@@ -8,7 +8,10 @@ export interface SavedProduct {
   id: string;
   type: ProductType;
   issuer: string;
+  /** Track name as displayed (kept for backward compatibility / UI). */
   track: string;
+  /** Stable track id from the source dataset, when available. */
+  trackId?: string;
   tags: TrackTag[];
   balance: number;
   fee: number;
