@@ -48,7 +48,8 @@ function Dashboard() {
           </span>
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
-          {productsToShow.length} מוצרים · דמי ניהול ממוצעים {data.avgFee}%
+          {productsToShow.length} מוצרים · דמי ניהול ממוצעים לפי הסכומים שהוזנו{" "}
+          {data.avgFee}%
         </div>
       </section>
 
