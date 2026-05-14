@@ -176,7 +176,7 @@ function AddWizard() {
         {step === 4 && (
           <Step
             title="פרטי היתרה ודמי הניהול"
-            subtitle={`${track?.name} · ${issuer}`}
+            subtitle={`${track?.trackName} · ${issuer}`}
           >
             <div className="space-y-4">
               <Field
@@ -217,7 +217,7 @@ function AddWizard() {
             <div className="rounded-xl bg-surface border border-border p-4">
               <div className="text-xs text-muted-foreground">{type}</div>
               <div className="text-sm font-semibold text-foreground mt-0.5">
-                {issuer} · {track?.name}
+                {issuer} · {track?.trackName}
               </div>
               <div className="text-xs text-muted-foreground mt-2">
                 יתרה: {Number(balance).toLocaleString("he-IL")} ₪ · דמי ניהול:{" "}
