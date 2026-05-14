@@ -29,9 +29,9 @@ function Dashboard() {
     data.exposures.find((e) => e.label === label)?.value ?? 0;
 
   const topCards: Array<{ label: string; helper: string }> = [
-    { label: "מניות", helper: "כמה מהחיסכון חשוף למניות" },
-    { label: "חו״ל", helper: "כמה מהחיסכון חשוף לנכסים מחוץ לישראל" },
-    { label: "מט״ח", helper: "כמה מהחיסכון חשוף למטבע חוץ" },
+    { label: "מניות", helper: "כמה מהחיסכון נמצא במניות" },
+    { label: "חו״ל", helper: "כמה מהחיסכון מושקע מחוץ לישראל" },
+    { label: "מט״ח", helper: "כמה מהחיסכון מושפע ממטבע חוץ" },
   ];
 
   return (
@@ -48,7 +48,8 @@ function Dashboard() {
           </span>
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
-          {productsToShow.length} מוצרים · דמי ניהול ממוצעים {data.avgFee}%
+          {productsToShow.length} מוצרים · דמי ניהול ממוצעים לפי הסכומים שהוזנו{" "}
+          {data.avgFee}%
         </div>
       </section>
 
@@ -64,25 +65,28 @@ function Dashboard() {
       </section>
 
       <section className="mt-6 rounded-2xl bg-surface border border-border p-5">
-        <div className="flex items-baseline justify-between mb-4">
+        <div className="flex items-baseline justify-between mb-1">
           <h2 className="text-base font-bold text-foreground">
-            פירוט החשיפות
+            איך מחולק החיסכון
           </h2>
           <span className="text-[11px] text-muted-foreground">% מהחיסכון</span>
         </div>
+        <p className="text-[11px] text-muted-foreground mb-4">
+          איזה חלק מהחיסכון נמצא בכל סוג השקעה.
+        </p>
         <div className="space-y-4">
-          {data.exposures.map((e, i) => (
+          {data.exposures.map((e) => (
             <ExposureBar
               key={e.label}
               label={e.label}
               value={e.value}
-              tone={i === 0 ? "primary" : "primary"}
+              tone="primary"
             />
           ))}
         </div>
         <p className="mt-4 text-[11px] text-muted-foreground leading-relaxed">
-          התוויות מוצגות לפי מאפייני המסלול בלבד (מניות, חו״ל, מט״ח, אג״ח, כללי)
-          ואינן מהוות הערכת סיכון או המלצה.
+          התוויות (מניות, חו״ל, מט״ח, אג״ח, כללי) מתארות את מאפייני המסלול
+          בלבד, ואינן מהוות הערכת סיכון או המלצה.
         </p>
       </section>
 
