@@ -25,16 +25,23 @@ function Dashboard() {
   const data = PLACEHOLDER_DASHBOARD;
   const productsToShow = isDemo ? PLACEHOLDER_PRODUCTS : products;
 
+  const exposureByLabel = (label: string) =>
+    data.exposures.find((e) => e.label === label)?.value ?? 0;
+
+  const topCards: Array<{ label: string; helper: string }> = [
+    { label: "מניות", helper: "כמה מהחיסכון חשוף למניות" },
+    { label: "חו״ל", helper: "כמה מהחיסכון חשוף לנכסים מחוץ לישראל" },
+    { label: "מט״ח", helper: "כמה מהחיסכון חשוף למטבע חוץ" },
+  ];
+
   return (
     <AppShell>
-      {isDemo && (
-        <div className="mb-4 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground">
-          מוצגים נתוני דוגמה להמחשה. הוסף מוצר ראשון כדי לראות את התמונה שלך.
-        </div>
-      )}
+      <div className="mb-4 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground text-center">
+        נתוני דוגמה לצורך המחשה בלבד
+      </div>
 
       <section>
-        <div className="text-xs text-muted-foreground">סך החיסכון המצרפי</div>
+        <div className="text-xs text-muted-foreground">סך החיסכון שהוזן</div>
         <div className="mt-1 flex items-baseline gap-2">
           <span className="text-3xl font-extrabold text-foreground tabular-nums">
             {data.totalBalance.toLocaleString("he-IL")} ₪
@@ -45,9 +52,14 @@ function Dashboard() {
         </div>
       </section>
 
-      <section className="mt-6 grid grid-cols-2 gap-3">
-        {data.exposures.slice(0, 2).map((e) => (
-          <BigStat key={e.label} label={e.label} value={e.value} />
+      <section className="mt-6 grid grid-cols-3 gap-2.5">
+        {topCards.map((c) => (
+          <BigStat
+            key={c.label}
+            label={c.label}
+            value={exposureByLabel(c.label)}
+            helper={c.helper}
+          />
         ))}
       </section>
 
@@ -139,11 +151,19 @@ function Dashboard() {
   );
 }
 
-function BigStat({ label, value }: { label: string; value: number }) {
+function BigStat({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: number;
+  helper?: string;
+}) {
   return (
-    <div className="rounded-2xl bg-surface border border-border p-4">
+    <div className="rounded-2xl bg-surface border border-border p-3">
       <div className="text-[11px] text-muted-foreground">חשיפה ל{label}</div>
-      <div className="mt-1 text-3xl font-extrabold text-primary tabular-nums">
+      <div className="mt-1 text-2xl font-extrabold text-primary tabular-nums">
         {value}%
       </div>
       <div className="mt-2 h-1.5 rounded-full bg-secondary overflow-hidden">
@@ -152,6 +172,11 @@ function BigStat({ label, value }: { label: string; value: number }) {
           style={{ width: `${value}%` }}
         />
       </div>
+      {helper && (
+        <div className="mt-2 text-[10px] text-muted-foreground leading-snug">
+          {helper}
+        </div>
+      )}
     </div>
   );
 }
