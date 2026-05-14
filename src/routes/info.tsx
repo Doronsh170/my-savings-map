@@ -10,7 +10,7 @@ export const Route = createFileRoute("/info")({
 function InfoScreen() {
   return (
     <AppShell>
-      <h1 className="text-xl font-bold text-foreground">מידע</h1>
+      <h1 className="text-xl font-bold text-foreground">מה חשוב לדעת?</h1>
       <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
         כל מה שכדאי לדעת על הכלי, בקצרה ובשפה פשוטה.
       </p>
