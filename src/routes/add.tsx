@@ -1,12 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ChevronRight, ArrowRight } from "lucide-react";
-import {
-  PRODUCT_TYPES,
-  ISSUERS,
-  TRACKS,
-  type PlaceholderTrack,
-} from "@/lib/placeholder";
+import { PRODUCT_TYPES, ISSUERS } from "@/lib/placeholder";
+import { getTracksFor, type Track } from "@/lib/tracks";
 import { loadProducts, saveProducts, type ProductType } from "@/lib/storage";
 import { Tag } from "@/components/Tag";
 
@@ -21,7 +17,7 @@ function AddWizard() {
   const [step, setStep] = useState<Step>(1);
   const [type, setType] = useState<ProductType | null>(null);
   const [issuer, setIssuer] = useState<string | null>(null);
-  const [track, setTrack] = useState<PlaceholderTrack | null>(null);
+  const [track, setTrack] = useState<Track | null>(null);
   const [balance, setBalance] = useState("");
   const [fee, setFee] = useState("");
 
@@ -41,7 +37,8 @@ function AddWizard() {
       id: `${Date.now()}`,
       type: type!,
       issuer: issuer!,
-      track: track!.name,
+      track: track!.trackName,
+      trackId: track!.trackId,
       tags: track!.tags,
       balance: Number(balance) || 0,
       fee: Number(fee) || 0,
@@ -133,34 +130,45 @@ function AddWizard() {
         )}
 
         {step === 3 && (
-          <Step title="באיזה מסלול?" subtitle={`${type} · ${issuer}`}>
+          <Step
+            title="באיזה מסלול?"
+            subtitle={`${type} · ${issuer}`}
+          >
+            <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
+              מסלולי דוגמה לצורך המחשה בלבד
+            </div>
             <div className="grid gap-2">
-              {TRACKS.map((tr) => (
-                <button
-                  key={tr.name}
-                  onClick={() => {
-                    setTrack(tr);
-                    setStep(4);
-                  }}
-                  className={`flex items-center justify-between gap-3 text-right p-3.5 rounded-xl bg-surface border transition ${
-                    track?.name === tr.name
-                      ? "border-primary"
-                      : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <div className="flex flex-col gap-1.5 items-start">
-                    <span className="text-sm font-medium text-foreground">
-                      {tr.name}
-                    </span>
-                    <div className="flex flex-wrap gap-1">
-                      {tr.tags.map((tag) => (
-                        <Tag key={tag}>{tag}</Tag>
-                      ))}
+              {getTracksFor(type!, issuer!).map((tr) => {
+                const key = tr.trackId ?? tr.trackName;
+                const selected =
+                  (track?.trackId ?? track?.trackName) === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setTrack(tr);
+                      setStep(4);
+                    }}
+                    className={`flex items-center justify-between gap-3 text-right p-3.5 rounded-xl bg-surface border transition ${
+                      selected
+                        ? "border-primary"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-1.5 items-start">
+                      <span className="text-sm font-medium text-foreground">
+                        {tr.trackName}
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {tr.tags.map((tag) => (
+                          <Tag key={tag}>{tag}</Tag>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180 shrink-0" />
-                </button>
-              ))}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180 shrink-0" />
+                  </button>
+                );
+              })}
             </div>
           </Step>
         )}
@@ -168,7 +176,7 @@ function AddWizard() {
         {step === 4 && (
           <Step
             title="פרטי היתרה ודמי הניהול"
-            subtitle={`${track?.name} · ${issuer}`}
+            subtitle={`${track?.trackName} · ${issuer}`}
           >
             <div className="space-y-4">
               <Field
@@ -209,7 +217,7 @@ function AddWizard() {
             <div className="rounded-xl bg-surface border border-border p-4">
               <div className="text-xs text-muted-foreground">{type}</div>
               <div className="text-sm font-semibold text-foreground mt-0.5">
-                {issuer} · {track?.name}
+                {issuer} · {track?.trackName}
               </div>
               <div className="text-xs text-muted-foreground mt-2">
                 יתרה: {Number(balance).toLocaleString("he-IL")} ₪ · דמי ניהול:{" "}
