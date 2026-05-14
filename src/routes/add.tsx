@@ -129,34 +129,45 @@ function AddWizard() {
         )}
 
         {step === 3 && (
-          <Step title="באיזה מסלול?" subtitle={`${type} · ${issuer}`}>
+          <Step
+            title="באיזה מסלול?"
+            subtitle={`${type} · ${issuer}`}
+          >
+            <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
+              מסלולי דוגמה לצורך המחשה בלבד
+            </div>
             <div className="grid gap-2">
-              {TRACKS.map((tr) => (
-                <button
-                  key={tr.name}
-                  onClick={() => {
-                    setTrack(tr);
-                    setStep(4);
-                  }}
-                  className={`flex items-center justify-between gap-3 text-right p-3.5 rounded-xl bg-surface border transition ${
-                    track?.name === tr.name
-                      ? "border-primary"
-                      : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <div className="flex flex-col gap-1.5 items-start">
-                    <span className="text-sm font-medium text-foreground">
-                      {tr.name}
-                    </span>
-                    <div className="flex flex-wrap gap-1">
-                      {tr.tags.map((tag) => (
-                        <Tag key={tag}>{tag}</Tag>
-                      ))}
+              {getTracksFor(type!, issuer!).map((tr) => {
+                const key = tr.trackId ?? tr.trackName;
+                const selected =
+                  (track?.trackId ?? track?.trackName) === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setTrack(tr);
+                      setStep(4);
+                    }}
+                    className={`flex items-center justify-between gap-3 text-right p-3.5 rounded-xl bg-surface border transition ${
+                      selected
+                        ? "border-primary"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-1.5 items-start">
+                      <span className="text-sm font-medium text-foreground">
+                        {tr.trackName}
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {tr.tags.map((tag) => (
+                          <Tag key={tag}>{tag}</Tag>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180 shrink-0" />
-                </button>
-              ))}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180 shrink-0" />
+                  </button>
+                );
+              })}
             </div>
           </Step>
         )}
