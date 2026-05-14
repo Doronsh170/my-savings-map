@@ -25,16 +25,23 @@ function Dashboard() {
   const data = PLACEHOLDER_DASHBOARD;
   const productsToShow = isDemo ? PLACEHOLDER_PRODUCTS : products;
 
+  const exposureByLabel = (label: string) =>
+    data.exposures.find((e) => e.label === label)?.value ?? 0;
+
+  const topCards: Array<{ label: string; helper: string }> = [
+    { label: "מניות", helper: "כמה מהחיסכון חשוף למניות" },
+    { label: "חו״ל", helper: "כמה מהחיסכון חשוף לנכסים מחוץ לישראל" },
+    { label: "מט״ח", helper: "כמה מהחיסכון חשוף למטבע חוץ" },
+  ];
+
   return (
     <AppShell>
-      {isDemo && (
-        <div className="mb-4 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground">
-          מוצגים נתוני דוגמה להמחשה. הוסף מוצר ראשון כדי לראות את התמונה שלך.
-        </div>
-      )}
+      <div className="mb-4 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground text-center">
+        נתוני דוגמה לצורך המחשה בלבד
+      </div>
 
       <section>
-        <div className="text-xs text-muted-foreground">סך החיסכון המצרפי</div>
+        <div className="text-xs text-muted-foreground">סך החיסכון שהוזן</div>
         <div className="mt-1 flex items-baseline gap-2">
           <span className="text-3xl font-extrabold text-foreground tabular-nums">
             {data.totalBalance.toLocaleString("he-IL")} ₪
@@ -45,9 +52,14 @@ function Dashboard() {
         </div>
       </section>
 
-      <section className="mt-6 grid grid-cols-2 gap-3">
-        {data.exposures.slice(0, 2).map((e) => (
-          <BigStat key={e.label} label={e.label} value={e.value} />
+      <section className="mt-6 grid grid-cols-3 gap-2.5">
+        {topCards.map((c) => (
+          <BigStat
+            key={c.label}
+            label={c.label}
+            value={exposureByLabel(c.label)}
+            helper={c.helper}
+          />
         ))}
       </section>
 
