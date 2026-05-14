@@ -25,8 +25,8 @@ function Landing() {
           <span className="text-primary">במט״ח</span>?
         </h1>
         <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-          כלי חינוכי קצר להמחשת תמונת החשיפות של החיסכון הפנסיוני שלך —
-          על בסיס נתונים פומביים של רשות שוק ההון.
+          הכלי עוזר לראות בתמונה אחת איך החיסכון שהוזן מחולק: מניות, חו״ל,
+          מט״ח ודמי ניהול.
         </p>
 
         <div className="mt-8 space-y-3">
