@@ -1,12 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ChevronRight, ArrowRight } from "lucide-react";
-import {
-  PRODUCT_TYPES,
-  ISSUERS,
-  TRACKS,
-  type PlaceholderTrack,
-} from "@/lib/placeholder";
+import { PRODUCT_TYPES, ISSUERS } from "@/lib/placeholder";
+import { getTracksFor, type Track } from "@/lib/tracks";
 import { loadProducts, saveProducts, type ProductType } from "@/lib/storage";
 import { Tag } from "@/components/Tag";
 
