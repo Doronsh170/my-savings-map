@@ -1,0 +1,37 @@
+// Simple localStorage helpers for product data. No backend, no analytics.
+
+export type ProductType = "פנסיה" | "גמל" | "השתלמות" | "גמל להשקעה" | "ביטוח מנהלים";
+
+export type TrackTag = "מניות" | "כללי" | "אג״ח" | "חו״ל" | "מט״ח";
+
+export interface SavedProduct {
+  id: string;
+  type: ProductType;
+  issuer: string;
+  track: string;
+  tags: TrackTag[];
+  balance: number;
+  fee: number;
+}
+
+const KEY = "savings-exposure-products-v1";
+
+export function loadProducts(): SavedProduct[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(KEY);
+    return raw ? (JSON.parse(raw) as SavedProduct[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveProducts(products: SavedProduct[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(KEY, JSON.stringify(products));
+}
+
+export function clearAll() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(KEY);
+}
