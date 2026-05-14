@@ -17,7 +17,7 @@ function AddWizard() {
   const [step, setStep] = useState<Step>(1);
   const [type, setType] = useState<ProductType | null>(null);
   const [issuer, setIssuer] = useState<string | null>(null);
-  const [track, setTrack] = useState<PlaceholderTrack | null>(null);
+  const [track, setTrack] = useState<Track | null>(null);
   const [balance, setBalance] = useState("");
   const [fee, setFee] = useState("");
 
