@@ -151,11 +151,19 @@ function Dashboard() {
   );
 }
 
-function BigStat({ label, value }: { label: string; value: number }) {
+function BigStat({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: number;
+  helper?: string;
+}) {
   return (
-    <div className="rounded-2xl bg-surface border border-border p-4">
+    <div className="rounded-2xl bg-surface border border-border p-3">
       <div className="text-[11px] text-muted-foreground">חשיפה ל{label}</div>
-      <div className="mt-1 text-3xl font-extrabold text-primary tabular-nums">
+      <div className="mt-1 text-2xl font-extrabold text-primary tabular-nums">
         {value}%
       </div>
       <div className="mt-2 h-1.5 rounded-full bg-secondary overflow-hidden">
@@ -164,6 +172,11 @@ function BigStat({ label, value }: { label: string; value: number }) {
           style={{ width: `${value}%` }}
         />
       </div>
+      {helper && (
+        <div className="mt-2 text-[10px] text-muted-foreground leading-snug">
+          {helper}
+        </div>
+      )}
     </div>
   );
 }
