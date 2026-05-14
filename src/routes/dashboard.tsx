@@ -29,9 +29,9 @@ function Dashboard() {
     data.exposures.find((e) => e.label === label)?.value ?? 0;
 
   const topCards: Array<{ label: string; helper: string }> = [
-    { label: "מניות", helper: "כמה מהחיסכון חשוף למניות" },
-    { label: "חו״ל", helper: "כמה מהחיסכון חשוף לנכסים מחוץ לישראל" },
-    { label: "מט״ח", helper: "כמה מהחיסכון חשוף למטבע חוץ" },
+    { label: "מניות", helper: "כמה מהחיסכון נמצא במניות" },
+    { label: "חו״ל", helper: "כמה מהחיסכון מושקע מחוץ לישראל" },
+    { label: "מט״ח", helper: "כמה מהחיסכון מושפע ממטבע חוץ" },
   ];
 
   return (
