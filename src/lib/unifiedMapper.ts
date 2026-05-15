@@ -35,7 +35,9 @@ export interface UnifiedFundRow {
   monthly_yield?: number | null;
   ytd_yield?: number | null;
   yield_trailing_3yrs?: number | null;
+  yield_trailing_5yrs?: number | null;
   avg_annual_yield_3yrs?: number | null;
+  avg_annual_yield_5yrs?: number | null;
 
   stock_pct?: number | null;
   foreign_pct?: number | null;
