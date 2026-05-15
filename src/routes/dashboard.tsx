@@ -422,7 +422,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
             </div>
             <div className="mt-3 text-[10px] text-muted-foreground">
               מקור: {p.sourceName ?? "—"}
-              {period && ` | תקופת דיווח: ${period}`}
+              {period && ` | נתוני תשואה לתקופת דיווח: ${period}`}
             </div>
             <div className="mt-1 text-[10px] text-muted-foreground">
               דמי ניהול לפי נתון ציבורי:{" "}
