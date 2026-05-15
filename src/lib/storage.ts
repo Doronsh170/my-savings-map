@@ -14,7 +14,12 @@ export interface SavedProduct {
   trackId?: string;
   tags: TrackTag[];
   balance: number;
-  fee: number;
+  /**
+   * Management fee (%) the user actually entered. `undefined` means the user
+   * did not provide a fee — it is NOT a 0% fee. The dashboard excludes such
+   * products from the weighted-fee calculation.
+   */
+  fee?: number;
   /**
    * True while the app is in prototype mode and the chosen track is not a
    * verified record from a real product dataset. Surfaced in the UI as a
