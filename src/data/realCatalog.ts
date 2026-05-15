@@ -17,5 +17,5 @@ interface UnifiedFile {
   funds?: UnifiedFundRow[];
 }
 
-const file = unifiedJson as UnifiedFile;
+const file = unifiedJson as unknown as UnifiedFile;
 export const realCatalog: CatalogTrack[] = mapUnifiedFunds(file.funds ?? []);
