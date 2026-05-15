@@ -84,6 +84,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content: "כלי חינוכי להמחשת חשיפות החיסכון הפנסיוני שלך.",
       },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "דשבורד חשיפות חיסכון" },
+      { name: "description", content: "חיסכון שלי: הצג תמונה כוללת של החיסכון שלך, כולל חשיפה למניות, מט\"ח ועמלות." },
+      { property: "og:description", content: "חיסכון שלי: הצג תמונה כוללת של החיסכון שלך, כולל חשיפה למניות, מט\"ח ועמלות." },
+      { name: "twitter:description", content: "חיסכון שלי: הצג תמונה כוללת של החיסכון שלך, כולל חשיפה למניות, מט\"ח ועמלות." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bf1a1b72-f0a8-48e7-b106-3bc82d439f71/id-preview-26d618fb--9cffdcf3-c1d8-4e3a-9548-1a2328a70d86.lovable.app-1778830964525.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bf1a1b72-f0a8-48e7-b106-3bc82d439f71/id-preview-26d618fb--9cffdcf3-c1d8-4e3a-9548-1a2328a70d86.lovable.app-1778830964525.png" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
