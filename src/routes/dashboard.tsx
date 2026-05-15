@@ -517,29 +517,55 @@ function ReturnCell({
   );
 }
 
+/**
+ * Pick the per-product annual historical rate using the priority order:
+ *   1. avgAnnualYield3yrs                                 (used as-is)
+ *   2. avgAnnualYield5yrs                                 (used as-is)
+ *   3. threeYearReturn → (1+x/100)^(1/3) - 1              (annualized here)
+ *   4. fiveYearReturn  → (1+x/100)^(1/5) - 1              (annualized here)
+ * Returns null if none are available — the product is then excluded from
+ * both the numerator and denominator of the portfolio weighted rate.
+ */
+function pickProductAnnualRate(
+  p: SavedProduct,
+): { rate: number; source: string } | null {
+  if (p.avgAnnualYield3yrs != null)
+    return { rate: p.avgAnnualYield3yrs, source: "avg_annual_yield_3yrs" };
+  if (p.avgAnnualYield5yrs != null)
+    return { rate: p.avgAnnualYield5yrs, source: "avg_annual_yield_5yrs" };
+  if (p.threeYearReturn != null) {
+    const ann = (Math.pow(1 + p.threeYearReturn / 100, 1 / 3) - 1) * 100;
+    return { rate: ann, source: "yield_trailing_3yrs (annualized per product)" };
+  }
+  if (p.fiveYearReturn != null) {
+    const ann = (Math.pow(1 + p.fiveYearReturn / 100, 1 / 5) - 1) * 100;
+    return { rate: ann, source: "yield_trailing_5yrs (annualized per product)" };
+  }
+  return null;
+}
+
 function SimulationSection({ products }: { products: SavedProduct[] }) {
   const [years, setYears] = useState(10);
   const [monthly, setMonthly] = useState(0);
 
   const totalBalance = products.reduce((s, p) => s + (p.userBalance || 0), 0);
 
-  // Prefer avgAnnualYield3yrs; fall back to threeYearReturn annualized note.
-  const wAvgAnnual = weightedReturn(products, (p) => p.avgAnnualYield3yrs);
-  const w3y = weightedReturn(products, (p) => p.threeYearReturn);
-
-  let usedRate: number | null = null;
-  let usedField = "";
-  if (wAvgAnnual !== null) {
-    usedRate = wAvgAnnual;
-    usedField = "תשואה שנתית ממוצעת ל-3 שנים (avg_annual_yield_3yrs)";
-  } else if (w3y !== null) {
-    // Approximate annualized rate from cumulative 3-year return.
-    const cumul = w3y / 100;
-    const ann = (Math.pow(1 + cumul, 1 / 3) - 1) * 100;
-    usedRate = +ann.toFixed(2);
-    usedField =
-      "תשואה מצטברת ל-3 שנים (yield_trailing_3yrs) שהומרה לתשואה שנתית";
+  // Per-product: annualize FIRST, then weight by userBalance.
+  let num = 0;
+  let den = 0;
+  const sourcesUsed = new Set<string>();
+  for (const p of products) {
+    if (!p.userBalance || p.userBalance <= 0) continue;
+    const picked = pickProductAnnualRate(p);
+    if (!picked) continue; // exclude from both numerator and denominator
+    num += p.userBalance * picked.rate;
+    den += p.userBalance;
+    sourcesUsed.add(picked.source);
   }
+  const usedRate: number | null =
+    den > 0 ? +(num / den).toFixed(2) : null;
+  const usedField =
+    sourcesUsed.size === 0 ? "" : Array.from(sourcesUsed).join(" + ");
 
   const DISCLAIMER =
     "הסימולציה מבוססת על תשואות עבר בלבד. ביצועי עבר אינם מעידים על תשואות עתידיות. אין לראות בכך ייעוץ או המלצה.";
