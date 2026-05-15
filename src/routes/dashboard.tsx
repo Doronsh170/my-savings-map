@@ -424,7 +424,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
                 value={p.ytdReturn ?? null}
               />
               <ReturnCell
-                label="3 שנים מצטבר"
+                label="תשואה מצטברת ל-3 שנים"
                 value={p.threeYearReturn ?? null}
               />
             </div>
