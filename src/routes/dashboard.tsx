@@ -595,20 +595,20 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
 
       <div className="rounded-xl border border-border bg-surface p-4 space-y-2">
         <Row
-          label="יתרה התחלתית"
+          label="היתרה שהוזנה"
           value={`${Math.round(result.initialBalance).toLocaleString("he-IL")} ₪`}
         />
         <Row
-          label="הפקדות עתידיות בלבד"
+          label="הפקדות חודשיות שחושבו"
           value={`${Math.round(result.futureContributions).toLocaleString("he-IL")} ₪`}
         />
         <Row
-          label="רכיב תשואה היסטורית"
+          label="תוספת מתשואות עבר"
           value={`${Math.round(result.gain).toLocaleString("he-IL")} ₪`}
         />
         <div className="pt-2 border-t border-border flex items-baseline justify-between">
           <span className="text-sm font-semibold text-foreground">
-            תוצאה בהמחשה על בסיס תשואות עבר
+            סכום בהמחשה היסטורית
           </span>
           <span className="text-base font-extrabold text-primary tabular-nums">
             {Math.round(result.finalAmount).toLocaleString("he-IL")} ₪
