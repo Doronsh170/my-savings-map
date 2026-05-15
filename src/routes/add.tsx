@@ -69,6 +69,7 @@ function AddWizard() {
       monthlyReturn: track!.monthlyReturn,
       ytdReturn: track!.ytdReturn,
       threeYearReturn: track!.threeYearReturn,
+      avgAnnualYield3yrs: track!.avgAnnualYield3yrs,
       managementFeeFromPublicData: track!.managementFeeFromPublicData,
       sourceName: track!.sourceName,
       sourceDate: track!.sourceDate,

@@ -264,17 +264,11 @@ function Dashboard() {
         </Collapsible>
 
         <Collapsible title="אינדיקציית ביצועי מסלולים">
-          <PlaceholderBlock
-            icon="📊"
-            text="כאן יוצגו נתוני תשואות עבר של המסלולים שבחרת, מתוך הנתונים הפומביים של רשות שוק ההון. לוגיקת החישוב תחובר בשלב הבא."
-          />
+          <PerformanceSection products={products} />
         </Collapsible>
 
         <Collapsible title="סימולציה על בסיס תשואות עבר">
-          <PlaceholderBlock
-            icon="📈"
-            text="המחשה כיצד היה מתנהג סך החיסכון בהתבסס על תשואות העבר של המסלולים. ביצועי עבר אינם מעידים על העתיד."
-          />
+          <SimulationSection products={products} />
         </Collapsible>
       </div>
     </AppShell>
@@ -340,11 +334,239 @@ function Collapsible({
   );
 }
 
-function PlaceholderBlock({ icon, text }: { icon: string; text: string }) {
+function fmtPct(v: number | null): string {
+  return v === null ? "לא זמין" : `${v.toFixed(2)}%`;
+}
+
+function weightedReturn(
+  products: SavedProduct[],
+  pick: (p: SavedProduct) => number | undefined,
+): number | null {
+  let num = 0;
+  let den = 0;
+  let included = 0;
+  for (const p of products) {
+    const v = pick(p);
+    if (v == null || !p.userBalance) continue;
+    num += p.userBalance * v;
+    den += p.userBalance;
+    included += 1;
+  }
+  if (den <= 0 || included === 0) return null;
+  return +(num / den).toFixed(2);
+}
+
+function PerformanceSection({ products }: { products: SavedProduct[] }) {
+  const wMonthly = weightedReturn(products, (p) => p.monthlyReturn);
+  const wYtd = weightedReturn(products, (p) => p.ytdReturn);
+  const w3y = weightedReturn(products, (p) => p.threeYearReturn);
+
   return (
-    <div className="rounded-xl bg-secondary/50 border border-dashed border-border p-4 flex gap-3">
-      <div className="text-2xl">{icon}</div>
-      <p className="text-xs text-muted-foreground leading-relaxed">{text}</p>
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-2">
+        <ReturnStat label="חודשי משוקלל" value={wMonthly} />
+        <ReturnStat label="YTD משוקלל" value={wYtd} />
+        <ReturnStat label="3 שנים משוקלל" value={w3y} />
+      </div>
+      <div className="space-y-2">
+        {products.map((p) => (
+          <div
+            key={p.id}
+            className="rounded-xl border border-border bg-surface p-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-foreground truncate">
+                  {p.issuerName}
+                </div>
+                <div className="text-[11px] text-muted-foreground truncate">
+                  {p.trackName}
+                </div>
+              </div>
+              <div className="text-[10px] text-muted-foreground text-left shrink-0">
+                {p.sourceName ?? "—"}
+                {p.sourceDate && <div>{p.sourceDate}</div>}
+              </div>
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-1 text-center">
+              <ReturnCell label="חודשי" value={p.monthlyReturn ?? null} />
+              <ReturnCell label="YTD" value={p.ytdReturn ?? null} />
+              <ReturnCell label="3 שנים" value={p.threeYearReturn ?? null} />
+            </div>
+            <div className="mt-2 text-[10px] text-muted-foreground">
+              דמי ניהול לפי נתון ציבורי:{" "}
+              {p.managementFeeFromPublicData == null
+                ? "לא זמין"
+                : `${p.managementFeeFromPublicData}%`}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground leading-relaxed">
+        {PUBLIC_DATA_NOTE}
+      </p>
+    </div>
+  );
+}
+
+function ReturnStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | null;
+}) {
+  return (
+    <div className="rounded-xl bg-secondary/50 border border-border p-2 text-center">
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-sm font-bold text-foreground tabular-nums">
+        {fmtPct(value)}
+      </div>
+    </div>
+  );
+}
+
+function ReturnCell({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | null;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="text-xs font-semibold text-foreground tabular-nums">
+        {fmtPct(value)}
+      </div>
+    </div>
+  );
+}
+
+function SimulationSection({ products }: { products: SavedProduct[] }) {
+  const [years, setYears] = useState(10);
+  const [monthly, setMonthly] = useState(0);
+
+  const totalBalance = products.reduce((s, p) => s + (p.userBalance || 0), 0);
+
+  // Prefer avgAnnualYield3yrs; fall back to threeYearReturn annualized note.
+  const wAvgAnnual = weightedReturn(products, (p) => p.avgAnnualYield3yrs);
+  const w3y = weightedReturn(products, (p) => p.threeYearReturn);
+
+  let usedRate: number | null = null;
+  let usedField = "";
+  if (wAvgAnnual !== null) {
+    usedRate = wAvgAnnual;
+    usedField = "תשואה שנתית ממוצעת ל-3 שנים (avg_annual_yield_3yrs)";
+  } else if (w3y !== null) {
+    // Approximate annualized rate from cumulative 3-year return.
+    const cumul = w3y / 100;
+    const ann = (Math.pow(1 + cumul, 1 / 3) - 1) * 100;
+    usedRate = +ann.toFixed(2);
+    usedField =
+      "תשואה מצטברת ל-3 שנים (yield_trailing_3yrs) שהומרה לתשואה שנתית";
+  }
+
+  const DISCLAIMER =
+    "הסימולציה מבוססת על תשואות עבר בלבד. ביצועי עבר אינם מעידים על תשואות עתידיות. אין לראות בכך ייעוץ או המלצה.";
+
+  if (totalBalance <= 0 || usedRate === null) {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          לא קיימים מספיק נתוני תשואה להצגת הסימולציה.
+        </p>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          {DISCLAIMER}
+        </p>
+      </div>
+    );
+  }
+
+  // Monthly compounding from annual rate.
+  const r = usedRate / 100;
+  const months = years * 12;
+  const monthlyRate = Math.pow(1 + r, 1 / 12) - 1;
+  const fvLump = totalBalance * Math.pow(1 + monthlyRate, months);
+  const fvContrib =
+    monthlyRate === 0
+      ? monthly * months
+      : monthly * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+  const finalValue = fvLump + fvContrib;
+  const totalContributions = totalBalance + monthly * months;
+  const returnComponent = finalValue - totalContributions;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-[11px] text-muted-foreground">
+            מספר שנים
+          </span>
+          <input
+            type="number"
+            min={1}
+            max={50}
+            value={years}
+            onChange={(e) =>
+              setYears(Math.max(1, Math.min(50, Number(e.target.value) || 1)))
+            }
+            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[11px] text-muted-foreground">
+            הפקדה חודשית (₪)
+          </span>
+          <input
+            type="number"
+            min={0}
+            value={monthly}
+            onChange={(e) => setMonthly(Math.max(0, Number(e.target.value) || 0))}
+            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums"
+          />
+        </label>
+      </div>
+
+      <div className="rounded-xl border border-border bg-surface p-4 space-y-2">
+        <Row label="יתרה נוכחית" value={`${totalBalance.toLocaleString("he-IL")} ₪`} />
+        <Row
+          label="תשואה שנתית בשימוש"
+          value={`${usedRate.toFixed(2)}%`}
+        />
+        <Row
+          label="סך הפקדות (כולל יתרה)"
+          value={`${Math.round(totalContributions).toLocaleString("he-IL")} ₪`}
+        />
+        <Row
+          label="רכיב תשואה היסטורית"
+          value={`${Math.round(returnComponent).toLocaleString("he-IL")} ₪`}
+        />
+        <div className="pt-2 border-t border-border flex items-baseline justify-between">
+          <span className="text-sm font-semibold text-foreground">
+            תוצאה היסטורית מצטברת
+          </span>
+          <span className="text-base font-extrabold text-primary tabular-nums">
+            {Math.round(finalValue).toLocaleString("he-IL")} ₪
+          </span>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
+        השדה בשימוש: {usedField}.
+      </p>
+      <p className="text-[11px] text-muted-foreground leading-relaxed">
+        {DISCLAIMER}
+      </p>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between text-xs">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-semibold text-foreground tabular-nums">{value}</span>
     </div>
   );
 }
