@@ -242,7 +242,7 @@ function Dashboard() {
                       {p.balance.toLocaleString("he-IL")} ₪
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      דמי ניהול {p.fee}%
+                      {p.fee == null ? "דמי ניהול: לא הוזן" : `דמי ניהול ${p.fee}%`}
                     </div>
                   </div>
                 </div>
