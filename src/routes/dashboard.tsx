@@ -218,7 +218,7 @@ function Dashboard() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[11px] text-muted-foreground">
-                        {p.type}
+                        {p.productType}
                       </span>
                       {p.isDemo && (
                         <span className="inline-flex items-center rounded-full border border-dashed border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -227,23 +227,25 @@ function Dashboard() {
                       )}
                     </div>
                     <div className="text-sm font-semibold text-foreground mt-0.5">
-                      {p.issuer}
+                      {p.issuerName}
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {p.track}
+                      {p.trackName}
                     </div>
                   </div>
                   <div className="text-left">
                     <div className="text-sm font-bold text-foreground tabular-nums">
-                      {p.balance.toLocaleString("he-IL")} ₪
+                      {p.userBalance.toLocaleString("he-IL")} ₪
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      {p.fee == null ? "דמי ניהול: לא הוזן" : `דמי ניהול ${p.fee}%`}
+                      {p.userManagementFee == null
+                        ? "דמי ניהול: לא הוזן"
+                        : `דמי ניהול ${p.userManagementFee}%`}
                     </div>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {p.tags.map((t) => (
+                  {tagsFor(p).map((t) => (
                     <Tag key={t}>{t}</Tag>
                   ))}
                 </div>
