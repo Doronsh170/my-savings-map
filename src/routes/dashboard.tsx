@@ -11,8 +11,8 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 // Until per-product exposure percentages are wired in from real CMA data,
-// derive a simple 0/100 exposure from the track tags. This keeps the
-// weighted-average formula meaningful and replaces hardcoded numbers.
+// derive an exposure value from the track tags. `undefined` means "no data
+// available for this exposure on this product" — never confuse it with 0%.
 function exposureFromTags(tags: TrackTag[]) {
   return {
     equity: tags.includes("מניות") ? 100 : 0,
@@ -22,34 +22,60 @@ function exposureFromTags(tags: TrackTag[]) {
   };
 }
 
+interface WeightedResult {
+  /** Weighted value (rounded), or null when no product carries this field. */
+  value: number | null;
+  /** True when at least one product was excluded due to missing data. */
+  partial: boolean;
+}
+
 interface DashboardData {
   totalBalance: number;
   productsCount: number;
-  avgFee: number;
-  exposures: Array<{ label: string; value: number }>;
+  /** null when no user entered a management fee. */
+  avgFee: WeightedResult;
+  exposures: Array<{ label: string; result: WeightedResult }>;
+}
+
+/**
+ * Weighted average over a subset of products: products where `pick` returns
+ * `undefined` are excluded from BOTH numerator and denominator. Returns
+ * { value: null } when no product has the field; `partial` is true when
+ * some — but not all — products were excluded.
+ */
+function weightedBy(
+  products: SavedProduct[],
+  pick: (p: SavedProduct) => number | undefined,
+): WeightedResult {
+  let num = 0;
+  let den = 0;
+  let included = 0;
+  for (const p of products) {
+    const v = pick(p);
+    if (v == null || !p.balance) continue;
+    num += p.balance * v;
+    den += p.balance;
+    included += 1;
+  }
+  if (den <= 0 || included === 0) return { value: null, partial: false };
+  return {
+    value: +(num / den).toFixed(1),
+    partial: included < products.length,
+  };
 }
 
 function computeDashboard(products: SavedProduct[]): DashboardData {
   const totalBalance = products.reduce((s, p) => s + (p.balance || 0), 0);
-
-  const weighted = (pick: (p: SavedProduct) => number) => {
-    if (totalBalance <= 0) return 0;
-    const num = products.reduce(
-      (s, p) => s + (p.balance || 0) * (pick(p) || 0),
-      0,
-    );
-    return +(num / totalBalance).toFixed(1);
-  };
-
   return {
     totalBalance,
     productsCount: products.length,
-    avgFee: weighted((p) => p.fee),
+    // Fee uses ONLY userManagementFee. No fallback to public-data fee.
+    avgFee: weightedBy(products, (p) => p.fee),
     exposures: [
-      { label: "מניות", value: weighted((p) => exposureFromTags(p.tags).equity) },
-      { label: "חו״ל", value: weighted((p) => exposureFromTags(p.tags).foreign) },
-      { label: "מט״ח", value: weighted((p) => exposureFromTags(p.tags).fx) },
-      { label: "אג״ח", value: weighted((p) => exposureFromTags(p.tags).bonds) },
+      { label: "מניות", result: weightedBy(products, (p) => exposureFromTags(p.tags).equity) },
+      { label: "חו״ל", result: weightedBy(products, (p) => exposureFromTags(p.tags).foreign) },
+      { label: "מט״ח", result: weightedBy(products, (p) => exposureFromTags(p.tags).fx) },
+      { label: "אג״ח", result: weightedBy(products, (p) => exposureFromTags(p.tags).bonds) },
     ],
   };
 }
