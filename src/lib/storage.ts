@@ -40,6 +40,7 @@ export interface SavedProduct {
   monthlyReturn?: Percent;
   ytdReturn?: Percent;
   threeYearReturn?: Percent;
+  avgAnnualYield3yrs?: Percent;
 
   managementFeeFromPublicData?: Percent;
 
