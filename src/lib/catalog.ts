@@ -58,7 +58,7 @@ export const CATALOG_CONFIG = {
    * No other code needs to change. UI demo badges/warnings are driven by
    * per-row `isDemo`, so flipping this flag also turns them off.
    */
-  useDemoData: true as boolean,
+  useDemoData: false as boolean,
 };
 
 // ---- Source selection -----------------------------------------------------
@@ -91,4 +91,21 @@ export function findIssuersFor(productType: ProductType): string[] {
     if (t.productType === productType) set.add(t.issuerName);
   }
   return [...set];
+}
+
+export function getCatalogDebugInfo(productType: ProductType | null) {
+  const realIssuers = new Set<string>();
+  if (productType) {
+    for (const t of realCatalog) {
+      if (t.productType === productType) realIssuers.add(t.issuerName);
+    }
+  }
+
+  return {
+    useDemoData: CATALOG_CONFIG.useDemoData,
+    totalRealCatalogRows: realCatalog.length,
+    selectedProductType: productType,
+    issuerCountForSelectedProductType: realIssuers.size,
+    firstFiveIssuersForSelectedProductType: [...realIssuers].slice(0, 5),
+  };
 }
