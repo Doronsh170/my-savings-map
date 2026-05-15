@@ -41,7 +41,7 @@ function AddWizard() {
       trackId: track!.trackId,
       tags: track!.tags,
       balance: Number(balance) || 0,
-      fee: Number(fee) || 0,
+      fee: fee.trim() === "" ? undefined : Number(fee),
       isDemo: true,
     });
     saveProducts(products);

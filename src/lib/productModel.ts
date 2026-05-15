@@ -99,49 +99,67 @@ export const EXAMPLE_PRODUCT: ProductRecord = {
 // small one. The same formula is used for the average management fee.
 // ---------------------------------------------------------------------------
 
+export interface WeightedField {
+  /** Weighted value (rounded), or null when no product carries this field. */
+  value: Percent | null;
+  /** True when at least one product was excluded due to missing data. */
+  partial: boolean;
+}
+
 export interface WeightedTotals {
   totalBalance: number;
-  equityExposure: Percent;
-  foreignExposure: Percent;
-  fxExposure: Percent;
-  liquidAssetsExposure: Percent;
-  avgManagementFee: Percent;
+  equityExposure: WeightedField;
+  foreignExposure: WeightedField;
+  fxExposure: WeightedField;
+  liquidAssetsExposure: WeightedField;
+  /**
+   * Weighted average of `userManagementFee` only — `managementFeeFromPublicData`
+   * is reference data and is NEVER used as a fallback for the user's actual
+   * fee. When no product has `userManagementFee`, `value` is null
+   * (UI: "לא הוזן").
+   */
+  avgManagementFee: WeightedField;
 }
 
 /**
- * Reference implementation for the weighted average. Kept here for the data
- * model spec; the dashboard will start using it in a later step.
+ * Reference implementation for the weighted average.
  *
- *   weighted(field) = Σ (product.userBalance * product[field])
+ *   weighted(field) = Σ (product.userBalance × product[field])
  *                     ─────────────────────────────────────────
  *                              Σ product.userBalance
  *
- * Products missing a given field are ignored for that field only (the
- * denominator excludes their balance for that specific field).
+ * Products where the field is `undefined` are excluded from BOTH numerator
+ * and denominator for that field only. `0` is a real value (e.g. 0% equity
+ * exposure) and is included.
  */
 export function computeWeightedTotals(products: ProductRecord[]): WeightedTotals {
   const totalBalance = products.reduce((s, p) => s + (p.userBalance || 0), 0);
 
-  const weightedAvg = (pick: (p: ProductRecord) => number | undefined): Percent => {
+  const weighted = (pick: (p: ProductRecord) => number | undefined): WeightedField => {
     let num = 0;
     let den = 0;
+    let included = 0;
     for (const p of products) {
       const v = pick(p);
       if (v == null || !p.userBalance) continue;
       num += p.userBalance * v;
       den += p.userBalance;
+      included += 1;
     }
-    return den > 0 ? +(num / den).toFixed(2) : 0;
+    if (den <= 0 || included === 0) return { value: null, partial: false };
+    return {
+      value: +(num / den).toFixed(2),
+      partial: included < products.length,
+    };
   };
 
   return {
     totalBalance,
-    equityExposure: weightedAvg((p) => p.equityExposure),
-    foreignExposure: weightedAvg((p) => p.foreignExposure),
-    fxExposure: weightedAvg((p) => p.fxExposure),
-    liquidAssetsExposure: weightedAvg((p) => p.liquidAssetsExposure),
-    avgManagementFee: weightedAvg(
-      (p) => p.userManagementFee ?? p.managementFeeFromPublicData,
-    ),
+    equityExposure: weighted((p) => p.equityExposure),
+    foreignExposure: weighted((p) => p.foreignExposure),
+    fxExposure: weighted((p) => p.fxExposure),
+    liquidAssetsExposure: weighted((p) => p.liquidAssetsExposure),
+    // userManagementFee ONLY — no fallback to managementFeeFromPublicData.
+    avgManagementFee: weighted((p) => p.userManagementFee),
   };
 }
