@@ -6,6 +6,11 @@ import { ExposureBar } from "@/components/ExposureBar";
 import { Tag } from "@/components/Tag";
 import { loadProducts, type SavedProduct } from "@/lib/storage";
 import { getDatasetMaxPeriod } from "@/data/realCatalog";
+import {
+  getSimulationRiskTrack,
+  runSimulation,
+  SIM_RISK_LABELS,
+} from "@/lib/simulation";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -517,64 +522,48 @@ function ReturnCell({
   );
 }
 
-/**
- * Pick the per-product annual historical rate using the priority order:
- *   1. avgAnnualYield3yrs                                 (used as-is)
- *   2. avgAnnualYield5yrs                                 (used as-is)
- *   3. threeYearReturn → (1+x/100)^(1/3) - 1              (annualized here)
- *   4. fiveYearReturn  → (1+x/100)^(1/5) - 1              (annualized here)
- * Returns null if none are available — the product is then excluded from
- * both the numerator and denominator of the portfolio weighted rate.
- */
-function pickProductAnnualRate(
-  p: SavedProduct,
-): { rate: number; source: string } | null {
-  if (p.avgAnnualYield3yrs != null)
-    return { rate: p.avgAnnualYield3yrs, source: "avg_annual_yield_3yrs" };
-  if (p.avgAnnualYield5yrs != null)
-    return { rate: p.avgAnnualYield5yrs, source: "avg_annual_yield_5yrs" };
-  if (p.threeYearReturn != null) {
-    const ann = (Math.pow(1 + p.threeYearReturn / 100, 1 / 3) - 1) * 100;
-    return { rate: ann, source: "yield_trailing_3yrs (annualized per product)" };
-  }
-  if (p.fiveYearReturn != null) {
-    const ann = (Math.pow(1 + p.fiveYearReturn / 100, 1 / 5) - 1) * 100;
-    return { rate: ann, source: "yield_trailing_5yrs (annualized per product)" };
-  }
-  return null;
-}
-
 function SimulationSection({ products }: { products: SavedProduct[] }) {
-  const [years, setYears] = useState(10);
-  const [monthly, setMonthly] = useState(0);
-
+  // Weighted equity exposure (numerator/denominator over products with stock_pct).
   const totalBalance = products.reduce((s, p) => s + (p.userBalance || 0), 0);
-
-  // Per-product: annualize FIRST, then weight by userBalance.
-  let num = 0;
-  let den = 0;
-  const sourcesUsed = new Set<string>();
+  let eqNum = 0;
+  let eqDen = 0;
+  let feeNum = 0;
+  let feeDen = 0;
   for (const p of products) {
     if (!p.userBalance || p.userBalance <= 0) continue;
-    const picked = pickProductAnnualRate(p);
-    if (!picked) continue; // exclude from both numerator and denominator
-    num += p.userBalance * picked.rate;
-    den += p.userBalance;
-    sourcesUsed.add(picked.source);
+    if (p.equityExposure != null) {
+      eqNum += p.userBalance * p.equityExposure;
+      eqDen += p.userBalance;
+    }
+    if (p.userManagementFee != null) {
+      feeNum += p.userBalance * p.userManagementFee;
+      feeDen += p.userBalance;
+    }
   }
-  const usedRate: number | null =
-    den > 0 ? +(num / den).toFixed(2) : null;
-  const usedField =
-    sourcesUsed.size === 0 ? "" : Array.from(sourcesUsed).join(" + ");
+  const stockPct = eqDen > 0 ? eqNum / eqDen : 0;
+  const weightedFee = feeDen > 0 ? +(feeNum / feeDen).toFixed(2) : null;
+  const track = getSimulationRiskTrack(stockPct);
+
+  const [years, setYears] = useState(10);
+  const [monthly, setMonthly] = useState(0);
+  const [feeStr, setFeeStr] = useState<string>("");
+  const [feeEdited, setFeeEdited] = useState(false);
+
+  // Prefill fee with weighted user fee when not user-edited.
+  useEffect(() => {
+    if (!feeEdited && weightedFee != null) {
+      setFeeStr(weightedFee.toFixed(2));
+    }
+  }, [weightedFee, feeEdited]);
 
   const DISCLAIMER =
     "הסימולציה מבוססת על תשואות עבר בלבד. ביצועי עבר אינם מעידים על תשואות עתידיות. אין לראות בכך ייעוץ או המלצה.";
 
-  if (totalBalance <= 0 || usedRate === null) {
+  if (totalBalance <= 0) {
     return (
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          לא קיימים מספיק נתוני תשואה להצגת הסימולציה.
+          לא הוזנה יתרה להצגת הסימולציה.
         </p>
         <p className="text-[11px] text-muted-foreground leading-relaxed">
           {DISCLAIMER}
@@ -583,33 +572,36 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
     );
   }
 
-  // Monthly compounding from annual rate.
-  const r = usedRate / 100;
-  const months = years * 12;
-  const monthlyRate = Math.pow(1 + r, 1 / 12) - 1;
-  const fvLump = totalBalance * Math.pow(1 + monthlyRate, months);
-  const fvContrib =
-    monthlyRate === 0
-      ? monthly * months
-      : monthly * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
-  const finalValue = fvLump + fvContrib;
-  const totalContributions = totalBalance + monthly * months;
-  const returnComponent = finalValue - totalContributions;
+  const feePct = Math.max(0, Number(feeStr) || 0);
+  const safeYears = Math.max(1, Math.min(30, Math.round(years)));
+  const result = runSimulation({
+    totalBalance,
+    monthly: Math.max(0, monthly),
+    years: safeYears,
+    feePct,
+    track,
+  });
 
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-secondary/40 p-3 text-[11px] text-muted-foreground leading-relaxed">
+        מסלול סיכון לסימולציה נקבע לפי החשיפה המשוקללת למניות:{" "}
+        <span className="font-semibold text-foreground">
+          {SIM_RISK_LABELS[track]}
+        </span>{" "}
+        ({stockPct.toFixed(1)}% מניות)
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="text-[11px] text-muted-foreground">
-            מספר שנים
-          </span>
+          <span className="text-[11px] text-muted-foreground">מספר שנים</span>
           <input
             type="number"
             min={1}
-            max={50}
+            max={30}
             value={years}
             onChange={(e) =>
-              setYears(Math.max(1, Math.min(50, Number(e.target.value) || 1)))
+              setYears(Math.max(1, Math.min(30, Number(e.target.value) || 1)))
             }
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums"
           />
@@ -622,39 +614,53 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
             type="number"
             min={0}
             value={monthly}
-            onChange={(e) => setMonthly(Math.max(0, Number(e.target.value) || 0))}
+            onChange={(e) =>
+              setMonthly(Math.max(0, Number(e.target.value) || 0))
+            }
+            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums"
+          />
+        </label>
+        <label className="block col-span-2">
+          <span className="text-[11px] text-muted-foreground">
+            דמי ניהול שנתיים לסימולציה (%)
+          </span>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={feeStr}
+            onChange={(e) => {
+              setFeeEdited(true);
+              setFeeStr(e.target.value);
+            }}
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums"
           />
         </label>
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 space-y-2">
-        <Row label="יתרה נוכחית" value={`${totalBalance.toLocaleString("he-IL")} ₪`} />
         <Row
-          label="תשואה שנתית בשימוש"
-          value={`${usedRate.toFixed(2)}%`}
+          label="יתרה התחלתית"
+          value={`${Math.round(result.initialBalance).toLocaleString("he-IL")} ₪`}
         />
         <Row
-          label="סך הפקדות (כולל יתרה)"
-          value={`${Math.round(totalContributions).toLocaleString("he-IL")} ₪`}
+          label="הפקדות עתידיות בלבד"
+          value={`${Math.round(result.futureContributions).toLocaleString("he-IL")} ₪`}
         />
         <Row
           label="רכיב תשואה היסטורית"
-          value={`${Math.round(returnComponent).toLocaleString("he-IL")} ₪`}
+          value={`${Math.round(result.gain).toLocaleString("he-IL")} ₪`}
         />
         <div className="pt-2 border-t border-border flex items-baseline justify-between">
           <span className="text-sm font-semibold text-foreground">
-            תוצאה היסטורית מצטברת
+            תוצאה בהמחשה על בסיס תשואות עבר
           </span>
           <span className="text-base font-extrabold text-primary tabular-nums">
-            {Math.round(finalValue).toLocaleString("he-IL")} ₪
+            {Math.round(result.finalAmount).toLocaleString("he-IL")} ₪
           </span>
         </div>
       </div>
 
-      <p className="text-[10px] text-muted-foreground leading-relaxed">
-        השדה בשימוש: {usedField}.
-      </p>
       <p className="text-[11px] text-muted-foreground leading-relaxed">
         {DISCLAIMER}
       </p>
