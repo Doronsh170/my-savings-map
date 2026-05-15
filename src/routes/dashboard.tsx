@@ -4,23 +4,11 @@ import { ChevronDown, Plus, Wallet } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ExposureBar } from "@/components/ExposureBar";
 import { Tag } from "@/components/Tag";
-import { loadProducts, type SavedProduct, type TrackTag } from "@/lib/storage";
+import { loadProducts, type SavedProduct } from "@/lib/storage";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
-
-// Until per-product exposure percentages are wired in from real CMA data,
-// derive an exposure value from the track tags. `undefined` means "no data
-// available for this exposure on this product" — never confuse it with 0%.
-function exposureFromTags(tags: TrackTag[]) {
-  return {
-    equity: tags.includes("מניות") ? 100 : 0,
-    foreign: tags.includes("חו״ל") ? 100 : 0,
-    fx: tags.includes("מט״ח") ? 100 : 0,
-    bonds: tags.includes("אג״ח") ? 100 : 0,
-  };
-}
 
 interface WeightedResult {
   /** Weighted value (rounded), or null when no product carries this field. */
@@ -39,9 +27,9 @@ interface DashboardData {
 
 /**
  * Weighted average over a subset of products: products where `pick` returns
- * `undefined` are excluded from BOTH numerator and denominator. Returns
- * { value: null } when no product has the field; `partial` is true when
- * some — but not all — products were excluded.
+ * `undefined` are excluded from BOTH numerator and denominator. `0` is a real
+ * value and IS included. Returns { value: null } when no product has the
+ * field; `partial` is true when some products were excluded.
  */
 function weightedBy(
   products: SavedProduct[],
@@ -52,9 +40,9 @@ function weightedBy(
   let included = 0;
   for (const p of products) {
     const v = pick(p);
-    if (v == null || !p.balance) continue;
-    num += p.balance * v;
-    den += p.balance;
+    if (v == null || !p.userBalance) continue;
+    num += p.userBalance * v;
+    den += p.userBalance;
     included += 1;
   }
   if (den <= 0 || included === 0) return { value: null, partial: false };
@@ -65,19 +53,27 @@ function weightedBy(
 }
 
 function computeDashboard(products: SavedProduct[]): DashboardData {
-  const totalBalance = products.reduce((s, p) => s + (p.balance || 0), 0);
+  const totalBalance = products.reduce((s, p) => s + (p.userBalance || 0), 0);
   return {
     totalBalance,
     productsCount: products.length,
     // Fee uses ONLY userManagementFee. No fallback to public-data fee.
-    avgFee: weightedBy(products, (p) => p.fee),
+    avgFee: weightedBy(products, (p) => p.userManagementFee),
     exposures: [
-      { label: "מניות", result: weightedBy(products, (p) => exposureFromTags(p.tags).equity) },
-      { label: "חו״ל", result: weightedBy(products, (p) => exposureFromTags(p.tags).foreign) },
-      { label: "מט״ח", result: weightedBy(products, (p) => exposureFromTags(p.tags).fx) },
-      { label: "אג״ח", result: weightedBy(products, (p) => exposureFromTags(p.tags).bonds) },
+      { label: "מניות", result: weightedBy(products, (p) => p.equityExposure) },
+      { label: "חו״ל", result: weightedBy(products, (p) => p.foreignExposure) },
+      { label: "מט״ח", result: weightedBy(products, (p) => p.fxExposure) },
     ],
   };
+}
+
+/** Lightweight, neutral tag list synthesized from a product's exposures. */
+function tagsFor(p: SavedProduct): string[] {
+  const out: string[] = [];
+  if ((p.equityExposure ?? 0) >= 50) out.push("מניות");
+  if ((p.foreignExposure ?? 0) >= 50) out.push("חו״ל");
+  if ((p.fxExposure ?? 0) >= 50) out.push("מט״ח");
+  return out;
 }
 
 function Dashboard() {
