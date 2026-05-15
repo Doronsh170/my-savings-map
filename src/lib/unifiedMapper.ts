@@ -28,6 +28,7 @@ export interface UnifiedFundRow {
   specialization?: string | null;
   sub_specialization?: string | null;
   report_period?: string | number | null;
+  total_assets?: number | null;
   current_date?: string | null;
 
   avg_annual_management_fee?: number | null;
@@ -157,6 +158,11 @@ export function mapUnifiedFundToCatalogTrack(
 
   const fee = num(row.avg_annual_management_fee);
   if (fee !== undefined) track.managementFeeFromPublicData = fee;
+
+  const ta = num(row.total_assets);
+  if (ta !== undefined) track.totalAssets = ta;
+  const rp = str(row.report_period);
+  if (rp !== undefined) track.reportPeriod = rp;
 
   return track;
 }

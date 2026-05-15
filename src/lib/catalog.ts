@@ -33,6 +33,9 @@ export interface CatalogTrack {
 
   managementFeeFromPublicData?: Percent;
 
+  totalAssets?: number;
+  reportPeriod?: string;
+
   sourceName: string;
   sourceDate: IsoDate;
 
@@ -72,9 +75,24 @@ function activeCatalog(): CatalogTrack[] {
 
 // ---- Query API ------------------------------------------------------------
 
+function assetsOf(t: CatalogTrack): number {
+  return typeof t.totalAssets === "number" && Number.isFinite(t.totalAssets)
+    ? t.totalAssets
+    : 0;
+}
+
+function compareTracks(a: CatalogTrack, b: CatalogTrack): number {
+  const da = assetsOf(b) - assetsOf(a);
+  if (da !== 0) return da;
+  const pa = a.reportPeriod ?? "";
+  const pb = b.reportPeriod ?? "";
+  if (pa !== pb) return pb.localeCompare(pa);
+  return a.trackName.localeCompare(b.trackName, "he");
+}
+
 export function findTracks(query: TrackQuery): CatalogTrack[] {
   const search = query.search?.trim().toLowerCase();
-  return activeCatalog().filter((t) => {
+  const rows = activeCatalog().filter((t) => {
     if (t.productType !== query.productType) return false;
     if (query.issuerName && t.issuerName !== query.issuerName) return false;
     if (search) {
@@ -83,13 +101,30 @@ export function findTracks(query: TrackQuery): CatalogTrack[] {
     }
     return true;
   });
+  return rows.sort(compareTracks);
 }
 
 export function findIssuersFor(productType: ProductType): string[] {
-  const set = new Set<string>();
+  const totals = new Map<string, number>();
   for (const t of activeCatalog()) {
-    if (t.productType === productType) set.add(t.issuerName);
+    if (t.productType !== productType) continue;
+    totals.set(t.issuerName, (totals.get(t.issuerName) ?? 0) + assetsOf(t));
   }
-  return [...set];
+  return [...totals.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "he"))
+    .map(([name]) => name);
+}
+
+export function getIssuerTotals(
+  productType: ProductType,
+): Array<{ issuerName: string; totalAssets: number }> {
+  const totals = new Map<string, number>();
+  for (const t of activeCatalog()) {
+    if (t.productType !== productType) continue;
+    totals.set(t.issuerName, (totals.get(t.issuerName) ?? 0) + assetsOf(t));
+  }
+  return [...totals.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "he"))
+    .map(([issuerName, totalAssets]) => ({ issuerName, totalAssets }));
 }
 
