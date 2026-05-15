@@ -174,8 +174,15 @@ function Dashboard() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {p.type}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-muted-foreground">
+                        {p.type}
+                      </span>
+                      {p.isDemo && (
+                        <span className="inline-flex items-center rounded-full border border-dashed border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          דוגמה
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm font-semibold text-foreground mt-0.5">
                       {p.issuer}
