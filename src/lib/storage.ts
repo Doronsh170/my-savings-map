@@ -9,9 +9,9 @@ export type ProductType =
   | "גמל להשקעה"
   | "ביטוח מנהלים";
 
-export function displayProductType(type: ProductType): string {
+export function displayProductType(type: ProductType | null): string {
   if (type === "ביטוח מנהלים") return "ביטוח מנהלים / פוליסות חיסכון";
-  return type;
+  return type ?? "";
 }
 
 /**
