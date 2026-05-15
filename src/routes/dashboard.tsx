@@ -1,15 +1,58 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, Plus, Wallet } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ExposureBar } from "@/components/ExposureBar";
 import { Tag } from "@/components/Tag";
-import { PLACEHOLDER_DASHBOARD, PLACEHOLDER_PRODUCTS } from "@/lib/placeholder";
-import { loadProducts, type SavedProduct } from "@/lib/storage";
+import { loadProducts, type SavedProduct, type TrackTag } from "@/lib/storage";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
+
+// Until per-product exposure percentages are wired in from real CMA data,
+// derive a simple 0/100 exposure from the track tags. This keeps the
+// weighted-average formula meaningful and replaces hardcoded numbers.
+function exposureFromTags(tags: TrackTag[]) {
+  return {
+    equity: tags.includes("מניות") ? 100 : 0,
+    foreign: tags.includes("חו״ל") ? 100 : 0,
+    fx: tags.includes("מט״ח") ? 100 : 0,
+    bonds: tags.includes("אג״ח") ? 100 : 0,
+  };
+}
+
+interface DashboardData {
+  totalBalance: number;
+  productsCount: number;
+  avgFee: number;
+  exposures: Array<{ label: string; value: number }>;
+}
+
+function computeDashboard(products: SavedProduct[]): DashboardData {
+  const totalBalance = products.reduce((s, p) => s + (p.balance || 0), 0);
+
+  const weighted = (pick: (p: SavedProduct) => number) => {
+    if (totalBalance <= 0) return 0;
+    const num = products.reduce(
+      (s, p) => s + (p.balance || 0) * (pick(p) || 0),
+      0,
+    );
+    return +(num / totalBalance).toFixed(1);
+  };
+
+  return {
+    totalBalance,
+    productsCount: products.length,
+    avgFee: weighted((p) => p.fee),
+    exposures: [
+      { label: "מניות", value: weighted((p) => exposureFromTags(p.tags).equity) },
+      { label: "חו״ל", value: weighted((p) => exposureFromTags(p.tags).foreign) },
+      { label: "מט״ח", value: weighted((p) => exposureFromTags(p.tags).fx) },
+      { label: "אג״ח", value: weighted((p) => exposureFromTags(p.tags).bonds) },
+    ],
+  };
+}
 
 function Dashboard() {
   const [products, setProducts] = useState<SavedProduct[]>([]);
@@ -20,10 +63,32 @@ function Dashboard() {
     setHydrated(true);
   }, []);
 
-  // For prototype: if no real products yet, show placeholder demo data.
-  const isDemo = hydrated && products.length === 0;
-  const data = PLACEHOLDER_DASHBOARD;
-  const productsToShow = isDemo ? PLACEHOLDER_PRODUCTS : products;
+  const data = useMemo(() => computeDashboard(products), [products]);
+
+  if (hydrated && products.length === 0) {
+    return (
+      <AppShell>
+        <div className="mt-10 flex flex-col items-center text-center">
+          <div className="w-14 h-14 rounded-2xl bg-secondary text-primary grid place-items-center">
+            <Wallet className="w-7 h-7" />
+          </div>
+          <h1 className="mt-4 text-lg font-bold text-foreground">
+            עדיין לא הוזנו מוצרים
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground max-w-xs">
+            כדי לראות את החשיפות שלך, הוסף מוצר חיסכון או פנסיה אחד לפחות.
+          </p>
+          <Link
+            to="/add"
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground px-5 py-3 font-semibold shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            הוסף מוצר ראשון
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   const exposureByLabel = (label: string) =>
     data.exposures.find((e) => e.label === label)?.value ?? 0;
@@ -36,10 +101,6 @@ function Dashboard() {
 
   return (
     <AppShell>
-      <div className="mb-4 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground text-center">
-        נתוני דוגמה לצורך המחשה בלבד
-      </div>
-
       <section>
         <div className="text-xs text-muted-foreground">סך החיסכון שהוזן</div>
         <div className="mt-1 flex items-baseline gap-2">
@@ -48,7 +109,7 @@ function Dashboard() {
           </span>
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
-          {productsToShow.length} מוצרים · דמי ניהול ממוצעים לפי הסכומים שהוזנו{" "}
+          {data.productsCount} מוצרים · דמי ניהול ממוצעים לפי הסכומים שהוזנו{" "}
           {data.avgFee}%
         </div>
       </section>
@@ -101,7 +162,7 @@ function Dashboard() {
       <div className="mt-6 space-y-3">
         <Collapsible title="פירוט לפי מוצר" defaultOpen>
           <div className="space-y-2.5">
-            {productsToShow.map((p) => (
+            {products.map((p) => (
               <div
                 key={p.id}
                 className="rounded-xl border border-border bg-surface p-4"
