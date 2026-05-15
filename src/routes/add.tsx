@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ChevronRight, ArrowRight } from "lucide-react";
 import { PRODUCT_TYPES } from "@/lib/placeholder";
-import { findIssuersFor, findTracks, type CatalogTrack } from "@/lib/catalog";
+import { findIssuersFor, findTracks, CATALOG_CONFIG, type CatalogTrack } from "@/lib/catalog";
 import {
   loadProducts,
   saveProducts,
@@ -142,9 +142,11 @@ function AddWizard() {
 
         {step === 2 && (
           <Step title="באיזה גוף מנהל המוצר?" subtitle={`סוג: ${type}`}>
-            <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
-              גופים מתוך קטלוג דמו פנימי - לצורך המחשת הממשק
-            </div>
+            {CATALOG_CONFIG.useDemoData && (
+              <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
+                גופים מתוך קטלוג דמו פנימי - לצורך המחשת הממשק
+              </div>
+            )}
             {issuersForType.length === 0 ? (
               <div className="text-sm text-muted-foreground">
                 אין כרגע גופים בקטלוג עבור סוג זה.
@@ -170,9 +172,11 @@ function AddWizard() {
 
         {step === 3 && (
           <Step title="באיזה מסלול?" subtitle={`${type} · ${issuer}`}>
-            <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
-              מסלולים לדוגמה בלבד - לצורך המחשת הממשק
-            </div>
+            {CATALOG_CONFIG.useDemoData && (
+              <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
+                מסלולים לדוגמה בלבד - לצורך המחשת הממשק
+              </div>
+            )}
             {tracksForChoice.length === 0 ? (
               <div className="text-sm text-muted-foreground">
                 אין כרגע מסלולים בקטלוג עבור הבחירה הזו.
