@@ -280,19 +280,20 @@ function BigStat({
   helper,
 }: {
   label: string;
-  value: number;
+  value: number | null;
   helper?: string;
 }) {
+  const display = value ?? 0;
   return (
     <div className="rounded-2xl bg-surface border border-border p-3">
       <div className="text-[11px] text-muted-foreground">חשיפה ל{label}</div>
       <div className="mt-1 text-2xl font-extrabold text-primary tabular-nums">
-        {value}%
+        {value === null ? "—" : `${value}%`}
       </div>
       <div className="mt-2 h-1.5 rounded-full bg-secondary overflow-hidden">
         <div
           className="h-full bg-gold rounded-full"
-          style={{ width: `${value}%` }}
+          style={{ width: `${display}%` }}
         />
       </div>
       {helper && (
