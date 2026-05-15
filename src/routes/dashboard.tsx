@@ -6,6 +6,11 @@ import { ExposureBar } from "@/components/ExposureBar";
 import { Tag } from "@/components/Tag";
 import { loadProducts, type SavedProduct } from "@/lib/storage";
 import { getDatasetMaxPeriod } from "@/data/realCatalog";
+import {
+  getSimulationRiskTrack,
+  runSimulation,
+  SIM_RISK_LABELS,
+} from "@/lib/simulation";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
