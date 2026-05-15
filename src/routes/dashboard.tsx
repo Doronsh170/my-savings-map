@@ -383,16 +383,30 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
   const wYtd = weightedReturn(products, (p) => p.ytdReturn);
   const w3y = weightedReturn(products, (p) => p.threeYearReturn);
 
+  const latestPeriod = products
+    .map((p) => formatPeriod(p.reportPeriod))
+    .filter((s): s is string => Boolean(s))
+    .sort((a, b) => {
+      const [am, ay] = a.split("/").map(Number);
+      const [bm, by] = b.split("/").map(Number);
+      return by !== ay ? by - ay : bm - am;
+    })[0];
+
   return (
     <div className="space-y-4">
       <div>
         <div className="text-sm font-semibold text-foreground">
-          תשואה כוללת לפי הסכומים שהוזנו
+          תשואות עבר של המסלולים שנבחרו
         </div>
         <div className="text-[11px] text-muted-foreground mt-0.5">
-          החישוב משקלל כל מוצר לפי היתרה שהוזנה עבורו.
+          התשואות מוצגות לפי נתוני המסלולים שנבחרו. הסכומים שהוזנו משמשים רק לחישוב התמונה המצרפית.
         </div>
       </div>
+      {latestPeriod && (
+        <div className="text-[11px] text-muted-foreground">
+          נתוני תשואה לתקופת דיווח: {latestPeriod}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2">
         <ReturnStat label="חודש אחרון" value={wMonthly} />
         <ReturnStat label="תשואה מתחילת השנה" value={wYtd} />
