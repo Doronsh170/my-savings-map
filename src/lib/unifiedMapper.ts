@@ -156,6 +156,8 @@ export function mapUnifiedFundToCatalogTrack(
   if (ytd !== undefined) track.ytdReturn = ytd;
   const y3 = num(row.yield_trailing_3yrs);
   if (y3 !== undefined) track.threeYearReturn = y3;
+  const ay3 = num(row.avg_annual_yield_3yrs);
+  if (ay3 !== undefined) track.avgAnnualYield3yrs = ay3;
 
   const fee = num(row.avg_annual_management_fee);
   if (fee !== undefined) track.managementFeeFromPublicData = fee;
