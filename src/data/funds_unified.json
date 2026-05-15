@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "note": "Replace this file's contents with the real funds_unified.json export. Until then, the real catalog is empty and the wizard will show no rows when CATALOG_CONFIG.useDemoData = false."
+  },
+  "funds": []
+}

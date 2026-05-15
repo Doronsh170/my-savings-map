@@ -61,6 +61,7 @@ function AddWizard() {
       equityExposure: track!.equityExposure,
       foreignExposure: track!.foreignExposure,
       fxExposure: track!.fxExposure,
+      liquidAssetsExposure: track!.liquidAssetsExposure,
       monthlyReturn: track!.monthlyReturn,
       ytdReturn: track!.ytdReturn,
       threeYearReturn: track!.threeYearReturn,
