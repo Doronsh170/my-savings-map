@@ -25,7 +25,7 @@ export function AppShell({ children, title }: AppShellProps) {
               ד
             </div>
             <span className="text-sm font-semibold text-foreground leading-tight">
-              דשבורד חשיפות חיסכון
+              החיסכון שלי בתמונה אחת
             </span>
           </Link>
           {title && (
@@ -39,7 +39,9 @@ export function AppShell({ children, title }: AppShellProps) {
       </main>
 
       <p className="mx-auto max-w-3xl px-4 pb-24 text-[11px] text-muted-foreground text-center">
-        כלי חינוכי להמחשה בלבד. אין לראות בתכנים ייעוץ, שיווק או המלצה.
+        כלי המחשה להצגת תמונת מצב של החיסכון שהוזן, על בסיס נתונים ציבוריים.
+        <br />
+        הכלי אינו ייעוץ, אינו שיווק פנסיוני או השקעות, ואינו המלצה לביצוע פעולה.
       </p>
 
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-surface border-t border-border">
@@ -63,8 +65,9 @@ export function AppShell({ children, title }: AppShellProps) {
             );
           })}
         </div>
-        <div className="text-center text-[10px] text-muted-foreground py-1.5 border-t border-border/60">
-          פותח על ידי דורון שרייבמן
+        <div className="text-center text-[10px] text-muted-foreground py-1.5 border-t border-border/60 space-y-0.5">
+          <div>פותח על ידי דורון שרייבמן</div>
+          <div>© 2026 דורון שרייבמן. כל הזכויות שמורות.</div>
         </div>
       </nav>
     </div>
