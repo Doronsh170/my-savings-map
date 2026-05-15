@@ -19,13 +19,12 @@ function Landing() {
 
       <main className="flex-1 px-5 pt-10 pb-8 mx-auto w-full max-w-xl">
         <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight text-foreground">
-          כמה מהחיסכון שלך נמצא{" "}
-          <span className="text-primary">במניות</span>,{" "}
-          <span className="text-primary">בחו״ל</span> ו
+          כמה מהחיסכון הפנסיוני שלך נמצא{" "}
+          <span className="text-primary">במניות</span> ו
           <span className="text-primary">במט״ח</span>?
         </h1>
         <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-          הכלי עוזר לראות בתמונה אחת איך החיסכון שהוזן מחולק: מניות, חו״ל,
+          הכלי עוזר לראות בתמונה אחת איך החיסכון הפנסיוני שהוזן מחולק: מניות, חו״ל,
           מט״ח ודמי ניהול.
         </p>
 
