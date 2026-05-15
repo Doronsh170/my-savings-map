@@ -160,6 +160,10 @@ export function mapUnifiedFundToCatalogTrack(
   if (y3 !== undefined) track.threeYearReturn = y3;
   const ay3 = num(row.avg_annual_yield_3yrs);
   if (ay3 !== undefined) track.avgAnnualYield3yrs = ay3;
+  const y5 = num(row.yield_trailing_5yrs);
+  if (y5 !== undefined) track.fiveYearReturn = y5;
+  const ay5 = num(row.avg_annual_yield_5yrs);
+  if (ay5 !== undefined) track.avgAnnualYield5yrs = ay5;
 
   const fee = num(row.avg_annual_management_fee);
   if (fee !== undefined) track.managementFeeFromPublicData = fee;
