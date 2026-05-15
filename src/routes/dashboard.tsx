@@ -608,7 +608,7 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
         />
         <div className="pt-2 border-t border-border flex items-baseline justify-between">
           <span className="text-sm font-semibold text-foreground">
-            סכום בהמחשה היסטורית
+            סכום לאחר סימולציה
           </span>
           <span className="text-base font-extrabold text-primary tabular-nums">
             {Math.round(result.finalAmount).toLocaleString("he-IL")} ₪
