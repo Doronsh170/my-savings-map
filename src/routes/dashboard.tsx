@@ -101,6 +101,11 @@ function Dashboard() {
 
   return (
     <AppShell>
+      {products.some((p) => p.isDemo) && (
+        <div className="mb-4 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground text-center">
+          נתוני דוגמה בלבד - אינם משקפים מוצרים אמיתיים
+        </div>
+      )}
       <section>
         <div className="text-xs text-muted-foreground">סך החיסכון שהוזן</div>
         <div className="mt-1 flex items-baseline gap-2">
