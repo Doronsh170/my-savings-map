@@ -25,6 +25,7 @@ export interface CatalogTrack {
   equityExposure?: Percent;
   foreignExposure?: Percent;
   fxExposure?: Percent;
+  liquidAssetsExposure?: Percent;
 
   monthlyReturn?: Percent;
   ytdReturn?: Percent;
