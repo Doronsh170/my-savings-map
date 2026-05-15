@@ -356,6 +356,23 @@ function weightedReturn(
   return +(num / den).toFixed(2);
 }
 
+/** Format "202603" or "2026-03" → "03/2026". Returns null if unrecognized. */
+function formatPeriod(raw?: string): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (/^\d{6}$/.test(s)) return `${s.slice(4, 6)}/${s.slice(0, 4)}`;
+  const m = s.match(/^(\d{4})[-/](\d{2})$/);
+  if (m) return `${m[2]}/${m[1]}`;
+  return null;
+}
+
+function periodYear(raw?: string): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  const m = s.match(/^(\d{4})/);
+  return m ? m[1] : null;
+}
+
 function PerformanceSection({ products }: { products: SavedProduct[] }) {
   const wMonthly = weightedReturn(products, (p) => p.monthlyReturn);
   const wYtd = weightedReturn(products, (p) => p.ytdReturn);
@@ -369,7 +386,29 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
         <ReturnStat label="3 שנים משוקלל" value={w3y} />
       </div>
       <div className="space-y-2">
-        {products.map((p) => (
+        {products.map((p) => {
+          const period = formatPeriod(p.reportPeriod);
+          const year = periodYear(p.reportPeriod);
+          const monthlyTitle = period
+            ? `תשואה חודשית לחודש ${period}`
+            : "תשואה חודשית";
+          const ytdTitle =
+            period && year
+              ? `תשואה מתחילת ${year} ועד ${period}`
+              : "תשואה מתחילת השנה";
+          const y3Title = period
+            ? `תשואה מצטברת ל-3 שנים שהסתיימו ב-${period}`
+            : "תשואה מצטברת ל-3 שנים";
+          const ay3Title = period
+            ? `תשואה שנתית ממוצעת ל-3 שנים שהסתיימו ב-${period}`
+            : "תשואה שנתית ממוצעת ל-3 שנים";
+          const y5Title = period
+            ? `תשואה מצטברת ל-5 שנים שהסתיימו ב-${period}`
+            : "תשואה מצטברת ל-5 שנים";
+          const ay5Title = period
+            ? `תשואה שנתית ממוצעת ל-5 שנים שהסתיימו ב-${period}`
+            : "תשואה שנתית ממוצעת ל-5 שנים";
+          return (
           <div
             key={p.id}
             className="rounded-xl border border-border bg-surface p-3"
@@ -385,13 +424,45 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
               </div>
               <div className="text-[10px] text-muted-foreground text-left shrink-0">
                 {p.sourceName ?? "—"}
-                {p.sourceDate && <div>{p.sourceDate}</div>}
+                {p.sourceDate && <div>מקור: {p.sourceDate}</div>}
               </div>
             </div>
+            {period && (
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                תקופת דיווח: {period}
+              </div>
+            )}
             <div className="mt-2 grid grid-cols-3 gap-1 text-center">
-              <ReturnCell label="חודשי" value={p.monthlyReturn ?? null} />
-              <ReturnCell label="YTD" value={p.ytdReturn ?? null} />
-              <ReturnCell label="3 שנים" value={p.threeYearReturn ?? null} />
+              <ReturnCell
+                label={period ? `חודשי ${period}` : "חודשי"}
+                title={monthlyTitle}
+                value={p.monthlyReturn ?? null}
+              />
+              <ReturnCell
+                label={period && year ? `YTD ${year}→${period}` : "YTD"}
+                title={ytdTitle}
+                value={p.ytdReturn ?? null}
+              />
+              <ReturnCell
+                label={period ? `3ש׳ מצטבר ${period}` : "3 שנים מצטבר"}
+                title={y3Title}
+                value={p.threeYearReturn ?? null}
+              />
+              <ReturnCell
+                label={period ? `3ש׳ שנתי ${period}` : "3 שנים שנתי"}
+                title={ay3Title}
+                value={p.avgAnnualYield3yrs ?? null}
+              />
+              <ReturnCell
+                label={period ? `5ש׳ מצטבר ${period}` : "5 שנים מצטבר"}
+                title={y5Title}
+                value={p.fiveYearReturn ?? null}
+              />
+              <ReturnCell
+                label={period ? `5ש׳ שנתי ${period}` : "5 שנים שנתי"}
+                title={ay5Title}
+                value={p.avgAnnualYield5yrs ?? null}
+              />
             </div>
             <div className="mt-2 text-[10px] text-muted-foreground">
               דמי ניהול לפי נתון ציבורי:{" "}
@@ -400,7 +471,8 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
                 : `${p.managementFeeFromPublicData}%`}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       <p className="text-[11px] text-muted-foreground leading-relaxed">
         {PUBLIC_DATA_NOTE}
@@ -429,13 +501,15 @@ function ReturnStat({
 function ReturnCell({
   label,
   value,
+  title,
 }: {
   label: string;
   value: number | null;
+  title?: string;
 }) {
   return (
-    <div>
-      <div className="text-[10px] text-muted-foreground">{label}</div>
+    <div title={title}>
+      <div className="text-[10px] text-muted-foreground truncate">{label}</div>
       <div className="text-xs font-semibold text-foreground tabular-nums">
         {fmtPct(value)}
       </div>

@@ -41,8 +41,13 @@ export interface SavedProduct {
   ytdReturn?: Percent;
   threeYearReturn?: Percent;
   avgAnnualYield3yrs?: Percent;
+  fiveYearReturn?: Percent;
+  avgAnnualYield5yrs?: Percent;
 
   managementFeeFromPublicData?: Percent;
+
+  /** "YYYYMM" or "YYYY-MM" — period the return figures refer to. */
+  reportPeriod?: string;
 
   sourceName?: string;
   sourceDate?: IsoDate;
