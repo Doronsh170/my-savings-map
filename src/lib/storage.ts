@@ -15,6 +15,12 @@ export interface SavedProduct {
   tags: TrackTag[];
   balance: number;
   fee: number;
+  /**
+   * True while the app is in prototype mode and the chosen track is not a
+   * verified record from a real product dataset. Surfaced in the UI as a
+   * "דוגמה" label so the user is never shown fake data as if it were real.
+   */
+  isDemo?: boolean;
 }
 
 const KEY = "savings-exposure-products-v1";

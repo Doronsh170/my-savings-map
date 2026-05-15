@@ -101,6 +101,11 @@ function Dashboard() {
 
   return (
     <AppShell>
+      {products.some((p) => p.isDemo) && (
+        <div className="mb-4 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground text-center">
+          נתוני דוגמה בלבד - אינם משקפים מוצרים אמיתיים
+        </div>
+      )}
       <section>
         <div className="text-xs text-muted-foreground">סך החיסכון שהוזן</div>
         <div className="mt-1 flex items-baseline gap-2">
@@ -169,8 +174,15 @@ function Dashboard() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {p.type}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-muted-foreground">
+                        {p.type}
+                      </span>
+                      {p.isDemo && (
+                        <span className="inline-flex items-center rounded-full border border-dashed border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          דוגמה
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm font-semibold text-foreground mt-0.5">
                       {p.issuer}
