@@ -11,6 +11,7 @@ import {
 import {
   loadProducts,
   saveProducts,
+  displayProductType,
   type ProductType,
   type SavedProduct,
 } from "@/lib/storage";
@@ -134,7 +135,7 @@ function AddWizard() {
               {PRODUCT_TYPES.map((t) => (
                 <SelectRow
                   key={t}
-                  label={t}
+                  label={displayProductType(t)}
                   selected={type === t}
                   onClick={() => {
                     setType(t);
@@ -149,7 +150,7 @@ function AddWizard() {
         )}
 
         {step === 2 && (
-          <Step title="באיזה גוף מנהל המוצר?" subtitle={`סוג: ${type}`}>
+          <Step title="באיזה גוף מנהל המוצר?" subtitle={`סוג: ${displayProductType(type)}`}>
             {CATALOG_CONFIG.useDemoData && (
               <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
                 גופים מתוך קטלוג דמו פנימי - לצורך המחשת הממשק
@@ -179,7 +180,7 @@ function AddWizard() {
         )}
 
         {step === 3 && (
-          <Step title="באיזה מסלול?" subtitle={`${type} · ${issuer}`}>
+          <Step title="באיזה מסלול?" subtitle={`${displayProductType(type)} · ${issuer}`}>
             {CATALOG_CONFIG.useDemoData && (
               <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
                 מסלולים לדוגמה בלבד - לצורך המחשת הממשק
@@ -263,7 +264,7 @@ function AddWizard() {
         {step === 5 && (
           <Step title="המוצר נוסף בהצלחה" subtitle="מה תרצה לעשות עכשיו?">
             <div className="rounded-xl bg-surface border border-border p-4">
-              <div className="text-xs text-muted-foreground">{type}</div>
+              <div className="text-xs text-muted-foreground">{displayProductType(type)}</div>
               <div className="text-sm font-semibold text-foreground mt-0.5">
                 {issuer} · {track?.trackName}
               </div>

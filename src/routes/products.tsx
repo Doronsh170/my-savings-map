@@ -7,6 +7,7 @@ import {
   loadProducts,
   saveProducts,
   clearAll,
+  displayProductType,
   type SavedProduct,
 } from "@/lib/storage";
 
@@ -77,7 +78,7 @@ function ProductsScreen() {
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] text-muted-foreground">
-                    {p.productType}
+                    {displayProductType(p.productType)}
                   </span>
                   {p.isDemo && (
                     <span className="inline-flex items-center rounded-full border border-dashed border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">

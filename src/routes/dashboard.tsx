@@ -4,7 +4,7 @@ import { ChevronDown, Plus, Wallet } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ExposureBar } from "@/components/ExposureBar";
 import { Tag } from "@/components/Tag";
-import { loadProducts, type SavedProduct } from "@/lib/storage";
+import { loadProducts, displayProductType, type SavedProduct } from "@/lib/storage";
 import { getDatasetMaxPeriod } from "@/data/realCatalog";
 import {
   getSimulationRiskTrack,
@@ -232,7 +232,7 @@ function Dashboard() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[11px] text-muted-foreground">
-                        {p.productType}
+                        {displayProductType(p.productType)}
                       </span>
                       {p.isDemo && (
                         <span className="inline-flex items-center rounded-full border border-dashed border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -399,7 +399,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
           תשואות עבר של המסלולים שנבחרו
         </div>
         <div className="text-[11px] text-muted-foreground mt-0.5">
-          התשואות מוצגות לפי נתוני המסלולים שנבחרו. הסכומים שהוזנו משמשים רק לחישוב התמונה המצרפית.
+          התשואות מוצגות לפי נתוני המסלולים שנבחרו.
         </div>
       </div>
       {latestPeriod && (
