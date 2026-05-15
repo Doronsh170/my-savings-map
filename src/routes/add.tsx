@@ -1,8 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, ArrowRight } from "lucide-react";
 import { PRODUCT_TYPES } from "@/lib/placeholder";
-import { findIssuersFor, findTracks, CATALOG_CONFIG, type CatalogTrack } from "@/lib/catalog";
+import {
+  findIssuersFor,
+  findTracks,
+  CATALOG_CONFIG,
+  getCatalogDebugInfo,
+  type CatalogTrack,
+} from "@/lib/catalog";
 import {
   loadProducts,
   saveProducts,
@@ -38,6 +44,11 @@ function AddWizard() {
         : [],
     [type, issuer],
   );
+  const catalogDebugInfo = useMemo(() => getCatalogDebugInfo(type), [type]);
+
+  useEffect(() => {
+    console.info("catalog debug", catalogDebugInfo);
+  }, [catalogDebugInfo]);
 
   function goBack() {
     if (step === 1) {
@@ -117,6 +128,8 @@ function AddWizard() {
       </header>
 
       <main className="flex-1 mx-auto w-full max-w-xl px-4 py-6">
+        <CatalogDebugPanel debugInfo={catalogDebugInfo} />
+
         {step === 1 && (
           <Step
             title="איזה סוג מוצר תרצה להוסיף?"
@@ -292,6 +305,21 @@ function AddWizard() {
 
 function fmt(v: number | undefined): string {
   return v == null ? "—" : `${v}%`;
+}
+
+function CatalogDebugPanel({
+  debugInfo,
+}: {
+  debugInfo: ReturnType<typeof getCatalogDebugInfo>;
+}) {
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-surface p-3 text-xs text-muted-foreground">
+      <div className="font-semibold text-foreground">Catalog debug</div>
+      <pre className="mt-2 whitespace-pre-wrap text-left" dir="ltr">
+        {JSON.stringify(debugInfo, null, 2)}
+      </pre>
+    </div>
+  );
 }
 
 function Step({
