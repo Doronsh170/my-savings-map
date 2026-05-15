@@ -13,7 +13,7 @@ function Landing() {
           <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground grid place-items-center text-sm font-bold">
             ד
           </div>
-          <span className="text-sm font-semibold">דשבורד חשיפות חיסכון</span>
+          <span className="text-sm font-semibold">החיסכון שלי בתמונה אחת</span>
         </div>
       </header>
 
@@ -43,7 +43,7 @@ function Landing() {
           <Feature
             icon={<ShieldCheck className="w-5 h-5" />}
             title="לא ייעוץ פיננסי"
-            text="כלי המחשה חינוכי בלבד, אין כאן המלצה."
+            text="הכלי אינו ייעוץ, אינו שיווק פנסיוני או השקעות, ואינו המלצה לביצוע פעולה."
           />
         </div>
 
@@ -63,8 +63,9 @@ function Landing() {
         </div>
       </main>
 
-      <footer className="px-5 py-6 text-center text-[11px] text-muted-foreground border-t border-border">
-        פותח על ידי דורון שרייבמן · כלי חינוכי בלבד
+      <footer className="px-5 py-6 text-center text-[11px] text-muted-foreground border-t border-border space-y-1">
+        <div>פותח על ידי דורון שרייבמן</div>
+        <div>© 2026 דורון שרייבמן. כל הזכויות שמורות.</div>
       </footer>
     </div>
   );

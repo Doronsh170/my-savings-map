@@ -72,22 +72,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "דשבורד חשיפות חיסכון" },
+      { title: "החיסכון שלי בתמונה אחת" },
       {
         name: "description",
         content:
-          "כלי חינוכי להמחשת חשיפות החיסכון הפנסיוני שלך — מניות, חו״ל ומט״ח. הנתונים נשמרים מקומית בלבד.",
+          "כלי המחשה להצגת תמונת מצב של החיסכון שהוזן, על בסיס נתונים ציבוריים.",
       },
-      { property: "og:title", content: "דשבורד חשיפות חיסכון" },
+      { property: "og:title", content: "החיסכון שלי בתמונה אחת" },
       {
         property: "og:description",
-        content: "כלי חינוכי להמחשת חשיפות החיסכון הפנסיוני שלך.",
+        content: "כלי המחשה להצגת תמונת מצב של החיסכון שהוזן, על בסיס נתונים ציבוריים.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:title", content: "דשבורד חשיפות חיסכון" },
-      { name: "description", content: "חיסכון שלי: הצג תמונה כוללת של החיסכון שלך, כולל חשיפה למניות, מט\"ח ועמלות." },
-      { property: "og:description", content: "חיסכון שלי: הצג תמונה כוללת של החיסכון שלך, כולל חשיפה למניות, מט\"ח ועמלות." },
-      { name: "twitter:description", content: "חיסכון שלי: הצג תמונה כוללת של החיסכון שלך, כולל חשיפה למניות, מט\"ח ועמלות." },
+      { name: "twitter:title", content: "החיסכון שלי בתמונה אחת" },
+      { name: "twitter:description", content: "כלי המחשה להצגת תמונת מצב של החיסכון שהוזן, על בסיס נתונים ציבוריים." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bf1a1b72-f0a8-48e7-b106-3bc82d439f71/id-preview-26d618fb--9cffdcf3-c1d8-4e3a-9548-1a2328a70d86.lovable.app-1778830964525.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bf1a1b72-f0a8-48e7-b106-3bc82d439f71/id-preview-26d618fb--9cffdcf3-c1d8-4e3a-9548-1a2328a70d86.lovable.app-1778830964525.png" },
       { name: "twitter:card", content: "summary_large_image" },

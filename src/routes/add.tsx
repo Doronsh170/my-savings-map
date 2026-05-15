@@ -284,7 +284,7 @@ function AddWizard() {
                 onClick={() => persistAndContinue("view")}
                 className="w-full rounded-xl bg-primary text-primary-foreground py-3.5 font-semibold shadow-sm hover:opacity-95 transition"
               >
-                צפה בדשבורד
+                צפה בתמונת המצב
               </button>
             </div>
           </Step>
@@ -292,7 +292,7 @@ function AddWizard() {
       </main>
 
       <footer className="px-5 py-4 text-center text-[11px] text-muted-foreground">
-        כלי חינוכי בלבד · אין במידע משום ייעוץ
+        הכלי אינו ייעוץ, אינו שיווק פנסיוני או השקעות, ואינו המלצה לביצוע פעולה.
       </footer>
     </div>
   );
