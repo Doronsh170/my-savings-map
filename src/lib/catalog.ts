@@ -31,6 +31,8 @@ export interface CatalogTrack {
   ytdReturn?: Percent;
   threeYearReturn?: Percent;
   avgAnnualYield3yrs?: Percent;
+  fiveYearReturn?: Percent;
+  avgAnnualYield5yrs?: Percent;
 
   managementFeeFromPublicData?: Percent;
 
