@@ -412,7 +412,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
                 value={p.monthlyReturn ?? null}
               />
               <ReturnCell
-                label="מתחילת השנה"
+                label="תשואה מתחילת השנה"
                 value={p.ytdReturn ?? null}
               />
               <ReturnCell
