@@ -9,15 +9,22 @@ import {
   clearAll,
   type SavedProduct,
 } from "@/lib/storage";
-import { PLACEHOLDER_PRODUCTS } from "@/lib/placeholder";
 
 export const Route = createFileRoute("/products")({
   component: ProductsScreen,
 });
 
+function tagsFor(p: SavedProduct): string[] {
+  const out: string[] = [];
+  if ((p.equityExposure ?? 0) >= 50) out.push("מניות");
+  if ((p.foreignExposure ?? 0) >= 50) out.push("חו״ל");
+  if ((p.fxExposure ?? 0) >= 50) out.push("מט״ח");
+  return out;
+}
+
 function ProductsScreen() {
   const [products, setProducts] = useState<SavedProduct[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [, setHydrated] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
@@ -25,11 +32,7 @@ function ProductsScreen() {
     setHydrated(true);
   }, []);
 
-  const isDemo = hydrated && products.length === 0;
-  const list = isDemo ? PLACEHOLDER_PRODUCTS : products;
-
   function removeOne(id: string) {
-    if (isDemo) return;
     const next = products.filter((p) => p.id !== id);
     setProducts(next);
     saveProducts(next);
@@ -46,11 +49,11 @@ function ProductsScreen() {
       <div className="flex items-baseline justify-between">
         <h1 className="text-xl font-bold text-foreground">המוצרים שלי</h1>
         <span className="text-xs text-muted-foreground">
-          {list.length} פריטים
+          {products.length} פריטים
         </span>
       </div>
 
-      {(isDemo || list.some((p) => "isDemo" in p && (p as SavedProduct).isDemo)) && (
+      {products.some((p) => p.isDemo) && (
         <div className="mt-3 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground text-center">
           מסלולים לדוגמה בלבד - לצורך המחשת הממשק
         </div>
@@ -65,7 +68,7 @@ function ProductsScreen() {
       </Link>
 
       <ul className="mt-5 space-y-2.5">
-        {list.map((p) => (
+        {products.map((p) => (
           <li
             key={p.id}
             className="rounded-xl border border-border bg-surface p-4"
@@ -74,49 +77,49 @@ function ProductsScreen() {
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] text-muted-foreground">
-                    {p.type}
+                    {p.productType}
                   </span>
-                  {(isDemo || ("isDemo" in p && (p as SavedProduct).isDemo)) && (
+                  {p.isDemo && (
                     <span className="inline-flex items-center rounded-full border border-dashed border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
                       דוגמה
                     </span>
                   )}
                 </div>
                 <div className="text-sm font-semibold text-foreground mt-0.5 truncate">
-                  {p.issuer}
+                  {p.issuerName}
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  {p.track}
+                  {p.trackName}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {p.tags.map((t) => (
+                  {tagsFor(p).map((t) => (
                     <Tag key={t}>{t}</Tag>
                   ))}
                 </div>
               </div>
               <div className="text-left shrink-0">
                 <div className="text-sm font-bold text-foreground tabular-nums">
-                  {p.balance.toLocaleString("he-IL")} ₪
+                  {p.userBalance.toLocaleString("he-IL")} ₪
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  {p.fee == null ? "לא הוזן" : `${p.fee}%`}
+                  {p.userManagementFee == null
+                    ? "לא הוזן"
+                    : `${p.userManagementFee}%`}
                 </div>
-                {!isDemo && (
-                  <button
-                    onClick={() => removeOne(p.id)}
-                    className="mt-2 inline-flex items-center gap-1 text-[11px] text-destructive hover:underline"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    הסר
-                  </button>
-                )}
+                <button
+                  onClick={() => removeOne(p.id)}
+                  className="mt-2 inline-flex items-center gap-1 text-[11px] text-destructive hover:underline"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  הסר
+                </button>
               </div>
             </div>
           </li>
         ))}
       </ul>
 
-      {!isDemo && products.length > 0 && (
+      {products.length > 0 && (
         <div className="mt-8 rounded-2xl border border-border bg-surface p-4">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-lg bg-secondary text-destructive grid place-items-center shrink-0">

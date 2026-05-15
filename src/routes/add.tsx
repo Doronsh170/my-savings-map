@@ -1,10 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronRight, ArrowRight } from "lucide-react";
-import { PRODUCT_TYPES, ISSUERS } from "@/lib/placeholder";
-import { getTracksFor, type Track } from "@/lib/tracks";
-import { loadProducts, saveProducts, type ProductType } from "@/lib/storage";
-import { Tag } from "@/components/Tag";
+import { PRODUCT_TYPES } from "@/lib/placeholder";
+import { findIssuersFor, findTracks, type CatalogTrack } from "@/lib/catalog";
+import {
+  loadProducts,
+  saveProducts,
+  type ProductType,
+  type SavedProduct,
+} from "@/lib/storage";
 
 export const Route = createFileRoute("/add")({
   component: AddWizard,
@@ -17,11 +21,23 @@ function AddWizard() {
   const [step, setStep] = useState<Step>(1);
   const [type, setType] = useState<ProductType | null>(null);
   const [issuer, setIssuer] = useState<string | null>(null);
-  const [track, setTrack] = useState<Track | null>(null);
+  const [track, setTrack] = useState<CatalogTrack | null>(null);
   const [balance, setBalance] = useState("");
   const [fee, setFee] = useState("");
 
   const totalSteps = 4;
+
+  const issuersForType = useMemo(
+    () => (type ? findIssuersFor(type) : []),
+    [type],
+  );
+  const tracksForChoice = useMemo(
+    () =>
+      type && issuer
+        ? findTracks({ productType: type, issuerName: issuer })
+        : [],
+    [type, issuer],
+  );
 
   function goBack() {
     if (step === 1) {
@@ -33,22 +49,31 @@ function AddWizard() {
 
   function persistAndContinue(action: "add" | "view") {
     const products = loadProducts();
-    products.push({
+    const next: SavedProduct = {
       id: `${Date.now()}`,
-      type: type!,
-      issuer: issuer!,
-      track: track!.trackName,
+      productType: type!,
+      issuerName: issuer!,
+      trackName: track!.trackName,
       trackId: track!.trackId,
-      tags: track!.tags,
-      balance: Number(balance) || 0,
-      fee: fee.trim() === "" ? undefined : Number(fee),
-      isDemo: true,
-    });
+      userBalance: Number(balance) || 0,
+      userManagementFee: fee.trim() === "" ? undefined : Number(fee),
+      // Copy the catalog row's public-data fields onto the saved product.
+      equityExposure: track!.equityExposure,
+      foreignExposure: track!.foreignExposure,
+      fxExposure: track!.fxExposure,
+      monthlyReturn: track!.monthlyReturn,
+      ytdReturn: track!.ytdReturn,
+      threeYearReturn: track!.threeYearReturn,
+      managementFeeFromPublicData: track!.managementFeeFromPublicData,
+      sourceName: track!.sourceName,
+      sourceDate: track!.sourceDate,
+      isDemo: track!.isDemo,
+    };
+    products.push(next);
     saveProducts(products);
     if (action === "view") {
       navigate({ to: "/dashboard" });
     } else {
-      // reset wizard
       setStep(1);
       setType(null);
       setIssuer(null);
@@ -104,6 +129,8 @@ function AddWizard() {
                   selected={type === t}
                   onClick={() => {
                     setType(t);
+                    setIssuer(null);
+                    setTrack(null);
                     setStep(2);
                   }}
                 />
@@ -114,63 +141,73 @@ function AddWizard() {
 
         {step === 2 && (
           <Step title="באיזה גוף מנהל המוצר?" subtitle={`סוג: ${type}`}>
-            <div className="grid gap-2">
-              {ISSUERS.map((i) => (
-                <SelectRow
-                  key={i}
-                  label={i}
-                  selected={issuer === i}
-                  onClick={() => {
-                    setIssuer(i);
-                    setStep(3);
-                  }}
-                />
-              ))}
+            <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
+              גופים מתוך קטלוג דמו פנימי - לצורך המחשת הממשק
             </div>
+            {issuersForType.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                אין כרגע גופים בקטלוג עבור סוג זה.
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                {issuersForType.map((i) => (
+                  <SelectRow
+                    key={i}
+                    label={i}
+                    selected={issuer === i}
+                    onClick={() => {
+                      setIssuer(i);
+                      setTrack(null);
+                      setStep(3);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </Step>
         )}
 
         {step === 3 && (
-          <Step
-            title="באיזה מסלול?"
-            subtitle={`${type} · ${issuer}`}
-          >
+          <Step title="באיזה מסלול?" subtitle={`${type} · ${issuer}`}>
             <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
               מסלולים לדוגמה בלבד - לצורך המחשת הממשק
             </div>
-            <div className="grid gap-2">
-              {getTracksFor(type!, issuer!).map((tr) => {
-                const key = tr.trackId ?? tr.trackName;
-                const selected =
-                  (track?.trackId ?? track?.trackName) === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setTrack(tr);
-                      setStep(4);
-                    }}
-                    className={`flex items-center justify-between gap-3 text-right p-3.5 rounded-xl bg-surface border transition ${
-                      selected
-                        ? "border-primary"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="flex flex-col gap-1.5 items-start">
-                      <span className="text-sm font-medium text-foreground">
-                        {tr.trackName}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {tr.tags.map((tag) => (
-                          <Tag key={tag}>{tag}</Tag>
-                        ))}
+            {tracksForChoice.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                אין כרגע מסלולים בקטלוג עבור הבחירה הזו.
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                {tracksForChoice.map((tr) => {
+                  const selected = track?.trackId === tr.trackId;
+                  return (
+                    <button
+                      key={tr.trackId}
+                      onClick={() => {
+                        setTrack(tr);
+                        setStep(4);
+                      }}
+                      className={`flex items-center justify-between gap-3 text-right p-3.5 rounded-xl bg-surface border transition ${
+                        selected
+                          ? "border-primary"
+                          : "border-border hover:border-primary/40"
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1 items-start min-w-0">
+                        <span className="text-sm font-medium text-foreground">
+                          {tr.trackName}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          מניות {fmt(tr.equityExposure)} · חו״ל{" "}
+                          {fmt(tr.foreignExposure)} · מט״ח {fmt(tr.fxExposure)}
+                        </span>
                       </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180 shrink-0" />
-                  </button>
-                );
-              })}
-            </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180 shrink-0" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </Step>
         )}
 
@@ -188,15 +225,15 @@ function AddWizard() {
                 inputMode="numeric"
               />
               <Field
-                label="דמי ניהול שנתיים מהצבירה (%)"
+                label="דמי ניהול שנתיים מהצבירה (%) - לא חובה"
                 value={fee}
                 onChange={setFee}
                 placeholder="לדוגמה: 0.6"
                 inputMode="decimal"
               />
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                ניתן למצוא את הנתונים בדוח השנתי או בחשבון האישי באתר היצרן.
-                המידע נשמר במכשיר שלך בלבד.
+                אם תשאיר ריק, החישוב הממוצע לא יכלול את המוצר הזה. הנתונים
+                נשמרים במכשיר שלך בלבד.
               </p>
             </div>
 
@@ -211,10 +248,7 @@ function AddWizard() {
         )}
 
         {step === 5 && (
-          <Step
-            title="המוצר נוסף בהצלחה"
-            subtitle="מה תרצה לעשות עכשיו?"
-          >
+          <Step title="המוצר נוסף בהצלחה" subtitle="מה תרצה לעשות עכשיו?">
             <div className="rounded-xl bg-surface border border-border p-4">
               <div className="text-xs text-muted-foreground">{type}</div>
               <div className="text-sm font-semibold text-foreground mt-0.5">
@@ -222,7 +256,7 @@ function AddWizard() {
               </div>
               <div className="text-xs text-muted-foreground mt-2">
                 יתרה: {Number(balance).toLocaleString("he-IL")} ₪ · דמי ניהול:{" "}
-                {fee || "0"}%
+                {fee.trim() === "" ? "לא הוזן" : `${fee}%`}
               </div>
             </div>
 
@@ -249,6 +283,10 @@ function AddWizard() {
       </footer>
     </div>
   );
+}
+
+function fmt(v: number | undefined): string {
+  return v == null ? "—" : `${v}%`;
 }
 
 function Step({
