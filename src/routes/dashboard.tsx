@@ -264,17 +264,11 @@ function Dashboard() {
         </Collapsible>
 
         <Collapsible title="אינדיקציית ביצועי מסלולים">
-          <PlaceholderBlock
-            icon="📊"
-            text="כאן יוצגו נתוני תשואות עבר של המסלולים שבחרת, מתוך הנתונים הפומביים של רשות שוק ההון. לוגיקת החישוב תחובר בשלב הבא."
-          />
+          <PerformanceSection products={products} />
         </Collapsible>
 
         <Collapsible title="סימולציה על בסיס תשואות עבר">
-          <PlaceholderBlock
-            icon="📈"
-            text="המחשה כיצד היה מתנהג סך החיסכון בהתבסס על תשואות העבר של המסלולים. ביצועי עבר אינם מעידים על העתיד."
-          />
+          <SimulationSection products={products} />
         </Collapsible>
       </div>
     </AppShell>
