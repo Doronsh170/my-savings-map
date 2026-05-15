@@ -9,6 +9,11 @@ export type ProductType =
   | "גמל להשקעה"
   | "ביטוח מנהלים";
 
+export function displayProductType(type: ProductType): string {
+  if (type === "ביטוח מנהלים") return "ביטוח מנהלים / פוליסות חיסכון";
+  return type;
+}
+
 /**
  * A user-saved product. Shape matches `ProductRecord` (the real-data
  * contract) so the dashboard can compute totals without a translation

@@ -7,6 +7,7 @@ import {
   loadProducts,
   saveProducts,
   clearAll,
+  displayProductType,
   type SavedProduct,
 } from "@/lib/storage";
 

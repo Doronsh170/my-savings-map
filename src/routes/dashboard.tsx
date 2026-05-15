@@ -4,7 +4,7 @@ import { ChevronDown, Plus, Wallet } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ExposureBar } from "@/components/ExposureBar";
 import { Tag } from "@/components/Tag";
-import { loadProducts, type SavedProduct } from "@/lib/storage";
+import { loadProducts, displayProductType, type SavedProduct } from "@/lib/storage";
 import { getDatasetMaxPeriod } from "@/data/realCatalog";
 import {
   getSimulationRiskTrack,
