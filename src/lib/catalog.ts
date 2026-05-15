@@ -33,6 +33,9 @@ export interface CatalogTrack {
 
   managementFeeFromPublicData?: Percent;
 
+  totalAssets?: number;
+  reportPeriod?: string;
+
   sourceName: string;
   sourceDate: IsoDate;
 
