@@ -11,6 +11,7 @@ import {
 import {
   loadProducts,
   saveProducts,
+  displayProductType,
   type ProductType,
   type SavedProduct,
 } from "@/lib/storage";
