@@ -24,7 +24,7 @@ function Landing() {
           <span className="text-primary">במט״ח</span>?
         </h1>
         <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-          הכלי עוזר לראות בתמונה אחת איך החיסכון שהוזן מחולק: מניות, חו״ל,
+          הכלי עוזר לראות בתמונה אחת איך החיסכון הפנסיוני שהוזן מחולק: מניות, חו״ל,
           מט״ח ודמי ניהול.
         </p>
 
