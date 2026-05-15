@@ -491,7 +491,7 @@ function ReturnCell({
 }) {
   return (
     <div title={title}>
-      <div className="text-[10px] text-muted-foreground truncate">{label}</div>
+      <div className="text-[10px] text-muted-foreground leading-tight break-words">{label}</div>
       <div className="text-xs font-semibold text-foreground tabular-nums">
         {fmtPct(value)}
       </div>
