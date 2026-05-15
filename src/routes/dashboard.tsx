@@ -386,9 +386,9 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2">
-        <ReturnStat label="חודשי משוקלל" value={wMonthly} />
-        <ReturnStat label="YTD משוקלל" value={wYtd} />
-        <ReturnStat label="3 שנים משוקלל" value={w3y} />
+        <ReturnStat label="חודש אחרון" value={wMonthly} />
+        <ReturnStat label="תשואה מתחילת השנה" value={wYtd} />
+        <ReturnStat label="3 שנים מצטבר" value={w3y} />
       </div>
       <div className="space-y-2">
         {products.map((p) => {
