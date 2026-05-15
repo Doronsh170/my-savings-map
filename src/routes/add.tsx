@@ -136,7 +136,7 @@ function AddWizard() {
             subtitle={`${type} · ${issuer}`}
           >
             <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
-              מסלולי דוגמה לצורך המחשה בלבד
+              מסלולים לדוגמה בלבד - לצורך המחשת הממשק
             </div>
             <div className="grid gap-2">
               {getTracksFor(type!, issuer!).map((tr) => {
