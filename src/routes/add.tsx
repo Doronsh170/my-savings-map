@@ -172,9 +172,11 @@ function AddWizard() {
 
         {step === 3 && (
           <Step title="באיזה מסלול?" subtitle={`${type} · ${issuer}`}>
-            <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
-              מסלולים לדוגמה בלבד - לצורך המחשת הממשק
-            </div>
+            {CATALOG_CONFIG.useDemoData && (
+              <div className="mb-3 rounded-lg border border-dashed border-border bg-secondary/50 px-3 py-2 text-[12px] text-muted-foreground">
+                מסלולים לדוגמה בלבד - לצורך המחשת הממשק
+              </div>
+            )}
             {tracksForChoice.length === 0 ? (
               <div className="text-sm text-muted-foreground">
                 אין כרגע מסלולים בקטלוג עבור הבחירה הזו.
