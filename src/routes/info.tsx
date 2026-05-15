@@ -2,18 +2,25 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { getDatasetMaxPeriod } from "@/data/realCatalog";
 
 export const Route = createFileRoute("/info")({
   component: InfoScreen,
 });
 
 function InfoScreen() {
+  const period = getDatasetMaxPeriod();
   return (
     <AppShell>
       <h1 className="text-xl font-bold text-foreground">מה חשוב לדעת?</h1>
       <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
         כל מה שכדאי לדעת על הכלי, בקצרה ובשפה פשוטה.
       </p>
+      {period && (
+        <div className="mt-3 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-[12px] text-muted-foreground text-center">
+          נתונים מעודכנים לתקופה: {period}
+        </div>
+      )}
 
       <div className="mt-5 space-y-3">
         <Card title="מה הכלי עושה">

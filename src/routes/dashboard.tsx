@@ -5,10 +5,15 @@ import { AppShell } from "@/components/AppShell";
 import { ExposureBar } from "@/components/ExposureBar";
 import { Tag } from "@/components/Tag";
 import { loadProducts, type SavedProduct } from "@/lib/storage";
+import { getDatasetMaxPeriod } from "@/data/realCatalog";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
+
+const DATASET_PERIOD = getDatasetMaxPeriod();
+const PUBLIC_DATA_NOTE =
+  "דמי הניהול והתשואות מבוססים על נתונים ציבוריים ואינם בהכרח הנתונים האישיים שלך.";
 
 interface WeightedResult {
   /** Weighted value (rounded), or null when no product carries this field. */
@@ -192,7 +197,11 @@ function Dashboard() {
             {PARTIAL_NOTE}
           </p>
         )}
-        <p className="mt-4 text-[11px] text-muted-foreground leading-relaxed">
+        <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
+          {PUBLIC_DATA_NOTE}
+          {DATASET_PERIOD && ` נתונים מעודכנים לתקופה: ${DATASET_PERIOD}.`}
+        </p>
+        <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
           התוויות (מניות, חו״ל, מט״ח, אג״ח, כללי) מתארות את מאפייני המסלול
           בלבד, ואינן מהוות הערכת סיכון או המלצה.
         </p>
