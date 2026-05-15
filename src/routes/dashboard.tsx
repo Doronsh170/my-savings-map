@@ -671,12 +671,3 @@ function Row({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between text-xs">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold text-foreground tabular-nums">{value}</span>
-    </div>
-  );
-}
