@@ -34,7 +34,7 @@ export function AppShell({ children, title }: AppShellProps) {
         </div>
       </header>
 
-      <main className="flex-1 mx-auto w-full max-w-3xl px-4 pb-32 pt-4">
+      <main className="flex-1 mx-auto w-full max-w-3xl px-4 pb-44 pt-4">
         {children}
       </main>
 

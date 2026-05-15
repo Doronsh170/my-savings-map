@@ -393,83 +393,38 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
       <div className="space-y-2">
         {products.map((p) => {
           const period = formatPeriod(p.reportPeriod);
-          const year = periodYear(p.reportPeriod);
-          const monthlyTitle = period
-            ? `תשואה חודשית לחודש ${period}`
-            : "תשואה חודשית";
-          const ytdTitle =
-            period && year
-              ? `תשואה מתחילת ${year} ועד ${period}`
-              : "תשואה מתחילת השנה";
-          const y3Title = period
-            ? `תשואה מצטברת ל-3 שנים שהסתיימו ב-${period}`
-            : "תשואה מצטברת ל-3 שנים";
-          const ay3Title = period
-            ? `תשואה שנתית ממוצעת ל-3 שנים שהסתיימו ב-${period}`
-            : "תשואה שנתית ממוצעת ל-3 שנים";
-          const y5Title = period
-            ? `תשואה מצטברת ל-5 שנים שהסתיימו ב-${period}`
-            : "תשואה מצטברת ל-5 שנים";
-          const ay5Title = period
-            ? `תשואה שנתית ממוצעת ל-5 שנים שהסתיימו ב-${period}`
-            : "תשואה שנתית ממוצעת ל-5 שנים";
           return (
           <div
             key={p.id}
             className="rounded-xl border border-border bg-surface p-3"
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-foreground truncate">
-                  {p.issuerName}
-                </div>
-                <div className="text-[11px] text-muted-foreground truncate">
-                  {p.trackName}
-                </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-foreground truncate">
+                {p.issuerName}
               </div>
-              <div className="text-[10px] text-muted-foreground text-left shrink-0">
-                {p.sourceName ?? "—"}
-                {p.sourceDate && <div>מקור: {p.sourceDate}</div>}
+              <div className="text-[11px] text-muted-foreground truncate">
+                {p.trackName}
               </div>
             </div>
-            {period && (
-              <div className="mt-1 text-[10px] text-muted-foreground">
-                תקופת דיווח: {period}
-              </div>
-            )}
             <div className="mt-2 grid grid-cols-3 gap-1 text-center">
               <ReturnCell
-                label={period ? `חודשי ${period}` : "חודשי"}
-                title={monthlyTitle}
+                label="חודש אחרון"
                 value={p.monthlyReturn ?? null}
               />
               <ReturnCell
-                label={period && year ? `YTD ${year}→${period}` : "YTD"}
-                title={ytdTitle}
+                label="מתחילת השנה"
                 value={p.ytdReturn ?? null}
               />
               <ReturnCell
-                label={period ? `3ש׳ מצטבר ${period}` : "3 שנים מצטבר"}
-                title={y3Title}
+                label="3 שנים מצטבר"
                 value={p.threeYearReturn ?? null}
               />
-              <ReturnCell
-                label={period ? `3ש׳ שנתי ${period}` : "3 שנים שנתי"}
-                title={ay3Title}
-                value={p.avgAnnualYield3yrs ?? null}
-              />
-              <ReturnCell
-                label={period ? `5ש׳ מצטבר ${period}` : "5 שנים מצטבר"}
-                title={y5Title}
-                value={p.fiveYearReturn ?? null}
-              />
-              <ReturnCell
-                label={period ? `5ש׳ שנתי ${period}` : "5 שנים שנתי"}
-                title={ay5Title}
-                value={p.avgAnnualYield5yrs ?? null}
-              />
             </div>
-            <div className="mt-2 text-[10px] text-muted-foreground">
+            <div className="mt-3 text-[10px] text-muted-foreground">
+              מקור: {p.sourceName ?? "—"}
+              {period && ` | תקופת דיווח: ${period}`}
+            </div>
+            <div className="mt-1 text-[10px] text-muted-foreground">
               דמי ניהול לפי נתון ציבורי:{" "}
               {p.managementFeeFromPublicData == null
                 ? "לא זמין"
@@ -640,20 +595,20 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
 
       <div className="rounded-xl border border-border bg-surface p-4 space-y-2">
         <Row
-          label="יתרה התחלתית"
+          label="היתרה שהוזנה"
           value={`${Math.round(result.initialBalance).toLocaleString("he-IL")} ₪`}
         />
         <Row
-          label="הפקדות עתידיות בלבד"
+          label="הפקדות חודשיות שחושבו"
           value={`${Math.round(result.futureContributions).toLocaleString("he-IL")} ₪`}
         />
         <Row
-          label="רכיב תשואה היסטורית"
+          label="תוספת מתשואות עבר"
           value={`${Math.round(result.gain).toLocaleString("he-IL")} ₪`}
         />
         <div className="pt-2 border-t border-border flex items-baseline justify-between">
           <span className="text-sm font-semibold text-foreground">
-            תוצאה בהמחשה על בסיס תשואות עבר
+            סכום בהמחשה היסטורית
           </span>
           <span className="text-base font-extrabold text-primary tabular-nums">
             {Math.round(result.finalAmount).toLocaleString("he-IL")} ₪
