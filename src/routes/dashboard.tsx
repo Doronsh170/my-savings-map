@@ -540,7 +540,7 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-secondary/40 p-3 text-[11px] text-muted-foreground leading-relaxed">
-        מסלול סיכון לסימולציה נקבע לפי החשיפה המשוקללת למניות:{" "}
+        מסלול סיכון לסימולציה נקבע לפי החלק מהמוצרים שהוזנו שנמצא במניות:{" "}
         <span className="font-semibold text-foreground">
           {SIM_RISK_LABELS[track]}
         </span>{" "}
