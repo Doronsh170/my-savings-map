@@ -50,9 +50,9 @@ function ProductsScreen() {
         </span>
       </div>
 
-      {isDemo && (
-        <div className="mt-3 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground">
-          מוצגים נתוני דוגמה. הוסף מוצר כדי להחליפם בנתונים שלך.
+      {(isDemo || list.some((p) => "isDemo" in p && (p as SavedProduct).isDemo)) && (
+        <div className="mt-3 rounded-xl border border-dashed border-border bg-secondary/40 px-4 py-3 text-[12px] text-muted-foreground text-center">
+          מסלולים לדוגמה בלבד - לצורך המחשת הממשק
         </div>
       )}
 
