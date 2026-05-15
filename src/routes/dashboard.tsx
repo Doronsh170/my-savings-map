@@ -116,14 +116,21 @@ function Dashboard() {
     );
   }
 
-  const exposureByLabel = (label: string) =>
-    data.exposures.find((e) => e.label === label)?.value ?? 0;
+  const exposureFor = (label: string) =>
+    data.exposures.find((e) => e.label === label)?.result ?? {
+      value: null,
+      partial: false,
+    };
 
   const topCards: Array<{ label: string; helper: string }> = [
     { label: "מניות", helper: "כמה מהחיסכון נמצא במניות" },
     { label: "חו״ל", helper: "כמה מהחיסכון מושקע מחוץ לישראל" },
     { label: "מט״ח", helper: "כמה מהחיסכון מושפע ממטבע חוץ" },
   ];
+
+  const anyExposurePartial = data.exposures.some((e) => e.result.partial);
+  const PARTIAL_NOTE =
+    "החישוב מבוסס רק על מוצרים שבהם קיים נתון חשיפה זמין.";
 
   return (
     <AppShell>
@@ -141,19 +148,27 @@ function Dashboard() {
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
           {data.productsCount} מוצרים · דמי ניהול ממוצעים לפי הסכומים שהוזנו{" "}
-          {data.avgFee}%
+          {data.avgFee.value === null ? "לא הוזן" : `${data.avgFee.value}%`}
         </div>
+        {data.avgFee.partial && (
+          <div className="mt-1 text-[11px] text-muted-foreground">
+            החישוב מבוסס רק על מוצרים שבהם הוזנו דמי ניהול.
+          </div>
+        )}
       </section>
 
       <section className="mt-6 grid grid-cols-3 gap-2.5">
-        {topCards.map((c) => (
-          <BigStat
-            key={c.label}
-            label={c.label}
-            value={exposureByLabel(c.label)}
-            helper={c.helper}
-          />
-        ))}
+        {topCards.map((c) => {
+          const r = exposureFor(c.label);
+          return (
+            <BigStat
+              key={c.label}
+              label={c.label}
+              value={r.value}
+              helper={c.helper}
+            />
+          );
+        })}
       </section>
 
       <section className="mt-6 rounded-2xl bg-surface border border-border p-5">
@@ -171,11 +186,16 @@ function Dashboard() {
             <ExposureBar
               key={e.label}
               label={e.label}
-              value={e.value}
+              value={e.result.value ?? 0}
               tone="primary"
             />
           ))}
         </div>
+        {anyExposurePartial && (
+          <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
+            {PARTIAL_NOTE}
+          </p>
+        )}
         <p className="mt-4 text-[11px] text-muted-foreground leading-relaxed">
           התוויות (מניות, חו״ל, מט״ח, אג״ח, כללי) מתארות את מאפייני המסלול
           בלבד, ואינן מהוות הערכת סיכון או המלצה.
