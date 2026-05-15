@@ -386,9 +386,9 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2">
-        <ReturnStat label="חודשי משוקלל" value={wMonthly} />
-        <ReturnStat label="YTD משוקלל" value={wYtd} />
-        <ReturnStat label="3 שנים משוקלל" value={w3y} />
+        <ReturnStat label="חודש אחרון" value={wMonthly} />
+        <ReturnStat label="תשואה מתחילת השנה" value={wYtd} />
+        <ReturnStat label="3 שנים מצטבר" value={w3y} />
       </div>
       <div className="space-y-2">
         {products.map((p) => {
@@ -422,7 +422,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
             </div>
             <div className="mt-3 text-[10px] text-muted-foreground">
               מקור: {p.sourceName ?? "—"}
-              {period && ` | תקופת דיווח: ${period}`}
+              {period && ` | נתוני תשואה לתקופת דיווח: ${period}`}
             </div>
             <div className="mt-1 text-[10px] text-muted-foreground">
               דמי ניהול לפי נתון ציבורי:{" "}
@@ -608,7 +608,7 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
         />
         <div className="pt-2 border-t border-border flex items-baseline justify-between">
           <span className="text-sm font-semibold text-foreground">
-            סכום בהמחשה היסטורית
+            סכום לאחר סימולציה
           </span>
           <span className="text-base font-extrabold text-primary tabular-nums">
             {Math.round(result.finalAmount).toLocaleString("he-IL")} ₪
