@@ -42,6 +42,7 @@ function AddWizard() {
       tags: track!.tags,
       balance: Number(balance) || 0,
       fee: Number(fee) || 0,
+      isDemo: true,
     });
     saveProducts(products);
     if (action === "view") {
