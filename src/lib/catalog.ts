@@ -93,19 +93,3 @@ export function findIssuersFor(productType: ProductType): string[] {
   return [...set];
 }
 
-export function getCatalogDebugInfo(productType: ProductType | null) {
-  const realIssuers = new Set<string>();
-  if (productType) {
-    for (const t of realCatalog) {
-      if (t.productType === productType) realIssuers.add(t.issuerName);
-    }
-  }
-
-  return {
-    useDemoData: CATALOG_CONFIG.useDemoData,
-    totalRealCatalogRows: realCatalog.length,
-    selectedProductType: productType,
-    issuerCountForSelectedProductType: realIssuers.size,
-    firstFiveIssuersForSelectedProductType: [...realIssuers].slice(0, 5),
-  };
-}

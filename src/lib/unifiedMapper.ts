@@ -27,7 +27,7 @@ export interface UnifiedFundRow {
   classification?: string | null;
   specialization?: string | null;
   sub_specialization?: string | null;
-  report_period?: string | null;
+  report_period?: string | number | null;
   current_date?: string | null;
 
   avg_annual_management_fee?: number | null;
