@@ -385,10 +385,18 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
 
   return (
     <div className="space-y-4">
+      <div>
+        <div className="text-sm font-semibold text-foreground">
+          תשואה כוללת לפי הסכומים שהוזנו
+        </div>
+        <div className="text-[11px] text-muted-foreground mt-0.5">
+          החישוב משקלל כל מוצר לפי היתרה שהוזנה עבורו.
+        </div>
+      </div>
       <div className="grid grid-cols-3 gap-2">
         <ReturnStat label="חודש אחרון" value={wMonthly} />
         <ReturnStat label="תשואה מתחילת השנה" value={wYtd} />
-        <ReturnStat label="3 שנים מצטבר" value={w3y} />
+        <ReturnStat label="תשואה מצטברת ל-3 שנים" value={w3y} />
       </div>
       <div className="space-y-2">
         {products.map((p) => {
@@ -416,7 +424,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
                 value={p.ytdReturn ?? null}
               />
               <ReturnCell
-                label="3 שנים מצטבר"
+                label="תשואה מצטברת ל-3 שנים"
                 value={p.threeYearReturn ?? null}
               />
             </div>
