@@ -307,6 +307,21 @@ function fmt(v: number | undefined): string {
   return v == null ? "—" : `${v}%`;
 }
 
+function CatalogDebugPanel({
+  debugInfo,
+}: {
+  debugInfo: ReturnType<typeof getCatalogDebugInfo>;
+}) {
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-surface p-3 text-xs text-muted-foreground">
+      <div className="font-semibold text-foreground">Catalog debug</div>
+      <pre className="mt-2 whitespace-pre-wrap text-left" dir="ltr">
+        {JSON.stringify(debugInfo, null, 2)}
+      </pre>
+    </div>
+  );
+}
+
 function Step({
   title,
   subtitle,
