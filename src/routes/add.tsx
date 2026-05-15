@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ChevronRight, ArrowRight } from "lucide-react";
 import { PRODUCT_TYPES } from "@/lib/placeholder";
-import { findIssuersFor, findTracks, type CatalogTrack } from "@/lib/catalog";
+import { findIssuersFor, findTracks, CATALOG_CONFIG, type CatalogTrack } from "@/lib/catalog";
 import {
   loadProducts,
   saveProducts,
