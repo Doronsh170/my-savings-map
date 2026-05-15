@@ -472,7 +472,7 @@ function ReturnStat({
 }) {
   return (
     <div className="rounded-xl bg-secondary/50 border border-border p-2 text-center">
-      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="text-[10px] text-muted-foreground leading-tight break-words">{label}</div>
       <div className="mt-0.5 text-sm font-bold text-foreground tabular-nums">
         {fmtPct(value)}
       </div>
