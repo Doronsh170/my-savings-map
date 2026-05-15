@@ -159,6 +159,11 @@ export function mapUnifiedFundToCatalogTrack(
   const fee = num(row.avg_annual_management_fee);
   if (fee !== undefined) track.managementFeeFromPublicData = fee;
 
+  const ta = num(row.total_assets);
+  if (ta !== undefined) track.totalAssets = ta;
+  const rp = str(row.report_period);
+  if (rp !== undefined) track.reportPeriod = rp;
+
   return track;
 }
 
