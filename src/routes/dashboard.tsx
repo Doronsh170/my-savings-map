@@ -17,8 +17,6 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const DATASET_PERIOD = getDatasetMaxPeriod();
-const PUBLIC_DATA_NOTE =
-  "דמי הניהול והתשואות מבוססים על נתונים ציבוריים ואינם בהכרח הנתונים האישיים שלך.";
 
 interface WeightedResult {
   /** Weighted value (rounded), or null when no product carries this field. */
@@ -202,10 +200,11 @@ function Dashboard() {
             {PARTIAL_NOTE}
           </p>
         )}
-        <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
-          {PUBLIC_DATA_NOTE}
-          {DATASET_PERIOD && ` נתונים מעודכנים לתקופה: ${DATASET_PERIOD}.`}
-        </p>
+        {DATASET_PERIOD && (
+          <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
+            נתונים מעודכנים לתקופה: {DATASET_PERIOD}.
+          </p>
+        )}
         <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
           התוויות (מניות, חו״ל, מט״ח, אג״ח, כללי) מתארות את מאפייני המסלול
           בלבד, ואינן מהוות הערכת סיכון או המלצה.
@@ -444,9 +443,6 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
           );
         })}
       </div>
-      <p className="text-[11px] text-muted-foreground leading-relaxed">
-        {PUBLIC_DATA_NOTE}
-      </p>
     </div>
   );
 }
