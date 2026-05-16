@@ -108,7 +108,7 @@ function Dashboard() {
             עדיין לא הוזנו מוצרים
           </h1>
           <p className="mt-2 text-sm text-muted-foreground max-w-xs">
-            כדי לראות את החשיפות שלך, הוסף מוצר חיסכון או פנסיה אחד לפחות.
+            כדי לראות את תמונת המצב, הוסף את המוצר הראשון שלך.
           </p>
           <Link
             to="/add"
