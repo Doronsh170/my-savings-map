@@ -17,8 +17,6 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const DATASET_PERIOD = getDatasetMaxPeriod();
-const PUBLIC_DATA_NOTE =
-  "דמי הניהול והתשואות מבוססים על נתונים ציבוריים ואינם בהכרח הנתונים האישיים שלך.";
 
 interface WeightedResult {
   /** Weighted value (rounded), or null when no product carries this field. */
