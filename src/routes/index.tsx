@@ -1,11 +1,17 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ShieldCheck, TrendingUp, Lock } from "lucide-react";
+import { loadProducts } from "@/lib/storage";
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
 function Landing() {
+  const navigate = useNavigate();
+  const handleStart = () => {
+    const hasProducts = loadProducts().length > 0;
+    navigate({ to: hasProducts ? "/dashboard" : "/add" });
+  };
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="px-5 pt-6">
@@ -47,12 +53,12 @@ function Landing() {
         </div>
 
         <div className="mt-10 flex flex-col gap-3">
-          <Link
-            to="/privacy"
+          <button
+            onClick={handleStart}
             className="w-full inline-flex justify-center items-center rounded-xl bg-primary text-primary-foreground py-3.5 font-semibold shadow-sm hover:opacity-95 transition"
           >
             בוא נתחיל
-          </Link>
+          </button>
           <Link
             to="/info"
             className="text-center text-sm text-muted-foreground hover:text-foreground"
