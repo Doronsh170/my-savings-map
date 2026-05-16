@@ -406,8 +406,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
           נתוני תשואה לתקופת דיווח: {latestPeriod}
         </div>
       )}
-      <div className="grid grid-cols-3 gap-2">
-        <ReturnStat label="חודש אחרון" value={wMonthly} />
+      <div className="grid grid-cols-2 gap-2">
         <ReturnStat label="תשואה מתחילת השנה" value={wYtd} />
         <ReturnStat label="תשואה מצטברת ל-3 שנים" value={w3y} />
       </div>
@@ -427,11 +426,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
                 {p.trackName}
               </div>
             </div>
-            <div className="mt-2 grid grid-cols-3 gap-1 text-center">
-              <ReturnCell
-                label="חודש אחרון"
-                value={p.monthlyReturn ?? null}
-              />
+            <div className="mt-2 grid grid-cols-2 gap-1 text-center">
               <ReturnCell
                 label="תשואה מתחילת השנה"
                 value={p.ytdReturn ?? null}
@@ -444,12 +439,6 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
             <div className="mt-3 text-[10px] text-muted-foreground">
               מקור: {p.sourceName ?? "—"}
               {period && ` | נתוני תשואה לתקופת דיווח: ${period}`}
-            </div>
-            <div className="mt-1 text-[10px] text-muted-foreground">
-              דמי ניהול לפי נתון ציבורי:{" "}
-              {p.managementFeeFromPublicData == null
-                ? "לא זמין"
-                : `${p.managementFeeFromPublicData}%`}
             </div>
           </div>
           );
@@ -622,10 +611,6 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
         <Row
           label="הפקדות חודשיות שחושבו"
           value={`${Math.round(result.futureContributions).toLocaleString("he-IL")} ₪`}
-        />
-        <Row
-          label="תוספת מתשואות עבר"
-          value={`${Math.round(result.gain).toLocaleString("he-IL")} ₪`}
         />
         <div className="pt-2 border-t border-border flex items-baseline justify-between">
           <span className="text-sm font-semibold text-foreground">
