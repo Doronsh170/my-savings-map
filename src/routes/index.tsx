@@ -52,6 +52,43 @@ function Landing() {
           />
         </div>
 
+        <div className="mt-8">
+          <div className="text-sm font-semibold text-foreground mb-3">
+            כך נראית תמונת המצב
+          </div>
+          <div className="rounded-2xl bg-surface border border-border p-5">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl bg-secondary/60 border border-border p-3 text-center">
+                <div className="text-[10px] text-muted-foreground leading-tight">
+                  מניות
+                </div>
+                <div className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
+                  47%
+                </div>
+              </div>
+              <div className="rounded-xl bg-secondary/60 border border-border p-3 text-center">
+                <div className="text-[10px] text-muted-foreground leading-tight">
+                  חו״ל
+                </div>
+                <div className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
+                  31%
+                </div>
+              </div>
+              <div className="rounded-xl bg-secondary/60 border border-border p-3 text-center">
+                <div className="text-[10px] text-muted-foreground leading-tight">
+                  מט״ח
+                </div>
+                <div className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
+                  28%
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-[10px] text-muted-foreground text-center">
+              נתונים להמחשה בלבד
+            </div>
+          </div>
+        </div>
+
         <div className="mt-10 flex flex-col gap-3">
           <button
             onClick={handleStart}
@@ -59,6 +96,9 @@ function Landing() {
           >
             בוא נתחיל
           </button>
+          <div className="text-center text-sm text-muted-foreground">
+            לוקח כ-2 דקות · ללא הרשמה · הנתונים נשמרים בדפדפן
+          </div>
           <Link
             to="/info"
             className="text-center text-sm text-muted-foreground hover:text-foreground"
