@@ -379,7 +379,6 @@ function periodYear(raw?: string): string | null {
 }
 
 function PerformanceSection({ products }: { products: SavedProduct[] }) {
-  const wMonthly = weightedReturn(products, (p) => p.monthlyReturn);
   const wYtd = weightedReturn(products, (p) => p.ytdReturn);
   const w3y = weightedReturn(products, (p) => p.threeYearReturn);
 
