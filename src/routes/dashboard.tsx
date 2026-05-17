@@ -410,9 +410,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
         <ReturnStat label="תשואה מצטברת ל-3 שנים" value={w3y} />
       </div>
       <div className="space-y-2">
-        {products.map((p) => {
-          const period = formatPeriod(p.reportPeriod);
-          return (
+        {products.map((p) => (
           <div
             key={p.id}
             className="rounded-xl border border-border bg-surface p-3"
@@ -435,13 +433,8 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
                 value={p.threeYearReturn ?? null}
               />
             </div>
-            <div className="mt-3 text-[10px] text-muted-foreground">
-              מקור: {p.sourceName ?? "—"}
-              {period && ` | נתוני תשואה לתקופת דיווח: ${period}`}
-            </div>
           </div>
-          );
-        })}
+        ))}
       </div>
     </div>
   );
