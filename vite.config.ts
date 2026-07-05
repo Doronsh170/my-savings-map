@@ -6,4 +6,28 @@
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-export default defineConfig({});
+// GitHub Pages serves the site from a sub-path (https://<user>.github.io/<repo>/)
+// and can only host static files, so the Pages build (GITHUB_PAGES=true) needs a
+// matching base + router basepath and a fully prerendered static output.
+// Local dev and Lovable builds are unaffected.
+const githubPages = process.env.GITHUB_PAGES === "true";
+const base = process.env.GITHUB_PAGES_BASE ?? "/my-savings-map/";
+
+export default defineConfig(
+  githubPages
+    ? {
+        // preview.host keeps the prerender preview server on IPv4 — some CI
+        // containers have no IPv6 and the default host fails with EAFNOSUPPORT.
+        vite: { base, preview: { host: "127.0.0.1" } },
+        tanstackStart: {
+          router: { basepath: base.replace(/\/$/, "") },
+          prerender: {
+            enabled: true,
+            crawlLinks: true,
+            autoSubfolderIndex: true,
+          },
+        },
+        nitro: false,
+      }
+    : {},
+);
