@@ -2,12 +2,7 @@
 
 import type { IsoDate, Percent } from "./productModel";
 
-export type ProductType =
-  | "פנסיה"
-  | "גמל"
-  | "השתלמות"
-  | "גמל להשקעה"
-  | "ביטוח מנהלים";
+export type ProductType = "פנסיה" | "גמל" | "השתלמות" | "גמל להשקעה" | "ביטוח מנהלים";
 
 export function displayProductType(type: ProductType | null): string {
   if (type === "ביטוח מנהלים") return "ביטוח מנהלים / פוליסות חיסכון";

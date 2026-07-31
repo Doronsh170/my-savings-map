@@ -23,21 +23,13 @@ function InfoScreen() {
       )}
 
       <div className="mt-5 space-y-3">
-        <Card title="מאיפה הנתונים?">
-          הנתונים מבוססים על מאגרי מידע ציבוריים של רשות שוק ההון.
-        </Card>
+        <Card title="מאיפה הנתונים?">הנתונים מבוססים על מאגרי מידע ציבוריים של רשות שוק ההון.</Card>
 
-        <Card title="תקופת הדיווח">
-          הנתונים מוצגים לפי תקופת הדיווח האחרונה בקובץ.
-        </Card>
+        <Card title="תקופת הדיווח">הנתונים מוצגים לפי תקופת הדיווח האחרונה בקובץ.</Card>
 
-        <Card title="איך מחושבות החשיפות">
-          החשיפות מחושבות לפי נתוני המסלולים שנבחרו.
-        </Card>
+        <Card title="איך מחושבות החשיפות">החשיפות מחושבות לפי נתוני המסלולים שנבחרו.</Card>
 
-        <Card title="פרטיות">
-          הנתונים שהמשתמש מזין נשמרים בדפדפן בלבד.
-        </Card>
+        <Card title="פרטיות">הנתונים שהמשתמש מזין נשמרים בדפדפן בלבד.</Card>
 
         <Card title="חשוב לדעת">
           הכלי אינו ייעוץ, אינו שיווק פנסיוני או השקעות, ואינו המלצה לביצוע פעולה.
@@ -55,8 +47,7 @@ function InfoScreen() {
           <Sub title="איך מחשבים את החשיפות">
             לכל מסלול יש מאפיינים (מניות, חו״ל, מט״ח ועוד).
             <br />
-            הכלי בודק כמה כסף יש בכל מסלול, ומחשב איזה חלק מהחיסכון נמצא בכל
-            קטגוריה.
+            הכלי בודק כמה כסף יש בכל מסלול, ומחשב איזה חלק מהחיסכון נמצא בכל קטגוריה.
           </Sub>
 
           <Sub title="איך מחשבים את דמי הניהול הממוצעים">
@@ -66,23 +57,17 @@ function InfoScreen() {
           </Sub>
 
           <Sub title="איך מסווגים מסלול">
-            התוויות (מניות, כללי, אג״ח, חו״ל, מט״ח) מבוססות על מאפייני המסלול
-            במאגרי רשות שוק ההון.
+            התוויות (מניות, כללי, אג״ח, חו״ל, מט״ח) מבוססות על מאפייני המסלול במאגרי רשות שוק ההון.
             <br />
             אין כאן דירוג סיכון או המלצה — רק תיאור.
           </Sub>
 
-          <Sub title="ביצועי עבר">
-            ביצועי עבר אינם מעידים על תשואות עתידיות.
-          </Sub>
+          <Sub title="ביצועי עבר">ביצועי עבר אינם מעידים על תשואות עתידיות.</Sub>
         </Collapsible>
       </div>
 
       <div className="mt-8">
-        <Link
-          to="/privacy"
-          className="block text-center text-sm text-primary font-medium"
-        >
+        <Link to="/privacy" className="block text-center text-sm text-primary font-medium">
           קרא את מסך הפרטיות וההבהרה
         </Link>
       </div>
@@ -94,30 +79,16 @@ function InfoScreen() {
   );
 }
 
-function Card({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-surface border border-border p-4">
       <h2 className="text-sm font-bold text-foreground">{title}</h2>
-      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-        {children}
-      </p>
+      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{children}</p>
     </div>
   );
 }
 
-function Collapsible({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Collapsible({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-2xl bg-surface border border-border overflow-hidden">
@@ -137,19 +108,11 @@ function Collapsible({
   );
 }
 
-function Sub({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Sub({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
       <h3 className="text-xs font-bold text-foreground">{title}</h3>
-      <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-        {children}
-      </p>
+      <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{children}</p>
     </div>
   );
 }

@@ -110,9 +110,7 @@ function mapDate(current: unknown, period: unknown): IsoDate | undefined {
   return undefined;
 }
 
-export function mapUnifiedFundToCatalogTrack(
-  row: UnifiedFundRow,
-): CatalogTrack | null {
+export function mapUnifiedFundToCatalogTrack(row: UnifiedFundRow): CatalogTrack | null {
   if (row.is_active !== true) return null;
 
   const productType = mapProductType(row);
@@ -124,9 +122,7 @@ export function mapUnifiedFundToCatalogTrack(
 
   const trackId =
     str(row.uid) ??
-    (row.source && row.fund_id != null
-      ? `${row.source}:${row.fund_id}`
-      : undefined);
+    (row.source && row.fund_id != null ? `${row.source}:${row.fund_id}` : undefined);
   if (!trackId) return null;
 
   const sourceName = mapSourceName(row.source);
@@ -150,7 +146,8 @@ export function mapUnifiedFundToCatalogTrack(
   const fx = num(row.fx_pct);
   if (fx !== undefined) track.fxExposure = fx;
   const liq = num(row.liquid_pct);
-  if (liq !== undefined) (track as CatalogTrack & { liquidAssetsExposure?: Percent }).liquidAssetsExposure = liq;
+  if (liq !== undefined)
+    (track as CatalogTrack & { liquidAssetsExposure?: Percent }).liquidAssetsExposure = liq;
 
   const mo = num(row.monthly_yield);
   if (mo !== undefined) track.monthlyReturn = mo;

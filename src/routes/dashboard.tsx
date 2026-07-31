@@ -6,11 +6,7 @@ import { ExposureBar } from "@/components/ExposureBar";
 import { Tag } from "@/components/Tag";
 import { loadProducts, displayProductType, type SavedProduct } from "@/lib/storage";
 import { getDatasetMaxPeriod } from "@/data/realCatalog";
-import {
-  getSimulationRiskTrack,
-  runSimulation,
-  SIM_RISK_LABELS,
-} from "@/lib/simulation";
+import { getSimulationRiskTrack, runSimulation, SIM_RISK_LABELS } from "@/lib/simulation";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -102,9 +98,7 @@ function Dashboard() {
           <div className="w-14 h-14 rounded-2xl bg-secondary text-primary grid place-items-center">
             <Wallet className="w-7 h-7" />
           </div>
-          <h1 className="mt-4 text-lg font-bold text-foreground">
-            עדיין לא הוזנו מוצרים
-          </h1>
+          <h1 className="mt-4 text-lg font-bold text-foreground">עדיין לא הוזנו מוצרים</h1>
           <p className="mt-2 text-sm text-muted-foreground max-w-xs">
             כדי לראות את תמונת המצב, הוסף את המוצר הראשון שלך.
           </p>
@@ -133,8 +127,7 @@ function Dashboard() {
   ];
 
   const anyExposurePartial = data.exposures.some((e) => e.result.partial);
-  const PARTIAL_NOTE =
-    "החישוב מבוסס רק על מוצרים שבהם קיים נתון חשיפה זמין.";
+  const PARTIAL_NOTE = "החישוב מבוסס רק על מוצרים שבהם קיים נתון חשיפה זמין.";
 
   return (
     <AppShell>
@@ -164,22 +157,13 @@ function Dashboard() {
       <section className="mt-6 grid grid-cols-3 gap-2.5">
         {topCards.map((c) => {
           const r = exposureFor(c.label);
-          return (
-            <BigStat
-              key={c.label}
-              label={c.label}
-              value={r.value}
-              helper={c.helper}
-            />
-          );
+          return <BigStat key={c.label} label={c.label} value={r.value} helper={c.helper} />;
         })}
       </section>
 
       <section className="mt-6 rounded-2xl bg-surface border border-border p-5">
         <div className="flex items-baseline justify-between mb-1">
-          <h2 className="text-base font-bold text-foreground">
-            איך מחולק החיסכון
-          </h2>
+          <h2 className="text-base font-bold text-foreground">איך מחולק החיסכון</h2>
           <span className="text-[11px] text-muted-foreground">% מהחיסכון</span>
         </div>
         <p className="text-[11px] text-muted-foreground mb-4">
@@ -187,18 +171,11 @@ function Dashboard() {
         </p>
         <div className="space-y-4">
           {data.exposures.map((e) => (
-            <ExposureBar
-              key={e.label}
-              label={e.label}
-              value={e.result.value ?? 0}
-              tone="primary"
-            />
+            <ExposureBar key={e.label} label={e.label} value={e.result.value ?? 0} tone="primary" />
           ))}
         </div>
         {anyExposurePartial && (
-          <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
-            {PARTIAL_NOTE}
-          </p>
+          <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">{PARTIAL_NOTE}</p>
         )}
         {DATASET_PERIOD && (
           <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
@@ -206,8 +183,8 @@ function Dashboard() {
           </p>
         )}
         <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
-          התוויות (מניות, חו״ל, מט״ח, אג״ח, כללי) מתארות את מאפייני המסלול
-          בלבד, ואינן מהוות הערכת סיכון או המלצה.
+          התוויות (מניות, חו״ל, מט״ח, אג״ח, כללי) מתארות את מאפייני המסלול בלבד, ואינן מהוות הערכת
+          סיכון או המלצה.
         </p>
       </section>
 
@@ -223,10 +200,7 @@ function Dashboard() {
         <Collapsible title="פירוט לפי מוצר" defaultOpen>
           <div className="space-y-2.5">
             {products.map((p) => (
-              <div
-                key={p.id}
-                className="rounded-xl border border-border bg-surface p-4"
-              >
+              <div key={p.id} className="rounded-xl border border-border bg-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-1.5">
@@ -242,9 +216,7 @@ function Dashboard() {
                     <div className="text-sm font-semibold text-foreground mt-0.5">
                       {p.issuerName}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {p.trackName}
-                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{p.trackName}</div>
                   </div>
                   <div className="text-left">
                     <div className="text-sm font-bold text-foreground tabular-nums">
@@ -296,15 +268,10 @@ function BigStat({
         {value === null ? "—" : `${value}%`}
       </div>
       <div className="mt-2 h-1.5 rounded-full bg-secondary overflow-hidden">
-        <div
-          className="h-full bg-gold rounded-full"
-          style={{ width: `${display}%` }}
-        />
+        <div className="h-full bg-gold rounded-full" style={{ width: `${display}%` }} />
       </div>
       {helper && (
-        <div className="mt-2 text-[10px] text-muted-foreground leading-snug">
-          {helper}
-        </div>
+        <div className="mt-2 text-[10px] text-muted-foreground leading-snug">{helper}</div>
       )}
     </div>
   );
@@ -393,9 +360,7 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-sm font-semibold text-foreground">
-          תשואות עבר של המסלולים שנבחרו
-        </div>
+        <div className="text-sm font-semibold text-foreground">תשואות עבר של המסלולים שנבחרו</div>
         <div className="text-[11px] text-muted-foreground mt-0.5">
           התשואות מוצגות לפי נתוני המסלולים שנבחרו.
         </div>
@@ -411,27 +376,14 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
       </div>
       <div className="space-y-2">
         {products.map((p) => (
-          <div
-            key={p.id}
-            className="rounded-xl border border-border bg-surface p-3"
-          >
+          <div key={p.id} className="rounded-xl border border-border bg-surface p-3">
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-foreground truncate">
-                {p.issuerName}
-              </div>
-              <div className="text-[11px] text-muted-foreground truncate">
-                {p.trackName}
-              </div>
+              <div className="text-sm font-semibold text-foreground truncate">{p.issuerName}</div>
+              <div className="text-[11px] text-muted-foreground truncate">{p.trackName}</div>
             </div>
             <div className="mt-2 grid grid-cols-2 gap-1 text-center">
-              <ReturnCell
-                label="תשואה מתחילת השנה"
-                value={p.ytdReturn ?? null}
-              />
-              <ReturnCell
-                label="תשואה מצטברת ל-3 שנים"
-                value={p.threeYearReturn ?? null}
-              />
+              <ReturnCell label="תשואה מתחילת השנה" value={p.ytdReturn ?? null} />
+              <ReturnCell label="תשואה מצטברת ל-3 שנים" value={p.threeYearReturn ?? null} />
             </div>
           </div>
         ))}
@@ -440,19 +392,11 @@ function PerformanceSection({ products }: { products: SavedProduct[] }) {
   );
 }
 
-function ReturnStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | null;
-}) {
+function ReturnStat({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="rounded-xl bg-secondary/50 border border-border p-2 text-center">
       <div className="text-[10px] text-muted-foreground leading-tight break-words">{label}</div>
-      <div className="mt-0.5 text-sm font-bold text-foreground tabular-nums">
-        {fmtPct(value)}
-      </div>
+      <div className="mt-0.5 text-sm font-bold text-foreground tabular-nums">{fmtPct(value)}</div>
     </div>
   );
 }
@@ -469,9 +413,7 @@ function ReturnCell({
   return (
     <div title={title}>
       <div className="text-[10px] text-muted-foreground leading-tight break-words">{label}</div>
-      <div className="text-xs font-semibold text-foreground tabular-nums">
-        {fmtPct(value)}
-      </div>
+      <div className="text-xs font-semibold text-foreground tabular-nums">{fmtPct(value)}</div>
     </div>
   );
 }
@@ -516,12 +458,8 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
   if (totalBalance <= 0) {
     return (
       <div className="space-y-3">
-        <p className="text-xs text-muted-foreground">
-          לא הוזנה יתרה להצגת הסימולציה.
-        </p>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
-          {DISCLAIMER}
-        </p>
+        <p className="text-xs text-muted-foreground">לא הוזנה יתרה להצגת הסימולציה.</p>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">{DISCLAIMER}</p>
       </div>
     );
   }
@@ -540,10 +478,8 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-secondary/40 p-3 text-[11px] text-muted-foreground leading-relaxed">
         מסלול סיכון לסימולציה נקבע לפי החלק מהמוצרים שהוזנו שנמצא במניות:{" "}
-        <span className="font-semibold text-foreground">
-          {SIM_RISK_LABELS[track]}
-        </span>{" "}
-        ({stockPct.toFixed(1)}% מניות)
+        <span className="font-semibold text-foreground">{SIM_RISK_LABELS[track]}</span> (
+        {stockPct.toFixed(1)}% מניות)
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -554,30 +490,22 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
             min={1}
             max={30}
             value={years}
-            onChange={(e) =>
-              setYears(Math.max(1, Math.min(30, Number(e.target.value) || 1)))
-            }
+            onChange={(e) => setYears(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums"
           />
         </label>
         <label className="block">
-          <span className="text-[11px] text-muted-foreground">
-            הפקדה חודשית (₪)
-          </span>
+          <span className="text-[11px] text-muted-foreground">הפקדה חודשית (₪)</span>
           <input
             type="number"
             min={0}
             value={monthly}
-            onChange={(e) =>
-              setMonthly(Math.max(0, Number(e.target.value) || 0))
-            }
+            onChange={(e) => setMonthly(Math.max(0, Number(e.target.value) || 0))}
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums"
           />
         </label>
         <label className="block col-span-2">
-          <span className="text-[11px] text-muted-foreground">
-            דמי ניהול שנתיים לסימולציה (%)
-          </span>
+          <span className="text-[11px] text-muted-foreground">דמי ניהול שנתיים לסימולציה (%)</span>
           <input
             type="number"
             min={0}
@@ -602,18 +530,14 @@ function SimulationSection({ products }: { products: SavedProduct[] }) {
           value={`${Math.round(result.futureContributions).toLocaleString("he-IL")} ₪`}
         />
         <div className="pt-2 border-t border-border flex items-baseline justify-between">
-          <span className="text-sm font-semibold text-foreground">
-            סכום לאחר סימולציה
-          </span>
+          <span className="text-sm font-semibold text-foreground">סכום לאחר סימולציה</span>
           <span className="text-base font-extrabold text-primary tabular-nums">
             {Math.round(result.finalAmount).toLocaleString("he-IL")} ₪
           </span>
         </div>
       </div>
 
-      <p className="text-[11px] text-muted-foreground leading-relaxed">
-        {DISCLAIMER}
-      </p>
+      <p className="text-[11px] text-muted-foreground leading-relaxed">{DISCLAIMER}</p>
     </div>
   );
 }

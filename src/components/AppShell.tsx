@@ -28,15 +28,11 @@ export function AppShell({ children, title }: AppShellProps) {
               החיסכון שלי בתמונה אחת
             </span>
           </Link>
-          {title && (
-            <span className="text-xs text-muted-foreground">{title}</span>
-          )}
+          {title && <span className="text-xs text-muted-foreground">{title}</span>}
         </div>
       </header>
 
-      <main className="flex-1 mx-auto w-full max-w-3xl px-4 pb-44 pt-4">
-        {children}
-      </main>
+      <main className="flex-1 mx-auto w-full max-w-3xl px-4 pb-44 pt-4">{children}</main>
 
       <p className="mx-auto max-w-3xl px-4 pb-24 text-[11px] text-muted-foreground text-center">
         כלי המחשה להצגת תמונת מצב של החיסכון שהוזן, על בסיס נתונים ציבוריים.

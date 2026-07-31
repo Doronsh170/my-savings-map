@@ -2,12 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, ArrowRight } from "lucide-react";
 import { PRODUCT_TYPES } from "@/lib/placeholder";
-import {
-  findIssuersFor,
-  findTracks,
-  CATALOG_CONFIG,
-  type CatalogTrack,
-} from "@/lib/catalog";
+import { findIssuersFor, findTracks, CATALOG_CONFIG, type CatalogTrack } from "@/lib/catalog";
 import {
   loadProducts,
   saveProducts,
@@ -33,15 +28,9 @@ function AddWizard() {
 
   const totalSteps = 4;
 
-  const issuersForType = useMemo(
-    () => (type ? findIssuersFor(type) : []),
-    [type],
-  );
+  const issuersForType = useMemo(() => (type ? findIssuersFor(type) : []), [type]);
   const tracksForChoice = useMemo(
-    () =>
-      type && issuer
-        ? findTracks({ productType: type, issuerName: issuer })
-        : [],
+    () => (type && issuer ? findTracks({ productType: type, issuerName: issuer }) : []),
     [type, issuer],
   );
   function goBack() {
@@ -49,7 +38,7 @@ function AddWizard() {
       navigate({ to: "/dashboard" });
       return;
     }
-    setStep((s) => (Math.max(1, s - 1) as Step));
+    setStep((s) => Math.max(1, s - 1) as Step);
   }
 
   function persistAndContinue(action: "add" | "view") {
@@ -105,9 +94,7 @@ function AddWizard() {
             <ArrowRight className="w-5 h-5 text-foreground" />
           </button>
           <div className="flex-1">
-            <div className="text-sm font-semibold text-foreground">
-              הוספת מוצר חיסכון
-            </div>
+            <div className="text-sm font-semibold text-foreground">הוספת מוצר חיסכון</div>
             {step <= totalSteps && (
               <div className="text-[11px] text-muted-foreground">
                 שלב {step} מתוך {totalSteps}
@@ -127,10 +114,7 @@ function AddWizard() {
 
       <main className="flex-1 mx-auto w-full max-w-xl px-4 py-6">
         {step === 1 && (
-          <Step
-            title="איזה סוג מוצר תרצה להוסיף?"
-            subtitle="בחר את סוג החיסכון או הביטוח."
-          >
+          <Step title="איזה סוג מוצר תרצה להוסיף?" subtitle="בחר את סוג החיסכון או הביטוח.">
             <div className="grid gap-2.5">
               {PRODUCT_TYPES.map((t) => (
                 <SelectRow
@@ -202,18 +186,14 @@ function AddWizard() {
                         setStep(4);
                       }}
                       className={`flex items-center justify-between gap-3 text-right p-3.5 rounded-xl bg-surface border transition ${
-                        selected
-                          ? "border-primary"
-                          : "border-border hover:border-primary/40"
+                        selected ? "border-primary" : "border-border hover:border-primary/40"
                       }`}
                     >
                       <div className="flex flex-col gap-1 items-start min-w-0">
-                        <span className="text-sm font-medium text-foreground">
-                          {tr.trackName}
-                        </span>
+                        <span className="text-sm font-medium text-foreground">{tr.trackName}</span>
                         <span className="text-[11px] text-muted-foreground">
-                          מניות {fmt(tr.equityExposure)} · חו״ל{" "}
-                          {fmt(tr.foreignExposure)} · מט״ח {fmt(tr.fxExposure)}
+                          מניות {fmt(tr.equityExposure)} · חו״ל {fmt(tr.foreignExposure)} · מט״ח{" "}
+                          {fmt(tr.fxExposure)}
                         </span>
                       </div>
                       <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180 shrink-0" />
@@ -226,10 +206,7 @@ function AddWizard() {
         )}
 
         {step === 4 && (
-          <Step
-            title="פרטי היתרה ודמי הניהול"
-            subtitle={`${track?.trackName} · ${issuer}`}
-          >
+          <Step title="פרטי היתרה ודמי הניהול" subtitle={`${track?.trackName} · ${issuer}`}>
             <div className="space-y-4">
               <Field
                 label="מה היתרה המשוערת במוצר? (₪)"
@@ -246,8 +223,7 @@ function AddWizard() {
                 inputMode="decimal"
               />
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                אם תשאיר ריק, החישוב הממוצע לא יכלול את המוצר הזה. הנתונים
-                נשמרים במכשיר שלך בלבד.
+                אם תשאיר ריק, החישוב הממוצע לא יכלול את המוצר הזה. הנתונים נשמרים במכשיר שלך בלבד.
               </p>
             </div>
 
@@ -315,9 +291,7 @@ function Step({
   return (
     <div>
       <h2 className="text-xl font-bold text-foreground">{title}</h2>
-      {subtitle && (
-        <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-      )}
+      {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
       <div className="mt-5">{children}</div>
     </div>
   );

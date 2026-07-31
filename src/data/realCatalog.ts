@@ -34,9 +34,7 @@ export function getDatasetMaxPeriod(): string | null {
   } else {
     let max = 0;
     for (const f of file.funds ?? []) {
-      const p = typeof f.report_period === "number"
-        ? f.report_period
-        : Number(f.report_period);
+      const p = typeof f.report_period === "number" ? f.report_period : Number(f.report_period);
       if (Number.isFinite(p) && p > max) max = p;
     }
     if (max > 0) raw = String(max);

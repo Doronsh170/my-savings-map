@@ -35,20 +35,13 @@ function PrivacyScreen() {
 
         <ul className="mt-6 space-y-3">
           {points.map((p) => (
-            <li
-              key={p.title}
-              className="flex gap-3 p-4 rounded-xl bg-surface border border-border"
-            >
+            <li key={p.title} className="flex gap-3 p-4 rounded-xl bg-surface border border-border">
               <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground grid place-items-center shrink-0">
                 <Check className="w-4 h-4" strokeWidth={3} />
               </div>
               <div>
-                <div className="text-sm font-semibold text-foreground">
-                  {p.title}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  {p.text}
-                </div>
+                <div className="text-sm font-semibold text-foreground">{p.title}</div>
+                <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{p.text}</div>
               </div>
             </li>
           ))}

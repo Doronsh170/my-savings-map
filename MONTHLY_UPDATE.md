@@ -3,7 +3,20 @@
 This app is fully static and reads its catalog from a single JSON file.
 A monthly refresh = replacing that one file. Nothing else.
 
-## 1. Replace the data file
+## 1. Rebuild the data file
+
+Do not hand-edit the JSON. Rebuild it from the CMA source files with the
+included ETL script, which validates the result against the previous file
+and refuses to write on failure:
+
+```bash
+python3 tools/build_dataset.py \
+    --gemel gemel.xlsx --pensia pensia.xlsx --bituach bituach.xlsx \
+    --prev src/data/funds_unified.json \
+    -o src/data/funds_unified.json
+
+python3 tools/build_dataset.py --check src/data/funds_unified.json
+```
 
 - File path: `src/data/funds_unified.json`
 - Keep the **same filename**.

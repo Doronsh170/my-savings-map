@@ -39,10 +39,10 @@
   --radius: 0.875rem;
 
   /* Light, professional financial palette */
-  --background: oklch(0.985 0.005 80);            /* warm off-white */
-  --foreground: oklch(0.22 0.04 250);             /* deep navy text */
+  --background: oklch(0.985 0.005 80); /* warm off-white */
+  --foreground: oklch(0.22 0.04 250); /* deep navy text */
 
-  --surface: oklch(1 0 0);                        /* pure white card surface */
+  --surface: oklch(1 0 0); /* pure white card surface */
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.04 250);
@@ -92,7 +92,10 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     letter-spacing: -0.01em;
   }
 }

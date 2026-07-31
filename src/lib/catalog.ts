@@ -79,9 +79,7 @@ function activeCatalog(): CatalogTrack[] {
 // ---- Query API ------------------------------------------------------------
 
 function assetsOf(t: CatalogTrack): number {
-  return typeof t.totalAssets === "number" && Number.isFinite(t.totalAssets)
-    ? t.totalAssets
-    : 0;
+  return typeof t.totalAssets === "number" && Number.isFinite(t.totalAssets) ? t.totalAssets : 0;
 }
 
 function compareTracks(a: CatalogTrack, b: CatalogTrack): number {
@@ -130,4 +128,3 @@ export function getIssuerTotals(
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "he"))
     .map(([issuerName, totalAssets]) => ({ issuerName, totalAssets }));
 }
-

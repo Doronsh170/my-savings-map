@@ -25,13 +25,11 @@ function Landing() {
 
       <main className="flex-1 px-5 pt-10 pb-8 mx-auto w-full max-w-xl">
         <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight text-foreground">
-          כמה מהחיסכון הפנסיוני שלך נמצא{" "}
-          <span className="text-primary">במניות</span> ו
+          כמה מהחיסכון הפנסיוני שלך נמצא <span className="text-primary">במניות</span> ו
           <span className="text-primary">במט״ח</span>?
         </h1>
         <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-          הכלי עוזר לראות בתמונה אחת איך החיסכון הפנסיוני שהוזן מחולק: מניות, חו״ל,
-          מט״ח ודמי ניהול.
+          הכלי עוזר לראות בתמונה אחת איך החיסכון הפנסיוני שהוזן מחולק: מניות, חו״ל, מט״ח ודמי ניהול.
         </p>
 
         <div className="mt-8 space-y-3">
@@ -53,34 +51,20 @@ function Landing() {
         </div>
 
         <div className="mt-8">
-          <div className="text-sm font-semibold text-foreground mb-3">
-            כך נראית תמונת המצב
-          </div>
+          <div className="text-sm font-semibold text-foreground mb-3">כך נראית תמונת המצב</div>
           <div className="rounded-2xl bg-surface border border-border p-5">
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl bg-secondary/60 border border-border p-3 text-center">
-                <div className="text-[10px] text-muted-foreground leading-tight">
-                  מניות
-                </div>
-                <div className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
-                  47%
-                </div>
+                <div className="text-[10px] text-muted-foreground leading-tight">מניות</div>
+                <div className="mt-0.5 text-lg font-bold text-foreground tabular-nums">47%</div>
               </div>
               <div className="rounded-xl bg-secondary/60 border border-border p-3 text-center">
-                <div className="text-[10px] text-muted-foreground leading-tight">
-                  חו״ל
-                </div>
-                <div className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
-                  31%
-                </div>
+                <div className="text-[10px] text-muted-foreground leading-tight">חו״ל</div>
+                <div className="mt-0.5 text-lg font-bold text-foreground tabular-nums">31%</div>
               </div>
               <div className="rounded-xl bg-secondary/60 border border-border p-3 text-center">
-                <div className="text-[10px] text-muted-foreground leading-tight">
-                  מט״ח
-                </div>
-                <div className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
-                  28%
-                </div>
+                <div className="text-[10px] text-muted-foreground leading-tight">מט״ח</div>
+                <div className="mt-0.5 text-lg font-bold text-foreground tabular-nums">28%</div>
               </div>
             </div>
             <div className="mt-3 text-[10px] text-muted-foreground text-center">
@@ -116,15 +100,7 @@ function Landing() {
   );
 }
 
-function Feature({
-  icon,
-  title,
-  text,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
+function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
     <div className="flex gap-3 p-4 rounded-xl bg-surface border border-border">
       <div className="w-9 h-9 rounded-lg bg-secondary text-primary grid place-items-center shrink-0">
@@ -132,9 +108,7 @@ function Feature({
       </div>
       <div>
         <div className="text-sm font-semibold text-foreground">{title}</div>
-        <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-          {text}
-        </div>
+        <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{text}</div>
       </div>
     </div>
   );

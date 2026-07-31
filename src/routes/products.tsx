@@ -49,9 +49,7 @@ function ProductsScreen() {
     <AppShell>
       <div className="flex items-baseline justify-between">
         <h1 className="text-xl font-bold text-foreground">המוצרים שלי</h1>
-        <span className="text-xs text-muted-foreground">
-          {products.length} פריטים
-        </span>
+        <span className="text-xs text-muted-foreground">{products.length} פריטים</span>
       </div>
 
       {products.some((p) => p.isDemo) && (
@@ -70,10 +68,7 @@ function ProductsScreen() {
 
       <ul className="mt-5 space-y-2.5">
         {products.map((p) => (
-          <li
-            key={p.id}
-            className="rounded-xl border border-border bg-surface p-4"
-          >
+          <li key={p.id} className="rounded-xl border border-border bg-surface p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
@@ -89,9 +84,7 @@ function ProductsScreen() {
                 <div className="text-sm font-semibold text-foreground mt-0.5 truncate">
                   {p.issuerName}
                 </div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {p.trackName}
-                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">{p.trackName}</div>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {tagsFor(p).map((t) => (
                     <Tag key={t}>{t}</Tag>
@@ -103,9 +96,7 @@ function ProductsScreen() {
                   {p.userBalance.toLocaleString("he-IL")} ₪
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  {p.userManagementFee == null
-                    ? "לא הוזן"
-                    : `${p.userManagementFee}%`}
+                  {p.userManagementFee == null ? "לא הוזן" : `${p.userManagementFee}%`}
                 </div>
                 <button
                   onClick={() => removeOne(p.id)}
@@ -127,9 +118,7 @@ function ProductsScreen() {
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div className="flex-1">
-              <div className="text-sm font-semibold text-foreground">
-                מחיקת כל הנתונים מהמכשיר
-              </div>
+              <div className="text-sm font-semibold text-foreground">מחיקת כל הנתונים מהמכשיר</div>
               <div className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                 הפעולה תמחק לצמיתות את כל המוצרים שהזנת. לא ניתן לשחזר.
               </div>
