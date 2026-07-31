@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>דשבורד חשיפות חיסכון | v3.91</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+
+
+
+
+
+</head>
+<body>
+<section class="hero premium-hero">
+  <div class="container premium-hero-container">
+    <div class="premium-header" aria-label="כותרת האתר">
+      <div class="premium-brand">
+        <div class="premium-mark" aria-hidden="true">ד</div>
+      </div>
+    </div>
+
+    <div class="lux-hero-text" aria-label="הצגה ראשית">
+      <h1 class="lux-headline">
+        כל החיסכון הפנסיוני שלך<br/>
+        <em>תמונה אחת ברורה</em>
+      </h1></div>
+
+    <div class="landing-actions" aria-label="אפשרויות ראשיות">
+      <button type="button" class="landing-card" id="landingAboutBtn" aria-expanded="true" aria-controls="landingAboutPanel">
+        <span class="landing-card-kicker">הסבר פשוט</span>
+        <span class="landing-card-title">מה הכלי עושה?</span>
+        <p class="landing-card-text">הכלי מחבר את הקופות והקרנות שלך לתמונה אחת פשוטה: כמה מהחיסכון חשוף למניות, לחו״ל ולמט״ח, לפי היתרות שתזין.</p>
+      </button>
+
+      <button type="button" class="landing-card" id="landingDisclosureBtn" aria-expanded="false" aria-controls="landingDisclosurePanel">
+        <span class="landing-card-kicker">חשוב לדעת</span>
+        <span class="landing-card-title">הבהרה מקצועית</span>
+        <p class="landing-card-text">הדשבורד מציג נתונים ציבוריים להמחשה בלבד ואינו מהווה ייעוץ או המלצה.</p>
+      </button>
+
+      <button type="button" class="landing-card" id="landingPrivacyBtn" aria-expanded="false" aria-controls="landingPrivacyPanel">
+        <span class="landing-card-kicker">אמון ופרטיות</span>
+        <span class="landing-card-title">פרטיות ומקור נתונים</span>
+        <p class="landing-card-text">הנתונים שאתה מזין נשמרים בדפדפן שלך. מקור הנתונים הוא מאגרי רשות שוק ההון.</p>
+      </button>
+    <button type="button" class="landing-card landing-primary" id="landingStartBtn" aria-expanded="false" aria-controls="searchSection">
+        <span class="landing-card-kicker">פעולה מרכזית</span>
+        <span class="landing-card-title">כאן מתחילים</span>
+        <p class="landing-card-text">בחר מוצר, סוג, חברה וקופה, ולאחר מכן הזן יתרה ודמי ניהול.</p>
+      </button>
+
+      </div>
+
+    <div class="landing-panel" id="landingAboutPanel">
+      <h3>מה הכלי עושה?</h3>
+      הכלי מיועד לעזור גם למי שפחות מכיר את עולם החיסכון הפנסיוני והפיננסי. במקום להסתכל על כל קופה בנפרד, אפשר להוסיף את הקופות והקרנות שלך, להזין יתרה ודמי ניהול אישיים, ולקבל תמונה אחת מרוכזת: מה החשיפה הכוללת למניות, כמה מהכסף מושקע בחו״ל, מה החשיפה למט״ח, ומה המשקל של כל מוצר בתיק. המטרה היא לתת תמונת מצב פשוטה וברורה, לא המלצה ולא ייעוץ.
+      <br>
+      <button type="button" class="guidance-toggle-btn" id="savingsLocateToggle" aria-expanded="false" aria-controls="savingsLocateContent" onclick="const panel=document.getElementById('savingsLocateContent'); const expanded=this.getAttribute('aria-expanded')==='true'; this.setAttribute('aria-expanded', String(!expanded)); panel.hidden=expanded;">
+        לא בטוח איפה הכסף שלך מנוהל?
+      </button>
+      <div class="guidance-content" id="savingsLocateContent" hidden>
+        אפשר לאתר את שם החברה והמסלול בדוחות שנשלחו לדואר או למייל, או בכניסה לאזור האישי באתר חברת הביטוח, קרן הפנסיה, קופת הגמל או קרן ההשתלמות. אם עדיין אינך בטוח, ניתן להיעזר באתר “הר הכסף” של משרד האוצר. לאחר האיתור, חזור לכאן ובחר את סוג המוצר, החברה והמסלול כדי לבנות את דשבורד החשיפות שלך.
+        <br>
+        <a class="external-link-btn" href="https://www.gov.il/he/service/pension_savings_search" target="_blank" rel="noopener noreferrer">מעבר להר הכסף</a>
+      </div>
+    </div>
+
+    <div class="landing-panel" id="landingDisclosurePanel" hidden>
+      <h3>הבהרה מקצועית</h3>
+      הדשבורד מציג חשיפות וביצועים מתוך נתונים ציבוריים של המסלולים בלבד. הוא אינו מושך יתרות אישיות ממסלקה פנסיונית, אינו מחליף ייעוץ פנסיוני או פיננסי, ואינו מציג המלצה. נתוני התשואה הם נתוני מסלול ציבוריים, ודמי הניהול בדשבורד מבוססים רק על הנתון שהוזן ידנית עבור כל מוצר.
+    </div>
+
+    <div class="landing-panel" id="landingPrivacyPanel" hidden>
+      <h3>פרטיות ומקור נתונים</h3>
+      היתרות ודמי הניהול שהזנת נשמרים בדפדפן שלך. הם אינם נשמרים בשרת ואינם משויכים לפרטים אישיים. מקור הנתונים: קובצי המידע הציבוריים של רשות שוק ההון, הביטוח והחיסכון, מתוך מאגרי גמל נט, פנסיה נט וביטוח נט כפי שפורסמו ב-data.gov.il.
+    </div>
+
+  </div>
+</section>
+
+<section class="section landing-hidden" id="searchSection">
+  <div class="container">
+    <div class="flow-top-actions">
+      <button type="button" class="return-landing-btn" id="returnLandingBtn">חזרה למסך הראשי</button>
+    </div>
+    <div class="product-type-panel active" id="productTypePanel" aria-live="polite">
+      <p class="product-type-title" id="productTypeTitle">מאיפה מתחילים?</p>
+      <p class="product-type-subtitle">בחר את סוג החיסכון ואנחנו ננחה אותך משם.</p>
+      <div class="product-type-grid" id="productTypeGrid">
+        <button type="button" class="product-type-btn" data-filter="pensia">פנסיה</button>
+        <button type="button" class="product-type-btn" data-filter="bituach">ביטוח מנהלים / פוליסות חיסכון</button>
+        <button type="button" class="product-type-btn" data-filter="gemelnet">גמל / השתלמות / גמל להשקעה</button>
+        <button type="button" class="manual-search-toggle manual-search-card" id="manualSearchToggle" aria-expanded="false" aria-controls="manualSearchControls">
+          חיפוש ידני
+        </button>
+      </div>
+    </div>
+
+    <div class="sub-product-panel" id="subProductPanel" style="display:none;" aria-live="polite">
+      <p class="product-type-title" id="subProductTitle">איזה סוג בדיוק?</p>
+      <p class="product-type-subtitle" id="subProductSubtitle">בחר תת-סוג כדי לצמצם את הרשימה לפני בחירת החברה.</p>
+      <div class="product-type-grid" id="subProductGrid"></div>
+    </div>
+
+    <p class="company-grid-label" id="companyGridLabel" style="display:none;">באיזו חברה מנוהל המוצר?</p>
+    <div class="company-grid" id="companyGrid" style="display:none;"></div>
+
+    <div class="manual-search-controls" id="manualSearchControls" hidden>
+      <p class="search-also">חיפוש ידני לפי שם חברה, מסלול או מספר קופה:</p>
+      <div class="filters" id="filters">
+        <button class="filter-btn active" data-filter="all" data-label="הכל">הכל</button>
+        <button class="filter-btn" data-filter="gemelnet" data-label="גמל / השתלמות / גמל להשקעה">גמל / השתלמות / גמל להשקעה</button>
+        <button class="filter-btn" data-filter="pensia" data-label="קרנות פנסיה">קרנות פנסיה</button>
+        <button class="filter-btn" data-filter="bituach" data-label="פוליסות חיסכון / ביטוחי מנהלים">פוליסות חיסכון / ביטוחי מנהלים</button>
+      </div>
+      <div class="search-wrap">
+        <input type="text" class="search-input" id="searchInput" placeholder="שם החברה או המסלול — לדוגמה: מנורה, הראל, מיטב, אלטשולר" autocomplete="off" />
+      </div>
+    </div>
+    <div class="quick-editor" id="quickEditor"></div>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+</section>
+
+<section class="section" id="portfolioSection" style="display:none;">
+  <div class="container">
+    <h2 class="section-title"><span class="num">02</span>התיק שלך</h2>
+    <div class="funds-list" id="fundsList"></div>
+  </div>
+</section>
+
+<section class="section" id="missingFundsSection" hidden>
+  <div class="container">
+    <div class="missing-funds-notice">
+      <h3>קופות שהוזנו בעבר ולא נמצאו במאגר המעודכן</h3>
+      <p>הקופות הבאות נשמרו אצלך אך המספר שלהן כבר לא מופיע בנתוני המאגר (למשל בעקבות מיזוג או שינוי מספר). הן אינן נכללות בחישובי הדשבורד. אפשר לאתר את הקופה בשמה החדש דרך החיפוש, או להסיר אותה.</p>
+      <div id="missingFundsList"></div>
+    </div>
+  </div>
+</section>
+
+<section class="dashboard" id="dashboard">
+  <div class="container">
+    <div class="pdf-report-header" aria-hidden="true">
+      <div class="pdf-report-title">דוח חשיפות חיסכון פנסיוני</div>
+      <div class="pdf-report-date">נכון לתאריך <span id="pdfGenDate"></span></div>
+    </div>
+    <h2>דשבורד מצרפי</h2>
+    <div class="subtitle">החישוב משוקלל לפי היתרות שהוזנו לכל מוצר</div>
+
+    <div class="total-row">
+      <div>
+        <div class="total" id="totalBalance">-</div>
+        <div class="total-label">יתרה כוללת שהוזנה</div>
+      </div>
+      <div class="source-mix" id="sourceMix"></div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-label">חשיפה למניות</div>
+        <div class="metric-value"><span id="aggStock">0</span><span class="pct">%</span></div>
+        <div class="metric-bar"><div class="metric-bar-fill stock-fill" id="aggStockBar"></div></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">חשיפה לחו״ל</div>
+        <div class="metric-value"><span id="aggForeign">0</span><span class="pct">%</span></div>
+        <div class="metric-bar"><div class="metric-bar-fill foreign-fill" id="aggForeignBar"></div></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">חשיפה למט״ח</div>
+        <div class="metric-value"><span id="aggFx">0</span><span class="pct">%</span></div>
+        <div class="metric-bar"><div class="metric-bar-fill fx-fill" id="aggFxBar"></div></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">נכסים סחירים</div>
+        <div class="metric-value"><span id="aggLiquid">0</span><span class="pct">%</span></div>
+        <div class="metric-bar"><div class="metric-bar-fill liquid-fill" id="aggLiquidBar"></div></div>
+      </div>
+    </div>
+
+    <details class="dashboard-toggle-section perf-toggle-section">
+      <summary class="dashboard-toggle-summary">
+        <span>אינדיקציית ביצועי מסלולים</span>
+        <span class="dashboard-toggle-hint">פתח / סגור</span>
+      </summary>
+      <div class="perf-wrap dashboard-toggle-content">
+        <div class="perf-note">מידע תומך בלבד: הנתונים משקפים את תשואות המסלולים הציבוריות לפי המאגר, ולא את התשואה האישית בפועל.</div>
+        <div class="perf-note perf-report-period" id="perfReportPeriod">נתוני התשואה מוצגים לפי הדיווח האחרון הזמין במאגר.</div>
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="metric-label">תשואה חודשית</div>
+            <div class="metric-value"><span id="perfMonth">-</span><span class="pct">%</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">מתחילת שנה</div>
+            <div class="metric-value"><span id="perfYtd">-</span><span class="pct">%</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">3 שנים מצטבר</div>
+            <div class="metric-value"><span id="perf3y">-</span><span class="pct">%</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">דמי ניהול אישיים</div>
+            <div class="metric-value"><span id="feeSavings">לא הוזן</span><span class="pct" id="feeSavingsPct" style="display:none">%</span></div>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="details" id="historySection" style="display:none;">
+  <div class="container">
+    <details class="dashboard-toggle-section history-toggle-section" id="historyDetails">
+      <summary class="dashboard-toggle-summary">
+        <span>מגמה חודשית של התיק</span>
+        <span class="dashboard-toggle-hint">פתח / סגור</span>
+      </summary>
+      <div class="dashboard-toggle-content history-wrap">
+        <div class="perf-note">תיאור בלבד: ממוצע משוקלל לפי היתרות שהוזנו, מתוך נתוני המסלולים הציבוריים בחודשים שבהם קיים דיווח במאגר. ההיסטוריה מצטברת עם עדכוני המאגר החודשיים.</div>
+        <div class="history-options" id="historyOptions" role="group" aria-label="בחירת הגרפים המוצגים"></div>
+        <div class="history-grid" id="historyGrid"></div>
+        <details class="history-table-details">
+          <summary>טבלת הנתונים</summary>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>חודש</th><th class="num">תשואה חודשית משוקללת</th><th class="num">חשיפה למניות</th><th class="num">חשיפה לחו״ל</th><th class="num">חשיפה למט״ח</th><th class="num">נכסים סחירים</th></tr>
+              </thead>
+              <tbody id="historyTableRows"></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="details" id="detailsSection">
+  <div class="container">
+    <details class="dashboard-toggle-section details-toggle-section">
+      <summary class="dashboard-toggle-summary">
+        <span>פירוט לפי מוצר</span>
+        <span class="dashboard-toggle-hint">פתח / סגור</span>
+      </summary>
+      <div class="table-wrap dashboard-toggle-content">
+        <table>
+          <thead>
+            <tr>
+              <th>מוצר</th>
+              <th class="num">משקל</th>
+              <th class="num">מניות</th>
+              <th class="num">חו״ל</th>
+              <th class="num">מט״ח</th>
+              <th class="num">סחיר</th>
+              <th class="num">חודשי</th>
+              <th class="num">YTD</th>
+              <th class="num">3Y מצטבר</th>
+              <th class="num">דמי ניהול שהוזנו</th>
+            </tr>
+          </thead>
+          <tbody id="detailsRows"></tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+</section>
+
+
+<section class="details simulation-tab-section" id="simulationTabSection">
+  <div class="container">
+    <details class="dashboard-toggle-section simulation-toggle-section" id="simulationDetails">
+      <summary class="dashboard-toggle-summary">
+        <span>סימולציה על בסיס תשואות עבר</span>
+        <span class="dashboard-toggle-hint">פתח / סגור</span>
+      </summary>
+      <div class="dashboard-toggle-content simulation-calculator-content">
+        <p class="perf-note simulation-note">המחשה בלבד: כיצד הסכום שהוזן היה עשוי להתפתח לאורך זמן לפי תשואות עבר ורמת הסיכון של התיק.</p>
+
+        <div class="sim-summary-grid" aria-label="נתוני בסיס לסימולציה">
+          <div class="sim-summary-card">
+            <div class="sim-summary-label">יתרה נוכחית שהוזנה</div>
+            <div class="sim-summary-value" id="simInitialDisplay">-</div>
+          </div>
+          <div class="sim-summary-card">
+            <div class="sim-summary-label">חשיפה למניות</div>
+            <div class="sim-summary-value" id="simStockDisplay">-</div>
+          </div>
+        </div>
+
+        <div class="sim-form-grid" aria-label="הגדרות סימולציה">
+          <label class="sim-field">
+            <span>הפקדה חודשית</span>
+            <input id="simMonthlyInput" type="number" min="0" step="100" inputmode="numeric" placeholder="לדוגמה 1,000" />
+          </label>
+          <label class="sim-field">
+            <span>מספר שנים</span>
+            <input id="simYearsInput" type="number" min="1" max="30" step="1" value="10" inputmode="numeric" />
+          </label>
+          <label class="sim-field">
+            <span>דמי ניהול שנתיים לחישוב</span>
+            <input id="simFeeInput" type="number" min="0" max="5" step="0.01" inputmode="decimal" placeholder="אם לא הוזן" />
+          </label>
+          <button type="button" class="sim-run-btn" id="simRunBtn">הרץ סימולציה</button>
+        </div>
+
+        <div class="sim-disclaimer">החישוב מבוסס על נתוני עבר בלבד ואינו מהווה תחזית, הבטחה לתשואה, ייעוץ השקעות, ייעוץ פנסיוני או המלצה.</div>
+
+        <div class="sim-results" id="simResults" hidden>
+          <div class="sim-result-card">
+            <div class="sim-result-label">סכום בסוף התקופה</div>
+            <div class="sim-result-value" id="simFinalAmount">-</div>
+          </div>
+          <div class="sim-result-card">
+            <div class="sim-result-label">סך הפקדות עתידיות</div>
+            <div class="sim-result-value" id="simTotalContrib">-</div>
+          </div>
+          <div class="sim-result-card">
+            <div class="sim-result-label">רווח / הפסד לפי תשואות עבר</div>
+            <div class="sim-result-value" id="simGainAmount">-</div>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="bottom-actions" id="bottomActions" aria-label="פעולות דוח" style="display:none;">
+  <div class="container">
+
+    <div class="action-toolbar" aria-label="פעולות דוח">
+      <button type="button" class="action-btn" onclick="saveAsPDF()">שמירה / הדפסה ל-PDF</button>
+      <button type="button" class="action-btn" onclick="shareWhatsApp()">שליחה לווטסאפ</button>
+      <button type="button" class="action-btn" onclick="backToTop()">חזרה לראש העמוד</button>
+      <button type="button" class="action-btn" onclick="resetAllData()">איפוס הכל</button>
+    </div>
+    <div class="action-note">שמירה ל-PDF נפתחת דרך חלון ההדפסה של הדפדפן. בשל מגבלות דפדפן, שליחה לווטסאפ שולחת סיכום טקסטואלי וקישור, לא מצרפת PDF אוטומטית.</div>
+  </div>
+</section>
+
+<div class="pdf-disclaimer" aria-hidden="true">הבהרה: הנתונים בדוח זה מבוססים על נתונים ציבוריים מהמאגר ועל יתרות שהוזנו ידנית. תשואות המסלולים הן ציבוריות ואינן משקפות את התשואה האישית בפועל. הדוח נועד למידע כללי בלבד ואינו מהווה ייעוץ פנסיוני, ייעוץ השקעות, שיווק פנסיוני, תחזית או המלצה.</div>
+
+<div class="site-credit">פותח ע״י דורון שרייבמן<div class="site-copyright">© 2026 דורון שרייבמן. כל הזכויות שמורות.</div></div>
+
+
+<!-- כרטיס תרגיל היסטורי - קוד הדשבורד הראשי -->
+
+<div class="loading" id="loadingState">טוען נתונים...</div>
+
+
+
+<!-- v3.39: Light dashboard theme override -->
+
+<!-- v4 — Premium polish layer (mobile-first luxe refinement) -->
+
+
+
+
+
+
+
+
+
+
+<script src="scripts.js"></script>
+</body>
+</html>

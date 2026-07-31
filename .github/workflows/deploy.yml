@@ -15,32 +15,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build (static, prerendered)
-        run: bun run build
-        env:
-          GITHUB_PAGES: "true"
-
-      - name: Add SPA fallback and nojekyll
+      - name: Assemble static site
         run: |
-          touch dist/client/.nojekyll
-          if [ ! -f dist/client/404.html ]; then
-            cp dist/client/index.html dist/client/404.html
-          fi
+          mkdir -p _site
+          cp index.html styles.css scripts.js funds_unified.json _site/
+          cp index.html _site/404.html
+          touch _site/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -48,16 +39,8 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/client
+          path: _site
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
