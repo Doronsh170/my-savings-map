@@ -71,10 +71,6 @@ function InfoScreen() {
           קרא את מסך הפרטיות וההבהרה
         </Link>
       </div>
-
-      <p className="mt-6 text-center text-[11px] text-muted-foreground">
-        פותח על ידי דורון שרייבמן
-      </p>
     </AppShell>
   );
 }

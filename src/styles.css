@@ -36,6 +36,8 @@
 }
 
 :root {
+  /* Height of the fixed bottom tab bar: py-2.5 + icon + gap + label. */
+  --bottom-nav-h: calc(3.75rem + env(safe-area-inset-bottom, 0px));
   --radius: 0.875rem;
 
   /* Light, professional financial palette */

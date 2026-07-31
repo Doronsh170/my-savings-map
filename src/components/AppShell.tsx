@@ -32,15 +32,21 @@ export function AppShell({ children, title }: AppShellProps) {
         </div>
       </header>
 
-      <main className="flex-1 mx-auto w-full max-w-3xl px-4 pb-44 pt-4">{children}</main>
+      <main className="flex-1 mx-auto w-full max-w-3xl px-4 pt-4">{children}</main>
 
-      <p className="mx-auto max-w-3xl px-4 pb-24 text-[11px] text-muted-foreground text-center">
-        כלי המחשה להצגת תמונת מצב של החיסכון שהוזן, על בסיס נתונים ציבוריים.
-        <br />
-        הכלי אינו ייעוץ, אינו שיווק פנסיוני או השקעות, ואינו המלצה לביצוע פעולה.
-      </p>
+      <footer className="mx-auto w-full max-w-3xl px-4 pt-10 pb-[calc(var(--bottom-nav-h)+1.5rem)] text-center text-[11px] text-muted-foreground space-y-2">
+        <p>
+          כלי המחשה להצגת תמונת מצב של החיסכון שהוזן, על בסיס נתונים ציבוריים.
+          <br />
+          הכלי אינו ייעוץ, אינו שיווק פנסיוני או השקעות, ואינו המלצה לביצוע פעולה.
+        </p>
+        <p className="text-[10px]">
+          פותח על ידי דורון שרייבמן
+          <br />© 2026 דורון שרייבמן. כל הזכויות שמורות.
+        </p>
+      </footer>
 
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-surface border-t border-border">
+      <nav className="fixed bottom-0 inset-x-0 z-40 bg-surface border-t border-border pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto max-w-3xl grid grid-cols-3">
           {tabs.map((t) => {
             const active = pathname.startsWith(t.to);
@@ -60,10 +66,6 @@ export function AppShell({ children, title }: AppShellProps) {
               </Link>
             );
           })}
-        </div>
-        <div className="text-center text-[10px] text-muted-foreground py-1.5 border-t border-border/60 space-y-0.5">
-          <div>פותח על ידי דורון שרייבמן</div>
-          <div>© 2026 דורון שרייבמן. כל הזכויות שמורות.</div>
         </div>
       </nav>
     </div>
