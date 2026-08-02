@@ -1,0 +1,35 @@
+[build]
+  publish = "_site"
+  command = """
+    mkdir -p _site
+    cp index.html styles.css scripts.js funds_unified.json _site/
+    cp index.html _site/404.html
+  """
+
+# הקבצים אינם ממוספרים בגרסה (styles.css, scripts.js), ועל כן אין קאשינג ארוך —
+# אחרת עדכון נתונים חודשי לא היה מגיע לגולשים קיימים.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/funds_unified.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/scripts.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/styles.css"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

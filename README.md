@@ -15,6 +15,26 @@
 | `scripts.js` | כל הלוגיקה (נטען בסוף הדף; מקור האמת היחיד לקוד) |
 | `funds_unified.json` | מאגר הקופות המאוחד שהדשבורד קורא |
 | `tools/build_dataset.py` | בניית המאגר מקובצי המקור + בדיקות שפיות |
+| `netlify.toml` | הגדרות הפרסום ל-Netlify |
+
+## פרסום (Netlify)
+
+האתר מתפרסם ב-Netlify מענף `main`. פקודת הבנייה מעתיקה את קובצי האתר
+לתיקיית `_site` (שאינה נשמרת ב-git) ומייצרת ממנה גם `404.html`:
+
+```bash
+mkdir -p _site
+cp index.html styles.css scripts.js funds_unified.json _site/
+cp index.html _site/404.html
+```
+
+חיבור ראשוני: ב-Netlify בוחרים **Add new site → Import an existing project**,
+מחברים את הריפו הזה ובוחרים ענף `main`. אין צורך למלא Build command ו-Publish
+directory — הם נקראים מ-`netlify.toml`. מכאן כל push ל-`main` מפרסם אוטומטית,
+ו-Pull Requests מקבלים Deploy Preview.
+
+לבדיקה מקומית לפני push: `npx netlify-cli deploy --build` (או פשוט להריץ שרת
+סטטי מתיקיית הפרויקט, למשל `python3 -m http.server`).
 
 ## עדכון הנתונים החודשי
 
