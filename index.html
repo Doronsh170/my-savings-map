@@ -29,8 +29,24 @@
         <em>תמונה אחת ברורה</em>
       </h1></div>
 
-    <div class="landing-actions" aria-label="אפשרויות ראשיות">
-      <button type="button" class="landing-card" id="landingAboutBtn" aria-expanded="true" aria-controls="landingAboutPanel">
+
+  </div>
+</section>
+
+<section class="section" id="searchSection">
+  <div class="container">
+    <div class="wizard" id="wizard">
+      <nav class="wiz-crumbs" id="wizCrumbs" aria-label="מסלול הבחירה"></nav>
+      <div class="wiz-screen" id="wizScreen" aria-live="polite"></div>
+    </div>
+    <div class="quick-editor" id="quickEditor"></div>
+  </div>
+</section>
+
+<section class="section site-info-section" id="siteInfoSection">
+  <div class="container">
+    <div class="site-info-actions" aria-label="מידע על הכלי">
+      <button type="button" class="landing-card" id="landingAboutBtn" aria-expanded="false" aria-controls="landingAboutPanel">
         <span class="landing-card-kicker">הסבר פשוט</span>
         <span class="landing-card-title">מה הכלי עושה?</span>
         <p class="landing-card-text">הכלי מחבר את הקופות והקרנות שלך לתמונה אחת פשוטה: כמה מהחיסכון חשוף למניות, לחו״ל ולמט״ח, לפי היתרות שתזין.</p>
@@ -47,15 +63,10 @@
         <span class="landing-card-title">פרטיות ומקור נתונים</span>
         <p class="landing-card-text">הנתונים שאתה מזין נשמרים בדפדפן שלך. מקור הנתונים הוא מאגרי רשות שוק ההון.</p>
       </button>
-    <button type="button" class="landing-card landing-primary" id="landingStartBtn" aria-expanded="false" aria-controls="searchSection">
-        <span class="landing-card-kicker">פעולה מרכזית</span>
-        <span class="landing-card-title">כאן מתחילים</span>
-        <p class="landing-card-text">בחר מוצר, סוג, חברה וקופה, ולאחר מכן הזן יתרה ודמי ניהול.</p>
-      </button>
 
       </div>
 
-    <div class="landing-panel" id="landingAboutPanel">
+    <div class="landing-panel" id="landingAboutPanel" hidden>
       <h3>מה הכלי עושה?</h3>
       הכלי מיועד לעזור גם למי שפחות מכיר את עולם החיסכון הפנסיוני והפיננסי. במקום להסתכל על כל קופה בנפרד, אפשר להוסיף את הקופות והקרנות שלך, להזין יתרה ודמי ניהול אישיים, ולקבל תמונה אחת מרוכזת: מה החשיפה הכוללת למניות, כמה מהכסף מושקע בחו״ל, מה החשיפה למט״ח, ומה המשקל של כל מוצר בתיק. המטרה היא לתת תמונת מצב פשוטה וברורה, לא המלצה ולא ייעוץ.
       <br>
@@ -78,51 +89,6 @@
       <h3>פרטיות ומקור נתונים</h3>
       היתרות ודמי הניהול שהזנת נשמרים בדפדפן שלך. הם אינם נשמרים בשרת ואינם משויכים לפרטים אישיים. מקור הנתונים: קובצי המידע הציבוריים של רשות שוק ההון, הביטוח והחיסכון, מתוך מאגרי גמל נט, פנסיה נט וביטוח נט כפי שפורסמו ב-data.gov.il.
     </div>
-
-  </div>
-</section>
-
-<section class="section landing-hidden" id="searchSection">
-  <div class="container">
-    <div class="flow-top-actions">
-      <button type="button" class="return-landing-btn" id="returnLandingBtn">חזרה למסך הראשי</button>
-    </div>
-    <div class="product-type-panel active" id="productTypePanel" aria-live="polite">
-      <p class="product-type-title" id="productTypeTitle">מאיפה מתחילים?</p>
-      <p class="product-type-subtitle">בחר את סוג החיסכון ואנחנו ננחה אותך משם.</p>
-      <div class="product-type-grid" id="productTypeGrid">
-        <button type="button" class="product-type-btn" data-filter="pensia">פנסיה</button>
-        <button type="button" class="product-type-btn" data-filter="bituach">ביטוח מנהלים / פוליסות חיסכון</button>
-        <button type="button" class="product-type-btn" data-filter="gemelnet">גמל / השתלמות / גמל להשקעה</button>
-        <button type="button" class="manual-search-toggle manual-search-card" id="manualSearchToggle" aria-expanded="false" aria-controls="manualSearchControls">
-          חיפוש ידני
-        </button>
-      </div>
-    </div>
-
-    <div class="sub-product-panel" id="subProductPanel" style="display:none;" aria-live="polite">
-      <p class="product-type-title" id="subProductTitle">איזה סוג בדיוק?</p>
-      <p class="product-type-subtitle" id="subProductSubtitle">בחר תת-סוג כדי לצמצם את הרשימה לפני בחירת החברה.</p>
-      <div class="product-type-grid" id="subProductGrid"></div>
-    </div>
-
-    <p class="company-grid-label" id="companyGridLabel" style="display:none;">באיזו חברה מנוהל המוצר?</p>
-    <div class="company-grid" id="companyGrid" style="display:none;"></div>
-
-    <div class="manual-search-controls" id="manualSearchControls" hidden>
-      <p class="search-also">חיפוש ידני לפי שם חברה, מסלול או מספר קופה:</p>
-      <div class="filters" id="filters">
-        <button class="filter-btn active" data-filter="all" data-label="הכל">הכל</button>
-        <button class="filter-btn" data-filter="gemelnet" data-label="גמל / השתלמות / גמל להשקעה">גמל / השתלמות / גמל להשקעה</button>
-        <button class="filter-btn" data-filter="pensia" data-label="קרנות פנסיה">קרנות פנסיה</button>
-        <button class="filter-btn" data-filter="bituach" data-label="פוליסות חיסכון / ביטוחי מנהלים">פוליסות חיסכון / ביטוחי מנהלים</button>
-      </div>
-      <div class="search-wrap">
-        <input type="text" class="search-input" id="searchInput" placeholder="שם החברה או המסלול — לדוגמה: מנורה, הראל, מיטב, אלטשולר" autocomplete="off" />
-      </div>
-    </div>
-    <div class="quick-editor" id="quickEditor"></div>
-    <div class="search-results" id="searchResults"></div>
   </div>
 </section>
 

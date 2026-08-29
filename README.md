@@ -15,6 +15,7 @@
 | `scripts.js` | כל הלוגיקה (נטען בסוף הדף; מקור האמת היחיד לקוד) |
 | `funds_unified.json` | מאגר הקופות המאוחד שהדשבורד קורא |
 | `tools/build_dataset.py` | בניית המאגר מקובצי המקור + בדיקות שפיות |
+| `logos/` | לוגואים של החברות המנהלות (אופציונלי — ראה `logos/README.md`) |
 | `netlify.toml` | הגדרות הפרסום ל-Netlify |
 
 ## פרסום (Netlify)
@@ -26,6 +27,8 @@
 mkdir -p _site
 cp index.html styles.css scripts.js funds_unified.json _site/
 cp index.html _site/404.html
+mkdir -p _site/logos
+cp -R logos/. _site/logos/ 2>/dev/null || true
 ```
 
 חיבור ראשוני: ב-Netlify בוחרים **Add new site → Import an existing project**,

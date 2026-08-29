@@ -91,237 +91,203 @@ function metricClass(value) {
 }
 
 
-function getGemelSubProduct(rec) {
-  const cls = normalizeText(rec.classification || '');
-  if (cls.includes('קרנות השתלמות')) return 'hishtalmut';
-  if (cls.includes('גמל להשקעה')) return 'gemel-invest';
-  if (rec.source === 'gemelnet') return 'gemel';
-  return '';
-}
-function getBituachSubProduct(rec) {
-  const name = normalizeText(rec.fund_name || '');
-  const cls = normalizeText(rec.classification || '');
-  const isOldPolicy = cls.includes('1990') || cls.includes('1991') || cls.includes('1992') || cls.includes('2003');
-  const looksLikeManagerPolicy = isOldPolicy || name.includes('משתתף ברווחים') || name.includes('מקבלי קצבה') || name.includes('לבני 50') || name.includes('לבני 60') || name.includes('קרן ט') || name.includes('קרן י');
-  return looksLikeManagerPolicy ? 'manager-insurance' : 'savings-policy';
-}
-function recMatchesSubProduct(rec, subtype) {
-  if (!subtype) return true;
-  if (rec.source === 'gemelnet') return getGemelSubProduct(rec) === subtype;
-  if (rec.source === 'bituach') return getBituachSubProduct(rec) === subtype;
-  return true;
-}
-function subProductLabel(subtype) {
-  const labels = {
-    'gemel': 'קופת גמל',
-    'hishtalmut': 'קרן השתלמות',
-    'gemel-invest': 'גמל להשקעה',
-    'manager-insurance': 'ביטוח מנהלים',
-    'savings-policy': 'פוליסות חיסכון'
-  };
-  return labels[subtype] || '';
-}
+/* === v4.0: טקסונומיה נגזרת מהנתונים — מותגים, סוגי מוצר ודירוג מסלולים ===
+   כל האינדקסים נבנים פעם אחת בטעינה (buildWizardIndexes) ולא בכל הקלדה. */
 
-
-function companyFieldsText(rec) {
-  return normalizeText([
-    rec.managing_corp,
-    rec.parent_company_name,
-    rec.controlling_corp
-  ].filter(Boolean).join(' '));
-}
-
-function textTokens(value) {
-  return normalizeText(value)
-    .replace(/[^֐-׿a-z0-9]+/gi, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-function companyAliasTokens(query) {
-  const q = normalizeText(query);
-  const map = {
-    'כלל': ['כלל'],
-    'מור': ['מור'],
-    'מנורה': ['מנורה'],
-    'מנורה מבטחים': ['מנורה'],
-    'הראל': ['הראל'],
-    'הפניקס': ['הפניקס', 'פניקס'],
-    'פניקס': ['הפניקס', 'פניקס'],
-    'מגדל': ['מגדל'],
-    'מיטב': ['מיטב'],
-    'אלטשולר': ['אלטשולר'],
-    'אלטשולר שחם': ['אלטשולר']
-  };
-  return map[q] || textTokens(q);
-}
-
-function recMatchesSelectedCompany(rec, query) {
-  const fieldsText = companyFieldsText(rec);
-  const tokens = new Set(textTokens(fieldsText));
-  const aliases = companyAliasTokens(query);
-  if (!aliases.length) return true;
-
-  // חשוב: סינון יצרן מתבצע רק לפי שדות החברה, ולא לפי שם הקופה/המסלול.
-  // כך "כלל" לא יתפוס מסלולים עם המילה "כללי", ו"מור" לא יתפוס "מורים".
-  return aliases.some(alias => tokens.has(alias));
-}
-function getSubProductOptions(filter) {
-  if (filter === 'gemelnet') {
-    return [
-      { type: 'gemel', label: 'קופת גמל' },
-      { type: 'hishtalmut', label: 'קרן השתלמות' },
-      { type: 'gemel-invest', label: 'גמל להשקעה' }
-    ];
-  }
-  if (filter === 'bituach') {
-    return [
-      { type: 'manager-insurance', label: 'ביטוח מנהלים' },
-      { type: 'savings-policy', label: 'פוליסות חיסכון' }
-    ];
-  }
-  return [];
-}
-
-const COMPANY_OPTIONS = [
-  { query: 'מנורה', label: 'מנורה מבטחים' },
-  { query: 'הראל', label: 'הראל' },
-  { query: 'הפניקס', label: 'הפניקס' },
-  { query: 'כלל', label: 'כלל' },
-  { query: 'מגדל', label: 'מגדל' },
-  { query: 'מיטב', label: 'מיטב' },
-  { query: 'מור', label: 'מור' },
-  { query: 'אלטשולר', label: 'אלטשולר שחם' }
+// סיומות משפטיות/תפקודיות שמורידות משם הגוף המנהל כדי להגיע לשם שהמשתמש מכיר.
+// מסירים רק כשהביטוי אינו פותח את השם, אחרת "קרנות השתלמות למורים" היה נחתך לגמרי.
+const BRAND_STRIP = [
+  /בע['׳"]{0,2}מ/g, /חברה לביטוח/g, /חברה מנהלת/g, /חברה לניהול קופות גמל/g,
+  /ניהול קופות גמל/g, /קרנות פנסיה וקופות גמל/g, /קופות גמל וקרנות השתלמות/g,
+  /קופות גמל/g, /קופת גמל/g, /השתלמות, גמל ופנסיה/g, /גמל ופנסיה/g,
+  /פנסיה וגמל/g, /גמל והשתלמות/g, /ניהול קרנות/g, /פנסיה מקיפה/g, /החזקות/g, /אחזקות/g
 ];
+// ישויות משפטיות נפרדות שהמשתמש תופס כמותג אחד.
+const BRAND_MERGE = {
+  'מגדל מקפת': 'מגדל',
+  'הראל פנסיה': 'הראל',
+  'מנורה מבטחים פנסיה': 'מנורה מבטחים'
+};
+// שמות שהמשתמש עשוי לחפש אך אינם מופיעים בשדות החברה — מותגים היסטוריים
+// ומסלולים בשם צד שלישי. מתוחזק ידנית: התאמת תת-מחרוזת אוטומטית הייתה
+// גורמת ל"כלל" לתפוס כל "מסלול כללי".
+const BRAND_ALIASES = {
+  'כלל': ['תמר'],
+  'הפניקס': ['אקסלנס', 'פניקס'],
+  'הראל': ['גילעד'],
+  'אלטשולר שחם': ['אלטשולר', 'פסגות'],
+  'מנורה מבטחים': ['מנורה', 'מבטחים'],
+  'מיטב': ['מיטב דש', 'דש'],
+  'אינפיניטי': ['הלמן אלדובי', 'הלמן'],
+  'מגדל': ['מקפת']
+};
+// קובץ לוגו לכל מותג: logos/<slug>.svg. הרשימה מתפקדת כמניפסט — מוסיפים שורה
+// רק אחרי שהקובץ הועלה לתיקיית logos, אחרת הדפדפן ידווח על 404 בקונסול.
+// המיפוי המלא המומלץ מתועד ב-logos/README.md. בלי לוגו מוצגת מונוגרמה.
+const BRAND_LOGOS = {};
 
-function recMatchesCurrentProductScope(rec) {
-  const filter = selectedProductFilter || activeFilter || 'all';
-  if (filter !== 'all' && rec.source !== filter) return false;
-  if (selectedSubProductType && !recMatchesSubProduct(rec, selectedSubProductType)) return false;
-  if (!rec.is_active || (Number(rec.total_assets) || 0) <= 0) return false;
-  return true;
+function brandOf(rec) {
+  const raw = String(rec.managing_corp || rec.parent_company_name || '').trim().replace(/[״]/g, '"').replace(/[׳]/g, "'");
+  let name = raw;
+  BRAND_STRIP.forEach(pattern => {
+    name = name.replace(pattern, (match, offset) => (offset === 0 ? match : ' '));
+  });
+  name = name.replace(/[-–,]+/g, ' ').replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
+  if (!name) name = raw;
+  return BRAND_MERGE[name] || name;
 }
 
-function getCompanyAssetsForCurrentScope() {
-  return COMPANY_OPTIONS.map(company => {
-    let totalAssets = 0;
-    let count = 0;
-    for (const rec of DATA) {
-      if (!recMatchesCurrentProductScope(rec)) continue;
-      if (!recMatchesSelectedCompany(rec, company.query)) continue;
-      totalAssets += Number(rec.total_assets) || 0;
-      count += 1;
+// סוגי החיסכון כפי שהמשתמש מכיר אותם. הסדר הוא סדר התצוגה.
+const PRODUCT_TYPES = [
+  { key: 'pensia',      label: 'קרן פנסיה',        hint: 'ההפקדה שיורדת מהשכר כל חודש, כולל כיסוי לנכות ולשארים' },
+  { key: 'hishtalmut',  label: 'קרן השתלמות',      hint: 'נפתחת דרך המעסיק, וניתנת למשיכה אחרי שש שנים' },
+  { key: 'gemel',       label: 'קופת גמל',         hint: 'חיסכון פנסיוני שאינו קרן פנסיה, נמשך בדרך כלל כקצבה' },
+  { key: 'invest',      label: 'גמל להשקעה',       hint: 'חיסכון פרטי שאפשר למשוך בכל עת' },
+  { key: 'child',       label: 'חיסכון לכל ילד',   hint: 'החיסכון שנפתח לילד עם קצבת הילדים' },
+  { key: 'policy',      label: 'פוליסת חיסכון',    hint: 'חיסכון בחברת ביטוח, לרוב דרך סוכן' },
+  { key: 'manager',     label: 'ביטוח מנהלים ותיק', hint: 'פוליסה שנפתחה עד 2003, לעיתים עם מקדם מובטח' },
+  { key: 'pitzuim',     label: 'מרכזית לפיצויים',  hint: 'קופה על שם המעסיק לכיסוי פיצויי פיטורים' }
+];
+const PRODUCT_LABEL = {};
+PRODUCT_TYPES.forEach(item => { PRODUCT_LABEL[item.key] = item.label; });
+const PRODUCT_ORDER = PRODUCT_TYPES.map(item => item.key);
+// עד חמישה אריחים גלויים; השאר מתקפלים תחת "סוג אחר".
+const PRIMARY_PRODUCTS_SHOWN = 5;
+
+function productOf(rec) {
+  const cls = String(rec.classification || '');
+  if (rec.source === 'pensia') return 'pensia';
+  if (rec.source === 'bituach') return /199\d|200[0-3]/.test(cls) ? 'manager' : 'policy';
+  if (cls.indexOf('השתלמות') > -1) return 'hishtalmut';
+  if (cls.indexOf('לילד') > -1) return 'child';
+  if (cls.indexOf('להשקעה') > -1) return 'invest';
+  if (cls.indexOf('מרכזית') > -1) return 'pitzuim';
+  return 'gemel';
+}
+
+// מסלולים שרוב המשתמשים הפרטיים אינם נמצאים בהם יורדים בדירוג — לא מוסתרים.
+// 2 = כמעט תמיד לא רלוונטי, 1 = ותיק/מיוחד, 0 = רגיל.
+function trackRelevanceGroup(rec) {
+  const text = normalizeText([rec.fund_name, rec.classification, rec.specialization, rec.sub_specialization].filter(Boolean).join(' '));
+  if (/מקבלי קצבה|לפנסיונרים|למקבלי פנסיה/.test(text)) return 2;
+  if (/מרכזית לפיצויים/.test(text)) return 2;
+  if (/ira|בניהול אישי|בניהול עצמי/.test(text)) return 2;
+  if (/קרן ותיקה|ותיקות|קרן [יטכל]['׳]?\b|מבטיח תשואה|מנוף/.test(text)) return 1;
+  if (/עתודה|נוסטרו|לעובדי מדינה בלבד/.test(text)) return 1;
+  return 0;
+}
+
+function rankTracks(list) {
+  return list.slice().sort((a, b) => {
+    const groupDiff = trackRelevanceGroup(a) - trackRelevanceGroup(b);
+    if (groupDiff !== 0) return groupDiff;
+    const assetDiff = (Number(b.total_assets) || 0) - (Number(a.total_assets) || 0);
+    if (assetDiff !== 0) return assetDiff;
+    return normalizeText(a.fund_name).localeCompare(normalizeText(b.fund_name), 'he');
+  });
+}
+
+// תגיות מסלול — משמשות גם לצ'יפים וגם לתיאור בשפה פשוטה בכרטיס.
+const TRACK_CHIPS = [
+  { key: 'general', label: 'כללי' },
+  { key: 'age50',   label: 'עד גיל 50' },
+  { key: 'age5060', label: 'גיל 50–60' },
+  { key: 'age60',   label: 'גיל 60 ומעלה' },
+  { key: 'equity',  label: 'מניות' },
+  { key: 'index',   label: 'עוקב מדד' },
+  { key: 'sp500',   label: 'S&P 500' },
+  { key: 'bond',    label: 'אג״ח' },
+  { key: 'money',   label: 'כספי' },
+  { key: 'halacha', label: 'הלכתי' }
+];
+function trackTags(rec) {
+  const text = normalizeText([rec.fund_name, rec.specialization, rec.sub_specialization].filter(Boolean).join(' '));
+  const tags = [];
+  if (/s and p|s&p|sp ?500|500/.test(text)) tags.push('sp500');
+  if (/עד 50|לבני 50 ומטה|50 ומטה|גילאי 50 ומטה|עד גיל 50/.test(text)) tags.push('age50');
+  if (/50 60|50 עד 60|גילאי 50 עד 60/.test(text)) tags.push('age5060');
+  if (/60 ומעלה|מעל 60|לבני 60|גילאי 60/.test(text)) tags.push('age60');
+  if (/מדד|עוקב/.test(text)) tags.push('index');
+  if (/מני/.test(text)) tags.push('equity');
+  if (/אגח|אג ח/.test(text)) tags.push('bond');
+  if (/כספי|שקלי/.test(text)) tags.push('money');
+  if (/הלכ|שריעה|מסורת/.test(text)) tags.push('halacha');
+  if (/יעד לפרישה|יעד פרישה/.test(text)) tags.push('target');
+  if (/כללי/.test(text)) tags.push('general');
+  return tags;
+}
+function trackLabel(rec) {
+  const tags = trackTags(rec);
+  const has = key => tags.indexOf(key) > -1;
+  if (has('sp500')) return 'מסלול עוקב מדד S&P 500';
+  if (has('age50')) return 'מסלול לפי גיל · עד 50';
+  if (has('age5060')) return 'מסלול לפי גיל · 50 עד 60';
+  if (has('age60')) return 'מסלול לפי גיל · 60 ומעלה';
+  if (has('index')) return 'מסלול עוקב מדדים';
+  if (has('equity')) return 'מסלול מנייתי';
+  if (has('bond')) return 'מסלול אג״ח';
+  if (has('money')) return 'מסלול כספי';
+  if (has('halacha')) return 'מסלול הלכתי';
+  if (has('target')) return 'מסלול יעד לפרישה';
+  if (has('general')) return 'מסלול כללי';
+  // ברירת מחדל: שם סוג המוצר, ולא הסיווג הרגולטורי ("קרנות חדשות" וכד').
+  return PRODUCT_LABEL[rec._product] || 'מסלול';
+}
+
+// --- אינדקסים שנבנים פעם אחת ---
+let BRANDS = [];
+let BRAND_BY_NAME = {};
+
+function isSelectableFund(rec) {
+  return rec.is_active && (Number(rec.total_assets) || 0) > 0;
+}
+
+function buildWizardIndexes() {
+  const map = {};
+  DATA.forEach(rec => {
+    if (!isSelectableFund(rec)) return;
+    rec._brand = brandOf(rec);
+    rec._product = productOf(rec);
+    rec._searchText = normalizeText([rec.fund_name, rec.fund_id, rec.specialization, rec.sub_specialization, rec.classification].filter(Boolean).join(' '));
+    let entry = map[rec._brand];
+    if (!entry) {
+      entry = map[rec._brand] = {
+        name: rec._brand,
+        logo: BRAND_LOGOS[rec._brand] || '',
+        assets: 0,
+        products: {},
+        corps: {},
+        search: ''
+      };
     }
-    return { ...company, totalAssets, count };
-  })
-  .filter(company => company.count > 0 && company.totalAssets > 0)
-  .sort((a, b) => {
-    if (b.totalAssets !== a.totalAssets) return b.totalAssets - a.totalAssets;
-    return a.label.localeCompare(b.label, 'he');
+    entry.assets += Number(rec.total_assets) || 0;
+    entry.products[rec._product] = (entry.products[rec._product] || 0) + 1;
+    if (rec.managing_corp) entry.corps[rec.managing_corp] = 1;
   });
+  BRANDS = Object.keys(map).map(key => {
+    const entry = map[key];
+    const aliases = BRAND_ALIASES[entry.name] || [];
+    entry.search = normalizeText([entry.name, Object.keys(entry.corps).join(' '), aliases.join(' ')].join(' '));
+    entry.monogram = entry.name.replace(/["'׳״-]/g, '').trim().slice(0, 2);
+    return entry;
+  }).sort((a, b) => b.assets - a.assets);
+  BRAND_BY_NAME = {};
+  BRANDS.forEach(entry => { BRAND_BY_NAME[entry.name] = entry; });
 }
 
-function handleCompanySelection(btn) {
-  const query = btn.dataset.query || '';
-  const isAlreadySelected = btn.classList.contains('is-selected') && selectedCompanyQuery === query;
-
-  if (isAlreadySelected) {
-    selectedCompanyQuery = '';
-    btn.classList.remove('is-selected');
-    const input = document.getElementById('searchInput');
-    if (input) input.value = '';
-    resetSearchResultsOnly();
-    return;
-  }
-
-  selectedCompanyQuery = query;
-  document.querySelectorAll('.company-btn').forEach(b => b.classList.remove('is-selected'));
-  btn.classList.add('is-selected');
-
-  const input = document.getElementById('searchInput');
-  if (input) input.value = query;
-  currentInsideResultsQuery = '';
-  resultVisibleLimit = 5;
-
-  showResults(query);
-  const resultsWrap = document.getElementById('searchResults');
-  if (resultsWrap && resultsWrap.scrollIntoView) {
-    resultsWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-  const insideInput = document.getElementById('insideResultsInput');
-  if (insideInput) setTimeout(() => insideInput.focus(), 120);
+function brandsForProduct(product) {
+  if (!product) return BRANDS;
+  return BRANDS.filter(entry => entry.products[product]);
 }
-
-function attachCompanyButtonEvents() {
-  document.querySelectorAll('.company-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleCompanySelection(btn));
-  });
+function productsForBrand(name) {
+  const entry = BRAND_BY_NAME[name];
+  if (!entry) return [];
+  return PRODUCT_ORDER.filter(key => entry.products[key]);
 }
-
-function searchFunds(query, limit = Infinity, filterOverride = activeFilter, allowEmptyAll = false) {
-  const q = normalizeText(query);
-  const qCompact = compactText(query);
-  LAST_SEARCH_TOTAL = 0;
-  const filter = filterOverride || 'all';
-  if (!q && filter === 'all' && !allowEmptyAll) return [];
-  const scored = [];
-  for (const rec of DATA) {
-    if (filter !== 'all' && rec.source !== filter) continue;
-    if (selectedSubProductType && !recMatchesSubProduct(rec, selectedSubProductType)) continue;
-
-    const isCompanyChoiceSearch = selectedCompanyQuery && q === normalizeText(selectedCompanyQuery) && filter !== 'all';
-    if (isCompanyChoiceSearch && !recMatchesSelectedCompany(rec, selectedCompanyQuery)) continue;
-
-    // בגרסת הדשבורד מציגים רק מוצרים פעילים עם נכסים, כדי שלא ייכנסו חישובי חשיפה ריקים.
-    if (!rec.is_active || (Number(rec.total_assets) || 0) <= 0) continue;
-
-    const name = normalizeText(rec.fund_name);
-    const mgr = normalizeText(rec.managing_corp + ' ' + rec.parent_company_name + ' ' + rec.controlling_corp);
-    const cls = normalizeText(rec.classification + ' ' + rec.specialization + ' ' + rec.sub_specialization);
-    const idText = normalizeText(rec.fund_id);
-    const fullText = `${name} ${mgr} ${cls} ${idText}`;
-    const fullCompact = compactText(fullText);
-
-    let score = 0;
-    if (!q) {
-      score = 1;
-    } else {
-      if (name === q) score += 30;
-      else if (name.startsWith(q)) score += 18;
-      else if (name.includes(q)) score += 12;
-
-      if (mgr === q) score += 35;
-      else if (mgr.startsWith(q)) score += 22;
-      else if (mgr.includes(q)) score += 16;
-      if (cls.includes(q)) score += 4;
-      if (idText === q) score += 25;
-
-      // מאפשר חיפוש גם כאשר המשתמש מקליד S&P500 / SP500 / אס אנד פי בצורה לא זהה לשם במאגר.
-      if (qCompact && fullCompact.includes(qCompact)) score += 10;
-
-      const parts = q.split(' ').filter(Boolean);
-      if (parts.length > 1 && parts.every(p => fullText.includes(p) || fullCompact.includes(compactText(p)))) score += 8;
-
-      if (score === 0) continue;
-    }
-    scored.push({ rec, score, total: Number(rec.total_assets) || 0 });
-  }
-
-  const sourceRank = { gemelnet: 1, pensia: 2, bituach: 3 };
-  scored.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    const sr = (sourceRank[a.rec.source] || 9) - (sourceRank[b.rec.source] || 9);
-    if (sr !== 0) return sr;
-    const ma = normalizeText(a.rec.managing_corp || a.rec.parent_company_name || a.rec.controlling_corp || '');
-    const mb = normalizeText(b.rec.managing_corp || b.rec.parent_company_name || b.rec.controlling_corp || '');
-    if (ma !== mb) return ma.localeCompare(mb, 'he');
-    const ca = normalizeText(a.rec.classification || a.rec.specialization || '');
-    const cb = normalizeText(b.rec.classification || b.rec.specialization || '');
-    if (ca !== cb) return ca.localeCompare(cb, 'he');
-    return normalizeText(a.rec.fund_name).localeCompare(normalizeText(b.rec.fund_name), 'he');
-  });
-  LAST_SEARCH_TOTAL = scored.length;
-  return scored.slice(0, Number.isFinite(limit) ? limit : scored.length).map(x => withRuntimeFlags(x.rec));
+function fundsInScope(brandName, product) {
+  return DATA.filter(rec => isSelectableFund(rec) &&
+    (!brandName || rec._brand === brandName) &&
+    (!product || rec._product === product));
 }
 
 function normalizeUserFee(value) {
@@ -1166,17 +1132,10 @@ function resetAllData() {
     editor.classList.remove('active');
     editor.innerHTML = '';
   }
-  const results = document.getElementById('searchResults');
-  if (results) {
-    results.classList.remove('active');
-    results.innerHTML = '';
-  }
-  const input = document.getElementById('searchInput');
-  if (input) input.value = '';
   renderDashboard();
-  const section = document.getElementById('searchSection');
-  if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  window.setTimeout(() => { if (input) input.focus({ preventScroll: true }); }, 350);
+  document.body.classList.remove('dashboard-reached');
+  wizReset();
+  wizScrollIntoView();
 }
 window.saveAsPDF = saveAsPDF;
 window.shareWhatsApp = shareWhatsApp;
@@ -1262,11 +1221,7 @@ function commitQuickUpdate() {
       </div>
     `;
   }
-  showResults(document.getElementById('searchInput').value || '');
-  const wrap = document.getElementById('searchResults');
-  if (wrap) wrap.classList.add('active');
-  const input = document.getElementById('searchInput');
-  if (input) input.focus({ preventScroll: true });
+  wizRender();
 }
 function removeCurrentQuickFund() {
   if (!CURRENT_EDIT_FUND) return;
@@ -1277,53 +1232,19 @@ function removeCurrentQuickFund() {
     renderDashboard();
     const msg = document.getElementById('quickEditorMessage');
     if (msg) msg.textContent = 'הוסר מהדשבורד.';
-    showResults(document.getElementById('searchInput').value || '');
+    wizRender();
   }
 }
 function prepareAnotherFund() {
   CURRENT_EDIT_FUND = null;
-  selectedCompanyQuery = '';
-
   const editor = document.getElementById('quickEditor');
   if (editor) {
     editor.classList.remove('active');
     editor.innerHTML = '';
   }
-
-  const results = document.getElementById('searchResults');
-  if (results) {
-    results.classList.remove('active');
-    results.innerHTML = '';
-  }
-
-  const productPanel = document.getElementById('productTypePanel');
-  if (productPanel) productPanel.classList.add('active');
-
-  const subProductPanel = document.getElementById('subProductPanel');
-  const subProductGrid = document.getElementById('subProductGrid');
-  if (subProductPanel) subProductPanel.style.display = 'none';
-  if (subProductGrid) subProductGrid.innerHTML = '';
-
-  const companyLabel = document.getElementById('companyGridLabel');
-  const companyGrid = document.getElementById('companyGrid');
-  if (companyLabel) companyLabel.style.display = 'none';
-  if (companyGrid) companyGrid.style.display = 'none';
-
-  selectedSubProductType = '';
-  document.querySelectorAll('.company-btn').forEach(btn => btn.classList.remove('is-selected'));
-  document.querySelectorAll('.product-type-btn').forEach(btn => btn.classList.remove('active'));
-  setActiveProductFilter('all');
-
-  const input = document.getElementById('searchInput');
-  if (input) input.value = '';
-
-  const hero = document.querySelector('.hero');
-  const productPanelTarget = document.getElementById('productTypePanel');
-  const target = hero || productPanelTarget || document.getElementById('searchSection');
-
-  if (target && target.scrollIntoView) {
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  document.body.classList.remove('dashboard-reached');
+  wizReset();
+  wizScrollIntoView();
 }
 window.prepareAnotherFund = prepareAnotherFund;
 window.openQuickEditor = openQuickEditor;
@@ -1337,17 +1258,9 @@ function updateFloatingSearchButton() {
 function returnToSearch() {
   QUICK_RETURN_VISIBLE = false;
   updateFloatingSearchButton();
-  const section = document.getElementById('searchSection');
-  const input = document.getElementById('searchInput');
-  const query = input ? input.value : '';
-  if (query.trim()) showResults(query);
-  if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  window.setTimeout(() => {
-    if (input) {
-      input.focus({ preventScroll: true });
-      if (!input.value.trim()) input.select();
-    }
-  }, 350);
+  document.body.classList.remove('dashboard-reached');
+  wizRender();
+  wizScrollIntoView();
 }
 window.returnToSearch = returnToSearch;
 
@@ -1413,445 +1326,320 @@ window.updateManagementFee = updateManagementFee;
 window.handleBalanceInput = handleBalanceInput;
 window.handleFeeInput = handleFeeInput;
 
-function buildResultSummary(query, results, totalCount = results.length, visibleCount = results.length) {
-  const q = (query || '').trim();
-  const counts = results.reduce((acc, r) => {
-    acc.total += 1;
-    acc[r.source] = (acc[r.source] || 0) + 1;
-    return acc;
-  }, { total: 0 });
-  const countPills = ['gemelnet', 'pensia', 'bituach']
-    .filter(src => counts[src])
-    .map(src => `<span class="result-count-pill">${SOURCE_LABEL[src]}: ${counts[src]}</span>`)
-    .join('');
-  const isFocusedCompanySearch = selectedCompanyQuery && q === selectedCompanyQuery && selectedProductFilter !== 'all';
-  const title = isFocusedCompanySearch
-    ? `נמצאו ${totalCount} קופות/מסלולים של ${escapeHtml(q)}`
-    : q
-      ? `נמצאו ${totalCount} מוצרים עבור החיפוש: "${escapeHtml(q)}"`
-      : `מציג ${totalCount} מוצרים`;
-  const visibleNote = totalCount > visibleCount
-    ? `<span>מוצגות ${visibleCount} תוצאות ראשונות מתוך ${totalCount}. אפשר לצמצם באמצעות החיפוש הפנימי.</span>`
-    : `<span>כל התוצאות הרלוונטיות מוצגות בעמוד</span>`;
-  return `
-    <div class="result-item result-summary">
-      <div class="result-name">${title}</div>
-      <div class="result-meta">
-        <span>לחיצה על “עדכן” פותחת אזור מהיר להזנת יתרה ודמי ניהול</span>
-        ${visibleNote}
-      </div>
-      <div class="result-counts">${countPills}</div>
-    </div>
-  `;
-}
 
-function updateFilterCounts(query) {
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    const label = btn.dataset.label || btn.textContent.trim();
-    btn.innerHTML = escapeHtml(label);
+/* === v4.0: אשף איתור הקופה ===
+   כל מצב האשף יושב באובייקט אחד. שדה החיפוש הוא קלט, לא מצב.
+   חברה ← סוג חיסכון ← מסלולים נפוצים, וכל השאר נחשף רק בבקשה. */
+
+const RESULTS_PAGE = 5;
+const wizard = {
+  step: 'company',      // company | allCompanies | unknown | typeFirst | product | results
+  company: '',
+  product: '',
+  chip: '',
+  query: '',
+  companyQuery: '',
+  expanded: false,      // נפתח רק אחרי "לא מצאת את שלך?"
+  showExtraProducts: false,
+  limit: RESULTS_PAGE,
+  globalSearch: false
+};
+
+function wizSet(patch) {
+  Object.assign(wizard, patch);
+  wizRender();
+}
+function wizReset() {
+  Object.assign(wizard, {
+    step: 'company', company: '', product: '', chip: '', query: '',
+    companyQuery: '', expanded: false, showExtraProducts: false, limit: RESULTS_PAGE, globalSearch: false
   });
+  wizRender();
 }
 
-function resultMatchesInternalSearch(rec, term) {
-  const q = normalizeText(term);
-  const qCompact = compactText(term);
-  if (!q && !qCompact) return true;
-  const searchable = [
-    rec.fund_name,
-    rec.fund_id,
-    rec.classification,
-    rec.specialization,
-    rec.sub_specialization,
-    rec.target_population,
-    rec.managing_corp,
-    rec.parent_company_name
-  ].join(' ');
-  const text = normalizeText(searchable);
-  const compact = compactText(searchable);
-  const parts = q.split(' ').filter(Boolean);
-  return text.includes(q) || (qCompact && compact.includes(qCompact)) || parts.every(p => text.includes(p) || compact.includes(compactText(p)));
-}
-
-function preferredTrackRank(rec) {
-  const rawText = [
-    rec.fund_name,
-    rec.classification,
-    rec.specialization,
-    rec.sub_specialization,
-    rec.target_population
-  ].filter(Boolean).join(' ');
-
-  const text = normalizeText(rawText);
-  const compact = compactText(rawText);
-
-  // סדר מועדף להצגת תוצאות אחרי בחירת מוצר + יצרן:
-  // 1. כללי, 2. עד גיל 50, 3. מניות, 4. כל השאר.
-  // הבדיקה רחבה כדי לתפוס ניסוחים שונים במאגר: "עד גיל 50", "50 ומטה", "לבני 50 ומטה" וכו'.
-  const isGeneral =
-    text.includes('מסלול כללי') ||
-    text.includes('כללי') ||
-    text.includes('כללית') ||
-    compact.includes('מסלולכללי');
-
-  const isUpTo50 =
-    text.includes('עד גיל 50') ||
-    text.includes('עד גיל50') ||
-    text.includes('עד 50') ||
-    text.includes('עד-50') ||
-    text.includes('לבני עד 50') ||
-    text.includes('לבני 50 ומטה') ||
-    text.includes('בני 50 ומטה') ||
-    text.includes('גילאי 50 ומטה') ||
-    text.includes('50 ומטה') ||
-    compact.includes('עדגיל50') ||
-    compact.includes('עד50') ||
-    compact.includes('לבני50ומטה') ||
-    compact.includes('בני50ומטה') ||
-    compact.includes('גילאי50ומטה') ||
-    compact.includes('50ומטה');
-
-  const isEquity =
-    text.includes('מסלול מניות') ||
-    text.includes('מניות') ||
-    text.includes('מנייתי') ||
-    text.includes('מניתי') ||
-    compact.includes('מסלולמניות');
-
-  if (isGeneral) return 0;
-  if (isUpTo50) return 1;
-  if (isEquity) return 2;
-  return 3;
-}
-
-function sortByPreferredTrack(results) {
-  // v3.56: אחרי בחירת מוצר / תת-מוצר / יצרן,
-  // התוצאות מסודרות לפי שווי נכסים בקטגוריה, מהגדול לקטן.
-  return results.slice().sort((a, b) => {
-    const assetDiff = (Number(b.total_assets) || 0) - (Number(a.total_assets) || 0);
-    if (assetDiff !== 0) return assetDiff;
-
-    const periodDiff = (Number(b.report_period) || 0) - (Number(a.report_period) || 0);
-    if (periodDiff !== 0) return periodDiff;
-
-    const nameA = normalizeText(a.fund_name || '');
-    const nameB = normalizeText(b.fund_name || '');
-    return nameA.localeCompare(nameB, 'he');
-  });
-}
-
-function buildInsideResultsSearch(query, baseCount) {
-  if (!(selectedCompanyQuery && query === selectedCompanyQuery && selectedProductFilter !== 'all')) return '';
-  const productLabel = (document.querySelector(`.product-type-btn[data-filter="${selectedProductFilter}"]`) || {}).textContent || '';
-  const subtypeText = subProductLabel(selectedSubProductType);
-  const scopeLabel = subtypeText || productLabel.trim();
-  return `
-    <div class="inside-results-search">
-      <p class="inside-results-title">חפש מסלול בתוך התוצאות של ${escapeHtml(selectedCompanyQuery)}</p>
-      <p class="inside-results-subtitle">נמצאו ${baseCount} קופות/מסלולים בתחום ${escapeHtml(scopeLabel)}. אפשר לצמצם לפי מסלול, גיל, מדד או מספר קופה.</p>
-      <input type="text" class="inside-results-input" id="insideResultsInput" value="${escapeHtml(currentInsideResultsQuery)}" placeholder="לדוגמה: כללי, מניות, S&P 500, 50 עד 60, מספר קופה" autocomplete="off" />
-    </div>
-  `;
-}
-
-function showResults(query) {
-  updateFilterCounts(query);
-  const baseResults = searchFunds(query);
-  const wrap = document.getElementById('searchResults');
-  const focusedCompanyMode = Boolean(selectedCompanyQuery && query === selectedCompanyQuery && selectedProductFilter !== 'all');
-  const filteredResults = focusedCompanyMode
-    ? baseResults.filter(r => resultMatchesInternalSearch(r, currentInsideResultsQuery))
-    : baseResults;
-  const orderedResults = focusedCompanyMode ? sortByPreferredTrack(filteredResults) : filteredResults;
-  const visibleLimit = focusedCompanyMode ? resultVisibleLimit : Infinity;
-  const displayedResults = orderedResults.slice(0, Number.isFinite(visibleLimit) ? visibleLimit : orderedResults.length);
-  if (!baseResults.length) {
-    wrap.innerHTML = query.trim()
-      ? '<div class="result-item result-summary"><div class="result-name">לא נמצאו תוצאות</div><div class="result-meta"><span>נסה לבחור סוג מוצר אחר או להשתמש בחיפוש הידני.</span></div></div>'
-      : '';
-    wrap.classList.toggle('active', Boolean(query.trim()));
-    return;
-  }
-  const insideSearch = buildInsideResultsSearch(query, baseResults.length);
-  if (!orderedResults.length) {
-    wrap.innerHTML = insideSearch + '<div class="result-item result-summary"><div class="result-name">לא נמצאה קופה שמתאימה לחיפוש הפנימי</div><div class="result-meta"><span>נסה לחפש מילה קצרה יותר, לדוגמה: כללי / מניות / 50 / מספר קופה.</span></div></div>';
-    wrap.classList.add('active');
-    attachInsideResultsEvents(query);
-    return;
-  }
-  const summary = buildResultSummary(query, orderedResults, orderedResults.length, displayedResults.length);
-  const resultItems = displayedResults.map(r => {
-    const stale = r.is_stale ? `<span class="stale-badge">${r.months_behind} ח׳ ישן</span>` : '';
-    const micro = r.is_micro_fund ? `<span class="micro-badge">קטנה</span>` : '';
-    const exposure = `מניות ${fmtPct(r.stock_pct, 0)} • חו״ל ${fmtPct(r.foreign_pct, 0)} • מט״ח ${fmtPct(r.fx_pct, 0)}`;
-    const manager = r.managing_corp || r.parent_company_name || '-';
-    const alreadySelected = userFunds.some(item => item.fund.uid === r.uid);
-    const selectedBadge = alreadySelected ? '<span class="selected-badge">כבר נוסף</span>' : '';
-    return `
-      <div class="result-item ${alreadySelected ? 'selected' : ''}" data-uid="${escapeHtml(r.uid)}">
-        <div class="result-main-row">
-          <div>
-            <div class="result-name"><span class="source-tag ${escapeHtml(r.source)}">${SOURCE_LABEL[r.source]}</span>${escapeHtml(r.fund_name)} ${selectedBadge} ${stale} ${micro}</div>
-            <div class="result-meta">
-              <span>${escapeHtml(manager)}</span>
-              <span>${escapeHtml(r.classification || '')}</span>
-              <span>${exposure}</span>
-              <span>נכסים: ₪${Math.round(Number(r.total_assets) || 0).toLocaleString('he-IL')} מיליון</span>
-              <span>מספר: ${escapeHtml(r.fund_id || '')}</span>
-            </div>
-          </div>
-          <button type="button" class="select-btn" data-uid="${escapeHtml(r.uid)}">עדכן</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-  const canToggleMore = focusedCompanyMode && orderedResults.length > 5;
-  const expandedResults = canToggleMore && resultVisibleLimit !== 5 && displayedResults.length >= orderedResults.length;
-  const showMore = canToggleMore
-    ? `<button type="button" class="show-more-results-btn" id="showMoreResultsBtn">${expandedResults ? 'סגור תוצאות נוספות' : `הצג עוד ${orderedResults.length - 5} תוצאות`}</button>`
+function wizLogo(entry) {
+  const monogram = `<span class="wiz-monogram">${escapeHtml(entry.monogram || '?')}</span>`;
+  const img = entry.logo
+    ? `<img src="logos/${escapeHtml(entry.logo)}.svg" alt="" loading="lazy" onerror="this.remove()" />`
     : '';
-  wrap.innerHTML = insideSearch + summary + resultItems + showMore;
-  wrap.classList.add('active');
-  wrap.querySelectorAll('.select-btn[data-uid]').forEach(btn => {
-    btn.addEventListener('click', (event) => {
-      event.stopPropagation();
-      const found = orderedResults.find(x => x.uid === btn.dataset.uid);
-      if (found) addFund(found);
-    });
-  });
-  attachInsideResultsEvents(query);
-  const showMoreBtn = document.getElementById('showMoreResultsBtn');
-  if (showMoreBtn) {
-    showMoreBtn.addEventListener('click', () => {
-      resultVisibleLimit = expandedResults ? 5 : Infinity;
-      showResults(query);
-      const nextBtn = document.getElementById('showMoreResultsBtn');
-      if (nextBtn && nextBtn.scrollIntoView) {
-        nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    });
-  }
+  return `<span class="wiz-logo" aria-hidden="true">${monogram}${img}</span>`;
 }
 
-function attachInsideResultsEvents(query) {
-  const insideInput = document.getElementById('insideResultsInput');
-  if (!insideInput) return;
-  insideInput.addEventListener('input', e => {
-    currentInsideResultsQuery = e.target.value;
-    resultVisibleLimit = 5;
-    showResults(query);
-    const nextInput = document.getElementById('insideResultsInput');
-    if (nextInput) {
-      nextInput.focus();
-      const len = nextInput.value.length;
-      try { nextInput.setSelectionRange(len, len); } catch (_) {}
-    }
-  });
+/* --- מסך 1: מי מנהל את החיסכון --- */
+function wizScreenCompany() {
+  const list = brandsForProduct(wizard.product);
+  const top = list.slice(0, 8);
+  const intro = wizard.product
+    ? `אילו חברות מנהלות ${escapeHtml(PRODUCT_LABEL[wizard.product] || '')}?`
+    : 'בוא נמצא את החיסכון שלך. מי מנהל אותו?';
+  return `
+    <h2 class="wiz-title">${intro}</h2>
+    <p class="wiz-sub">בחר את החברה שאליה שייך החיסכון. אפשר לזהות אותה בדוח או באזור האישי.</p>
+    <div class="wiz-company-grid">
+      ${top.map(entry => `
+        <button type="button" class="wiz-company" data-wiz="company" data-value="${escapeHtml(entry.name)}">
+          ${wizLogo(entry)}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
+        </button>`).join('')}
+    </div>
+    <div class="wiz-links">
+      <button type="button" class="wiz-link" data-wiz="allCompanies">כל החברות</button>
+      <button type="button" class="wiz-link" data-wiz="unknown">אני לא יודע איפה הכסף מנוהל</button>
+    </div>`;
 }
 
-document.getElementById('searchInput').addEventListener('input', e => showResults(e.target.value));
-document.getElementById('searchInput').addEventListener('focus', e => {
-  if (activeFilter !== 'all' || e.target.value.trim()) showResults(e.target.value);
-});
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedSubProductType = '';
-    activeFilter = btn.dataset.filter;
-    selectedProductFilter = activeFilter;
-    showResults(document.getElementById('searchInput').value);
-  });
-});
-
-
-const manualSearchToggle = document.getElementById('manualSearchToggle');
-const manualSearchControls = document.getElementById('manualSearchControls');
-if (manualSearchToggle && manualSearchControls) {
-  manualSearchToggle.addEventListener('click', () => {
-    const willOpen = manualSearchControls.hasAttribute('hidden');
-    if (willOpen) {
-      selectedSubProductType = '';
-      manualSearchControls.removeAttribute('hidden');
-      manualSearchToggle.setAttribute('aria-expanded', 'true');
-      manualSearchToggle.textContent = 'סגור חיפוש ידני';
-      const input = document.getElementById('searchInput');
-      if (input) {
-        setTimeout(() => input.focus(), 80);
-      }
-    } else {
-      manualSearchControls.setAttribute('hidden', '');
-      manualSearchToggle.setAttribute('aria-expanded', 'false');
-      manualSearchToggle.textContent = 'חיפוש ידני';
-    }
-  });
+/* --- מסך 2: כל החברות --- */
+function wizScreenAllCompanies() {
+  const term = normalizeText(wizard.companyQuery);
+  const list = brandsForProduct(wizard.product)
+    .filter(entry => !term || entry.search.indexOf(term) > -1);
+  const rows = list.length
+    ? list.map(entry => `
+        <button type="button" class="wiz-company-row" data-wiz="company" data-value="${escapeHtml(entry.name)}">
+          ${wizLogo(entry)}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
+        </button>`).join('')
+    : `<p class="wiz-empty-note">לא מצאנו חברה בשם הזה. אפשר לנסות חלק מהשם, או לחזור ולבחור מהחברות המרכזיות.</p>`;
+  return `
+    <h2 class="wiz-title">חפש את החברה שלך</h2>
+    <div class="wiz-field">
+      <input type="text" id="wizCompanySearch" class="wiz-input" placeholder="שם החברה" value="${escapeHtml(wizard.companyQuery)}" autocomplete="off" />
+    </div>
+    <div class="wiz-company-list">${rows}</div>
+    <div class="wiz-links">
+      <button type="button" class="wiz-link" data-wiz="backToCompanies">חזרה לחברות המרכזיות</button>
+    </div>`;
 }
 
-// v3.48: זרימה פשוטה יותר — בחירת סוג מוצר, אחר כך יצרן, ואז קופה
-let selectedCompanyQuery = '';
-let selectedProductFilter = 'all';
-let selectedSubProductType = '';
-let currentInsideResultsQuery = '';
-let resultVisibleLimit = 5;
-
-function setActiveProductFilter(filter) {
-  activeFilter = filter || 'all';
-  selectedProductFilter = activeFilter;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  const matchingFilterBtn = document.querySelector(`.filter-btn[data-filter="${activeFilter}"]`);
-  if (matchingFilterBtn) matchingFilterBtn.classList.add('active');
-  document.querySelectorAll('.product-type-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === activeFilter));
+/* --- מסך 3: אני לא יודע --- */
+function wizScreenUnknown() {
+  return `
+    <h2 class="wiz-title">איפה אפשר למצוא את שם החברה?</h2>
+    <ul class="wiz-hints">
+      <li><strong>תלוש השכר</strong> — בשורת ההפרשות לפנסיה ולהשתלמות מופיע שם החברה המנהלת.</li>
+      <li><strong>הדוח התקופתי</strong> — מגיע בדואר או במייל, ושם החברה מופיע בראש העמוד.</li>
+      <li><strong>האזור האישי</strong> — באתר חברת הביטוח, קרן הפנסיה או בית ההשקעות.</li>
+    </ul>
+    <p class="wiz-note">הכלי אינו מתחבר למסלקה הפנסיונית ואינו מושך נתונים אישיים — הוא עוזר לך לאתר את הקופה במאגר הציבורי ולהזין את היתרה בעצמך.</p>
+    <div class="wiz-links">
+      <button type="button" class="wiz-link wiz-link-strong" data-wiz="typeFirst">אני יודע רק מה סוג החיסכון</button>
+      <a class="wiz-link" href="https://www.gov.il/he/service/pension_savings_search" target="_blank" rel="noopener noreferrer">איתור חסכונות בהר הכסף</a>
+      <button type="button" class="wiz-link" data-wiz="backToCompanies">חזרה</button>
+    </div>`;
 }
 
-function resetSearchResultsOnly() {
-  currentInsideResultsQuery = '';
-  resultVisibleLimit = 5;
-  const resultsWrap = document.getElementById('searchResults');
-  if (resultsWrap) {
-    resultsWrap.innerHTML = '';
-    resultsWrap.classList.remove('active');
-  }
-  const editor = document.getElementById('quickEditor');
-  if (editor) {
-    editor.classList.remove('active');
-    editor.innerHTML = '';
-  }
+/* --- מסך 4: סוג החיסכון --- */
+function wizProductButton(key) {
+  const item = PRODUCT_TYPES.filter(entry => entry.key === key)[0];
+  if (!item) return '';
+  return `
+    <button type="button" class="wiz-choice" data-wiz="product" data-value="${escapeHtml(item.key)}">
+      <span class="wiz-choice-title">${escapeHtml(item.label)}</span>
+      <span class="wiz-choice-hint">${escapeHtml(item.hint)}</span>
+    </button>`;
 }
-
-function hideCompanyChooser() {
-  const companyLabel = document.getElementById('companyGridLabel');
-  const companyGrid = document.getElementById('companyGrid');
-  if (companyLabel) companyLabel.style.display = 'none';
-  if (companyGrid) companyGrid.style.display = 'none';
-  document.querySelectorAll('.company-btn').forEach(b => b.classList.remove('is-selected'));
-}
-
-function hideSubProductChooser() {
-  const panel = document.getElementById('subProductPanel');
-  const grid = document.getElementById('subProductGrid');
-  if (panel) panel.style.display = 'none';
-  if (grid) {
-    grid.innerHTML = '';
-    grid.querySelectorAll?.('.sub-product-btn').forEach(b => b.classList.remove('active'));
-  }
-  selectedSubProductType = '';
-}
-
-function clearGuidedSelectionState() {
-  selectedCompanyQuery = '';
-  selectedSubProductType = '';
-  selectedProductFilter = 'all';
-  activeFilter = 'all';
-  const input = document.getElementById('searchInput');
-  if (input) input.value = '';
-  document.querySelectorAll('.product-type-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  const allFilterBtn = document.querySelector('.filter-btn[data-filter="all"]');
-  if (allFilterBtn) allFilterBtn.classList.add('active');
-  hideCompanyChooser();
-  hideSubProductChooser();
-  resetSearchResultsOnly();
-}
-
-function showCompanyChooser() {
-  const companyLabel = document.getElementById('companyGridLabel');
-  const companyGrid = document.getElementById('companyGrid');
-  if (!companyGrid) return;
-
-  const companies = getCompanyAssetsForCurrentScope();
-  companyGrid.innerHTML = companies.length
-    ? companies.map(company => `
-        <button type="button" class="company-btn" data-query="${escapeHtml(company.query)}" title="${Math.round(company.totalAssets).toLocaleString('he-IL')} מיליון ₪">
-          <span>${escapeHtml(company.label)}</span>
+function wizScreenProduct() {
+  const keys = wizard.company ? productsForBrand(wizard.company) : PRODUCT_ORDER.slice();
+  const primary = keys.slice(0, PRIMARY_PRODUCTS_SHOWN);
+  const extra = keys.slice(PRIMARY_PRODUCTS_SHOWN);
+  const title = wizard.company ? 'מה סוג החיסכון?' : 'מה סוג החיסכון שלך?';
+  const sub = wizard.company
+    ? `אלה סוגי החיסכון שמנוהלים ב${escapeHtml(wizard.company)}.`
+    : 'נמצא לפי הסוג, ואחר כך נבחר את החברה.';
+  return `
+    <h2 class="wiz-title">${title}</h2>
+    <p class="wiz-sub">${sub}</p>
+    <div class="wiz-choices">
+      ${primary.map(wizProductButton).join('')}
+      ${extra.length ? `
+        <button type="button" class="wiz-choice wiz-choice-more" data-wiz="moreProducts">
+          <span class="wiz-choice-title">סוג אחר</span>
+          <span class="wiz-choice-hint">מוצרים ותיקים וקופות על שם המעסיק</span>
         </button>
-      `).join('')
-    : '<div class="result-item result-summary"><div class="result-name">לא נמצאו חברות רלוונטיות בקטגוריה שנבחרה</div><div class="result-meta"><span>נסה לבחור סוג מוצר אחר או להשתמש בחיפוש הידני.</span></div></div>';
-
-  if (companyLabel) {
-    companyLabel.style.display = '';
-    companyLabel.textContent = companies.length
-      ? 'באיזו חברה מנוהל המוצר? החברות מסודרות לפי שווי נכסים בקטגוריה שנבחרה.'
-      : 'לא נמצאו חברות רלוונטיות';
-  }
-  companyGrid.style.display = 'grid';
-  attachCompanyButtonEvents();
-  if (companyGrid.scrollIntoView) {
-    companyGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+        <div class="wiz-choices wiz-choices-extra" id="wizExtraProducts" ${wizard.showExtraProducts ? '' : 'hidden'}>
+          ${extra.map(wizProductButton).join('')}
+        </div>` : ''}
+    </div>`;
 }
-function renderSubProductOptions(filter) {
-  const panel = document.getElementById('subProductPanel');
-  const grid = document.getElementById('subProductGrid');
-  const title = document.getElementById('subProductTitle');
-  const subtitle = document.getElementById('subProductSubtitle');
-  const options = getSubProductOptions(filter);
-  selectedSubProductType = '';
-  if (!panel || !grid) return false;
-  grid.innerHTML = '';
-  if (!options.length) {
-    panel.style.display = 'none';
-    return false;
-  }
-  if (title) title.textContent = filter === 'gemelnet' ? 'איזה סוג גמל יש לך?' : 'איזה סוג ביטוח / פוליסה יש לך?';
-  if (subtitle) subtitle.textContent = 'בחר תת-סוג כדי לצמצם את רשימת החברות והמסלולים.';
-  grid.innerHTML = options.map(opt => `<button type="button" class="product-type-btn sub-product-btn" data-subtype="${escapeHtml(opt.type)}">${escapeHtml(opt.label)}</button>`).join('');
-  panel.style.display = 'block';
-  grid.querySelectorAll('.sub-product-btn').forEach(button => {
-    button.addEventListener('click', () => {
-      const subtype = button.dataset.subtype || '';
-      const isAlreadySelected = button.classList.contains('active') && selectedSubProductType === subtype;
-      if (isAlreadySelected) {
-        selectedSubProductType = '';
-        selectedCompanyQuery = '';
-        button.classList.remove('active');
-        hideCompanyChooser();
-        const input = document.getElementById('searchInput');
-        if (input) input.value = '';
-        resetSearchResultsOnly();
-        return;
-      }
-      selectedSubProductType = subtype;
-      grid.querySelectorAll('.sub-product-btn').forEach(b => b.classList.remove('active'));
-      button.classList.add('active');
-      selectedCompanyQuery = '';
-      const input = document.getElementById('searchInput');
-      if (input) input.value = '';
-      resetSearchResultsOnly();
-      showCompanyChooser();
+
+/* --- מסך 5: מסלולים --- */
+function wizResultCard(rec) {
+  const chosen = userFunds.some(item => item.fund && item.fund.uid === rec.uid);
+  return `
+    <div class="wiz-result${chosen ? ' is-chosen' : ''}">
+      <div class="wiz-result-body">
+        <div class="wiz-result-name">${escapeHtml(rec.fund_name)}</div>
+        <div class="wiz-result-meta">${escapeHtml(trackLabel(rec))}</div>
+        <div class="wiz-result-id">מספר קופה ${escapeHtml(rec.fund_id || '')}</div>
+      </div>
+      <button type="button" class="wiz-pick" data-wiz="pick" data-value="${escapeHtml(rec.uid)}">${chosen ? 'ערוך' : 'בחר'}</button>
+    </div>`;
+}
+function wizFilteredResults() {
+  const scope = wizard.globalSearch
+    ? DATA.filter(isSelectableFund)
+    : fundsInScope(wizard.company, wizard.product);
+  const term = normalizeText(wizard.query);
+  let list = scope;
+  if (wizard.chip) list = list.filter(rec => trackTags(rec).indexOf(wizard.chip) > -1);
+  if (term) {
+    list = list.filter(rec => {
+      const text = rec._searchText || normalizeText(rec.fund_name);
+      return text.indexOf(term) > -1 || (rec.fund_id || '') === wizard.query.trim();
     });
+  }
+  return rankTracks(list);
+}
+function wizScreenResults() {
+  const results = wizFilteredResults();
+  const visible = results.slice(0, wizard.limit);
+  const chipCounts = {};
+  fundsInScope(wizard.company, wizard.product).forEach(rec => {
+    trackTags(rec).forEach(tag => { chipCounts[tag] = (chipCounts[tag] || 0) + 1; });
   });
-  panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  return true;
+  const chips = TRACK_CHIPS.filter(chip => chipCounts[chip.key]).slice(0, 7);
+
+  let body;
+  if (!visible.length) {
+    body = `
+      <div class="wiz-empty">
+        <p class="wiz-empty-title">לא מצאנו מסלול שמתאים לחיפוש</p>
+        <p class="wiz-empty-note">אפשר לנסות מילה קצרה יותר, לנקות את הסינון, או לחפש בכל החברות.</p>
+        <div class="wiz-links">
+          <button type="button" class="wiz-link" data-wiz="clearFilters">נקה סינון</button>
+          ${wizard.globalSearch ? '' : '<button type="button" class="wiz-link wiz-link-strong" data-wiz="globalSearch">חפש בכל החברות</button>'}
+        </div>
+      </div>`;
+  } else {
+    body = `<div class="wiz-results">${visible.map(wizResultCard).join('')}</div>`;
+  }
+
+  const disclosure = wizard.expanded
+    ? `
+      <div class="wiz-disclosure">
+        ${chips.length ? `<div class="wiz-chips">
+          ${chips.map(chip => `<button type="button" class="wiz-chip${wizard.chip === chip.key ? ' is-on' : ''}" data-wiz="chip" data-value="${escapeHtml(chip.key)}">${escapeHtml(chip.label)}</button>`).join('')}
+        </div>` : ''}
+        <div class="wiz-field">
+          <input type="text" id="wizTrackSearch" class="wiz-input" placeholder="חיפוש לפי שם המסלול או מספר קופה" value="${escapeHtml(wizard.query)}" autocomplete="off" />
+        </div>
+        ${results.length > visible.length ? '<button type="button" class="wiz-more" data-wiz="more">הצג עוד מסלולים</button>' : ''}
+      </div>`
+    : `<button type="button" class="wiz-link wiz-not-found" data-wiz="expand">לא מצאת את שלך?</button>`;
+
+  const title = wizard.globalSearch ? 'חיפוש בכל החברות' : 'נתחיל מהמסלולים הנפוצים';
+  return `
+    <h2 class="wiz-title">${title}</h2>
+    <p class="wiz-sub">בחר את המסלול שמופיע בדוח שלך, ואז נזין את היתרה.</p>
+    ${body}
+    ${disclosure}`;
 }
 
-document.querySelectorAll('.product-type-btn:not(.sub-product-btn)').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const filter = btn.dataset.filter || 'all';
-    const isAlreadySelected = btn.classList.contains('active') && selectedProductFilter === filter;
+/* --- פירורי לחם --- */
+function wizRenderCrumbs() {
+  const wrap = document.getElementById('wizCrumbs');
+  if (!wrap) return;
+  const parts = [];
+  if (wizard.company) {
+    parts.push(`<button type="button" class="wiz-crumb" data-wiz="crumbCompany">${escapeHtml(wizard.company)}</button>`);
+  }
+  if (wizard.product && wizard.step === 'results') {
+    parts.push(`<button type="button" class="wiz-crumb" data-wiz="crumbProduct">${escapeHtml(PRODUCT_LABEL[wizard.product] || '')}</button>`);
+  }
+  wrap.innerHTML = parts.length
+    ? `<span class="wiz-crumb-sep-wrap">${parts.join('<span class="wiz-crumb-sep" aria-hidden="true">›</span>')}</span>
+       <button type="button" class="wiz-crumb wiz-crumb-reset" data-wiz="reset">התחל מחדש</button>`
+    : '';
+}
 
-    if (isAlreadySelected) {
-      clearGuidedSelectionState();
+function wizRender() {
+  const screen = document.getElementById('wizScreen');
+  if (!screen) return;
+  let html = '';
+  if (wizard.step === 'allCompanies') html = wizScreenAllCompanies();
+  else if (wizard.step === 'unknown') html = wizScreenUnknown();
+  else if (wizard.step === 'product' || wizard.step === 'typeFirst') html = wizScreenProduct();
+  else if (wizard.step === 'results') html = wizScreenResults();
+  else html = wizScreenCompany();
+  screen.innerHTML = html;
+  wizRenderCrumbs();
+  wizRestoreFocus();
+}
+
+// שמירת מיקוד וסמן בשדות החיפוש אחרי רינדור מחדש.
+let WIZ_FOCUS_FIELD = '';
+function wizRestoreFocus() {
+  if (!WIZ_FOCUS_FIELD) return;
+  const field = document.getElementById(WIZ_FOCUS_FIELD);
+  if (!field) { WIZ_FOCUS_FIELD = ''; return; }
+  field.focus({ preventScroll: true });
+  const end = field.value.length;
+  try { field.setSelectionRange(end, end); } catch (error) { /* שדה שאינו תומך */ }
+}
+
+function wizAfterCompany(name) {
+  const products = productsForBrand(name);
+  // סוג יחיד אצל החברה — אין מה לשאול, קופצים ישר למסלולים.
+  if (products.length === 1) {
+    wizSet({ company: name, product: products[0], step: 'results', chip: '', query: '', expanded: false, limit: RESULTS_PAGE, globalSearch: false });
+    return;
+  }
+  wizSet({ company: name, product: '', step: 'product', expanded: false });
+}
+
+function wizHandle(action, value) {
+  if (action === 'company') {
+    if (wizard.product) {
+      wizSet({ company: value, step: 'results', chip: '', query: '', expanded: false, limit: RESULTS_PAGE, globalSearch: false });
       return;
     }
+    wizAfterCompany(value);
+    return;
+  }
+  if (action === 'allCompanies') { WIZ_FOCUS_FIELD = 'wizCompanySearch'; wizSet({ step: 'allCompanies', companyQuery: '' }); return; }
+  if (action === 'backToCompanies') { WIZ_FOCUS_FIELD = ''; wizSet({ step: 'company', companyQuery: '' }); return; }
+  if (action === 'unknown') { wizSet({ step: 'unknown' }); return; }
+  if (action === 'typeFirst') { wizSet({ step: 'typeFirst', company: '', product: '', expanded: false }); return; }
+  if (action === 'moreProducts') { wizSet({ showExtraProducts: !wizard.showExtraProducts }); return; }
+  if (action === 'product') {
+    if (wizard.step === 'typeFirst') { wizSet({ product: value, step: 'company', expanded: false }); return; }
+    wizSet({ product: value, step: 'results', chip: '', query: '', expanded: false, limit: RESULTS_PAGE, globalSearch: false });
+    return;
+  }
+  if (action === 'expand') { WIZ_FOCUS_FIELD = ''; wizSet({ expanded: true }); return; }
+  if (action === 'chip') { wizSet({ chip: wizard.chip === value ? '' : value, limit: RESULTS_PAGE }); return; }
+  if (action === 'more') { wizSet({ limit: wizard.limit + RESULTS_PAGE }); return; }
+  if (action === 'clearFilters') { WIZ_FOCUS_FIELD = ''; wizSet({ chip: '', query: '', limit: RESULTS_PAGE }); return; }
+  if (action === 'globalSearch') { wizSet({ globalSearch: true, limit: RESULTS_PAGE }); return; }
+  if (action === 'crumbCompany') { wizSet({ step: 'company', product: '', chip: '', query: '', expanded: false, globalSearch: false }); return; }
+  if (action === 'crumbProduct') { wizSet({ step: 'product', chip: '', query: '', expanded: false, globalSearch: false }); return; }
+  if (action === 'reset') { wizReset(); return; }
+  if (action === 'pick') {
+    const rec = DATA.filter(item => item.uid === value)[0];
+    if (rec) addFund(rec);
+    return;
+  }
+}
 
-    selectedCompanyQuery = '';
-    setActiveProductFilter(filter);
-    hideCompanyChooser();
-
-    const input = document.getElementById('searchInput');
-    if (input) input.value = '';
-    resetSearchResultsOnly();
-
-    const needsSubProduct = renderSubProductOptions(filter);
-    if (!needsSubProduct) {
-      selectedSubProductType = '';
-      showCompanyChooser();
-    }
-  });
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('[data-wiz]');
+  if (!trigger || !document.getElementById('wizard') || !document.getElementById('wizard').contains(trigger)) return;
+  event.preventDefault();
+  wizHandle(trigger.dataset.wiz, trigger.dataset.value || '');
+});
+document.addEventListener('input', event => {
+  if (event.target.id === 'wizCompanySearch') {
+    WIZ_FOCUS_FIELD = 'wizCompanySearch';
+    wizSet({ companyQuery: event.target.value });
+  }
+  if (event.target.id === 'wizTrackSearch') {
+    WIZ_FOCUS_FIELD = 'wizTrackSearch';
+    wizSet({ query: event.target.value, limit: RESULTS_PAGE });
+  }
 });
 
-// כפתורי החברות נוצרים דינמית לפי שווי נכסים בקטגוריה שנבחרה.
-
-// חיפוש ידני מוסתר כברירת מחדל ונפתח רק בלחיצה, כדי לא להעמיס על המשתמש.
+function wizScrollIntoView() {
+  const section = document.getElementById('searchSection');
+  if (section && section.scrollIntoView) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 
 (async function init() {
@@ -1866,7 +1654,8 @@ document.querySelectorAll('.product-type-btn:not(.sub-product-btn)').forEach(btn
     renderDatasetMeta();
     loadState();
     renderMissingFunds();
-    updateFilterCounts('');
+    buildWizardIndexes();
+    wizRender();
     renderFunds();
   } catch (error) {
     document.getElementById('loadingState').textContent = 'שגיאה בטעינת הנתונים: ' + error.message;
@@ -1971,14 +1760,10 @@ window.backToTop = function() { const hero = document.querySelector('.premium-he
   togglePanel('landingDisclosureBtn', 'landingDisclosurePanel');
   togglePanel('landingPrivacyBtn', 'landingPrivacyPanel');
 
-  const startBtn = document.getElementById('landingStartBtn');
-  const searchSection = document.getElementById('searchSection');
+  // v4.0: אין יותר מסך פתיחה נפרד — האשף הוא הדבר הראשון בעמוד.
+  // אין יותר גם body.landing-started: הוא היה מסתיר את כותרת ההירו ואת כרטיסי המידע.
   function returnToLanding() {
-    if (!searchSection) return;
-    searchSection.classList.add('landing-hidden');
-    document.body.classList.remove('landing-started');
     document.body.classList.remove('dashboard-reached');
-    if (startBtn) startBtn.setAttribute('aria-expanded', 'false');
     const hero = document.querySelector('.premium-hero');
     if (hero) hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -1987,37 +1772,13 @@ window.backToTop = function() { const hero = document.querySelector('.premium-he
 
   window.enterDashboardView = function() {
     closeLandingPanels('');
-    document.body.classList.remove('landing-started');
     document.body.classList.add('dashboard-reached');
-    if (startBtn) startBtn.setAttribute('aria-expanded', 'false');
-    if (searchSection) searchSection.classList.add('landing-hidden');
 
     const editor = document.getElementById('quickEditor');
     if (editor) { editor.classList.remove('active'); editor.innerHTML = ''; }
 
-    const results = document.getElementById('searchResults');
-    if (results) { results.classList.remove('active'); results.innerHTML = ''; }
-
     const portfolio = document.getElementById('portfolioSection');
     if (portfolio) portfolio.style.display = 'none';
-
-    const productPanel = document.getElementById('productTypePanel');
-    if (productPanel) productPanel.classList.add('active');
-
-    const subProductPanel = document.getElementById('subProductPanel');
-    const subProductGrid = document.getElementById('subProductGrid');
-    if (subProductPanel) subProductPanel.style.display = 'none';
-    if (subProductGrid) subProductGrid.innerHTML = '';
-
-    const companyLabel = document.getElementById('companyGridLabel');
-    const companyGrid = document.getElementById('companyGrid');
-    if (companyLabel) companyLabel.style.display = 'none';
-    if (companyGrid) { companyGrid.style.display = 'none'; companyGrid.innerHTML = ''; }
-
-    const manual = document.getElementById('manualSearchControls');
-    if (manual) manual.hidden = true;
-    const manualToggle = document.getElementById('manualSearchToggle');
-    if (manualToggle) manualToggle.setAttribute('aria-expanded', 'false');
 
     const projection = document.getElementById('projectionSection');
     if (projection) {
@@ -2031,36 +1792,10 @@ window.backToTop = function() { const hero = document.querySelector('.premium-he
     const projResults = document.getElementById('projResults');
     if (projResults) projResults.hidden = true;
 
-    const input = document.getElementById('searchInput');
-    if (input) input.value = '';
-    document.querySelectorAll('.product-type-btn.active, .company-btn.is-selected, .sub-product-btn.active').forEach(function(btn) {
-      btn.classList.remove('active', 'is-selected');
-    });
+    if (typeof wizReset === 'function') wizReset();
   };
 
   const returnBtn = document.getElementById('returnLandingBtn');
   if (returnBtn) returnBtn.addEventListener('click', returnToLanding);
-  if (startBtn && searchSection) {
-    startBtn.addEventListener('click', function() {
-      const isHidden = searchSection.classList.contains('landing-hidden');
-      closeLandingPanels('');
-      document.querySelectorAll('.landing-card[aria-controls]').forEach(function(btn) {
-        if (btn.id !== 'landingStartBtn') btn.setAttribute('aria-expanded', 'false');
-      });
-      if (isHidden) {
-        searchSection.classList.remove('landing-hidden');
-        document.body.classList.remove('dashboard-reached');
-        document.body.classList.add('landing-started');
-        startBtn.setAttribute('aria-expanded', 'true');
-        searchSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        searchSection.classList.add('landing-hidden');
-        document.body.classList.remove('landing-started');
-        startBtn.setAttribute('aria-expanded', 'false');
-        const hero = document.querySelector('.premium-hero');
-        if (hero) hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  }
 })();
 
