@@ -28,7 +28,7 @@ mkdir -p _site
 cp index.html styles.css scripts.js funds_unified.json _site/
 cp index.html _site/404.html
 mkdir -p _site/logos
-cp -R logos/. _site/logos/ 2>/dev/null || true
+cp logos/*.svg logos/*.png _site/logos/ 2>/dev/null || true
 ```
 
 חיבור ראשוני: ב-Netlify בוחרים **Add new site → Import an existing project**,
