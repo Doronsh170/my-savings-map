@@ -155,9 +155,8 @@ const PRODUCT_TYPES = [
   { key: 'hishtalmut',  label: 'קרן השתלמות',      hint: 'נפתחת דרך המעסיק, וניתנת למשיכה אחרי שש שנים' },
   { key: 'gemel',       label: 'קופת גמל',         hint: 'חיסכון פנסיוני שאינו קרן פנסיה, נמשך בדרך כלל כקצבה' },
   { key: 'invest',      label: 'גמל להשקעה',       hint: 'חיסכון פרטי שאפשר למשוך בכל עת' },
+  { key: 'insurance',   label: 'ביטוח מנהלים / פוליסת חיסכון', hint: 'חיסכון בחברת ביטוח, לרוב דרך סוכן — ותיק או חדש' },
   { key: 'child',       label: 'חיסכון לכל ילד',   hint: 'החיסכון שנפתח לילד עם קצבת הילדים' },
-  { key: 'policy',      label: 'פוליסת חיסכון',    hint: 'חיסכון בחברת ביטוח, לרוב דרך סוכן' },
-  { key: 'manager',     label: 'ביטוח מנהלים ותיק', hint: 'פוליסה שנפתחה עד 2003, לעיתים עם מקדם מובטח' },
   { key: 'pitzuim',     label: 'מרכזית לפיצויים',  hint: 'קופה על שם המעסיק לכיסוי פיצויי פיטורים' }
 ];
 const PRODUCT_LABEL = {};
@@ -169,7 +168,9 @@ const PRIMARY_PRODUCTS_SHOWN = 5;
 function productOf(rec) {
   const cls = String(rec.classification || '');
   if (rec.source === 'pensia') return 'pensia';
-  if (rec.source === 'bituach') return /199\d|200[0-3]/.test(cls) ? 'manager' : 'policy';
+  // כל מוצרי הביטוח תחת סוג אחד: classification מתאר תקופת הנפקה ואינו מבחין
+  // באמינות בין ביטוח מנהלים לפוליסת חיסכון. המשתמש מזהה את המסלול בתוצאות.
+  if (rec.source === 'bituach') return 'insurance';
   if (cls.indexOf('השתלמות') > -1) return 'hishtalmut';
   if (cls.indexOf('לילד') > -1) return 'child';
   if (cls.indexOf('להשקעה') > -1) return 'invest';
@@ -1464,7 +1465,7 @@ function wizScreenProduct() {
       ${extra.length ? `
         <button type="button" class="wiz-choice wiz-choice-more" data-wiz="moreProducts">
           <span class="wiz-choice-title">סוג אחר</span>
-          <span class="wiz-choice-hint">מוצרים ותיקים וקופות על שם המעסיק</span>
+          <span class="wiz-choice-hint">מוצרים נוספים שמנוהלים בחברה</span>
         </button>
         <div class="wiz-choices wiz-choices-extra" id="wizExtraProducts" ${wizard.showExtraProducts ? '' : 'hidden'}>
           ${extra.map(wizProductButton).join('')}
