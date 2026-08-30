@@ -121,22 +121,19 @@ const BRAND_ALIASES = {
   'אינפיניטי': ['הלמן אלדובי', 'הלמן'],
   'מגדל': ['מקפת']
 };
-// מותג -> שם הקובץ בתיקיית logos, כולל סיומת (svg או png).
-// הרשימה מתפקדת כמניפסט: מוסיפים שורה רק אחרי שהקובץ הועלה, אחרת הדפדפן
-// ידווח על 404. בלי לוגו מוצגת מונוגרמה. פירוט: logos/README.md.
-//
-// שמונה החברות של המסך הראשון — להסיר את הערות השורות אחרי העלאת הקבצים:
-// const BRAND_LOGOS = {
-//   'הראל': 'harel.svg',
-//   'מנורה מבטחים': 'menora.svg',
-//   'הפניקס': 'phoenix.svg',
-//   'מגדל': 'migdal.svg',
-//   'כלל': 'clal.svg',
-//   'מיטב': 'meitav.svg',
-//   'אלטשולר שחם': 'altshuler.svg',
-//   'מור': 'mor.svg'
-// };
-const BRAND_LOGOS = {};
+// לוגו לכל מותג נטען מ-LogoKit לפי הדומיין של החברה, בלי קבצים בריפו.
+// חברה שאינה כאן — ובכל כשל טעינה — מוצגת מונוגרמה. פירוט: logos/README.md.
+const LOGO_ENDPOINT = 'https://img.logokit.com/';
+const BRAND_LOGOS = {
+  'הראל': 'harel-group.co.il',
+  'מנורה מבטחים': 'menoramivt.co.il',
+  'הפניקס': 'fnx.co.il',
+  'מגדל': 'migdal.co.il',
+  'כלל': 'clalbit.co.il',
+  'מיטב': 'meitav.co.il',
+  'אלטשולר שחם': 'as-invest.co.il',
+  'מור': 'moreinvest.co.il'
+};
 
 function brandOf(rec) {
   const raw = String(rec.managing_corp || rec.parent_company_name || '').trim().replace(/[״]/g, '"').replace(/[׳]/g, "'");
@@ -1373,7 +1370,7 @@ function wizReset() {
 function wizLogo(entry) {
   const monogram = `<span class="wiz-monogram">${escapeHtml(entry.monogram || '?')}</span>`;
   const img = entry.logo
-    ? `<img src="logos/${escapeHtml(entry.logo)}" alt="" loading="lazy" onerror="this.remove()" />`
+    ? `<img src="${LOGO_ENDPOINT}${escapeHtml(encodeURIComponent(entry.logo))}" alt="" loading="lazy" onerror="this.remove()" />`
     : '';
   return `<span class="wiz-logo" aria-hidden="true">${monogram}${img}</span>`;
 }
