@@ -19,6 +19,7 @@ import argparse
 import csv
 import datetime as dt
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -164,10 +165,25 @@ def to_num(value):
         return None
 
 
+# תיקוני טקסט לפגמים ידועים בקובצי המקור. נכון ל-202607 נצפה פגם אחד:
+# בקובץ פנסיה-נט התו & בשם "S&P" מגיע כרצף "1;" (18 קופות), בעוד שבגמל
+# ובביטוח אותו שם תקין. התיקון מחליף רק את התו הפגום ושומר על אותיות
+# המקור, כך ש-"s1;p 500" הופך ל-"s&p 500" ו-"S1;P500" ל-"S&P500".
+TEXT_REPAIRS = [
+    (re.compile(r'([Ss])1;([Pp])'), r'\1&\2'),
+]
+
+
+def repair_text(value):
+    for pattern, replacement in TEXT_REPAIRS:
+        value = pattern.sub(replacement, value)
+    return value
+
+
 def to_str(value):
     if value is None:
         return ''
-    return str(value)
+    return repair_text(str(value))
 
 
 def to_iso_date(value):
@@ -497,8 +513,32 @@ def main():
     ap.add_argument('--prev', help='funds_unified.json קודם להשוואה (מומלץ)')
     ap.add_argument('-o', '--output', default='funds_unified.json', help='קובץ פלט (ברירת מחדל: funds_unified.json)')
     ap.add_argument('--check', metavar='JSON', help='רק בדיקת קובץ קיים, בלי בנייה')
+    ap.add_argument('--renormalize', metavar='JSON',
+                    help='החלת תיקוני הטקסט (TEXT_REPAIRS) על קובץ קיים, בלי קובצי מקור')
     ap.add_argument('--full', action='store_true', help='לכלול בפלט גם שדות שהדשבורד לא קורא')
     args = ap.parse_args()
+
+    if args.renormalize:
+        path = args.renormalize
+        payload = json.load(open(path, encoding='utf-8'))
+        changed = 0
+        for fund in payload.get('funds') or []:
+            for key, value in fund.items():
+                if isinstance(value, str):
+                    fixed = repair_text(value)
+                    if fixed != value:
+                        fund[key] = fixed
+                        changed += 1
+        errors, warnings = validate(payload)
+        report(errors, warnings)
+        if errors:
+            print('הבדיקה נכשלה — הקובץ לא נכתב')
+            sys.exit(1)
+        out = args.output if args.output != 'funds_unified.json' else path
+        with open(out, 'w', encoding='utf-8') as fh:
+            json.dump(payload, fh, ensure_ascii=False, separators=(',', ':'))
+        print(f'{out}: תוקנו {changed} שדות טקסט')
+        sys.exit(0)
 
     if args.check:
         payload = json.load(open(args.check, encoding='utf-8'))
