@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>דשבורד חשיפות חיסכון | v3.91</title>
+<title>מפת החיסכון | v5.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -28,16 +28,10 @@
 <section class="section" id="searchSection">
   <div class="container">
     <div class="wizard" id="wizard">
-      <ol class="wiz-steps" aria-label="שלבי האיתור">
-        <li class="wiz-step"><span class="wiz-step-num">1</span><span class="wiz-step-label">חברה</span></li>
-        <li class="wiz-step"><span class="wiz-step-num">2</span><span class="wiz-step-label">סוג חיסכון</span></li>
-        <li class="wiz-step"><span class="wiz-step-num">3</span><span class="wiz-step-label">מסלול</span></li>
-        <li class="wiz-step"><span class="wiz-step-num">4</span><span class="wiz-step-label">יתרה</span></li>
-      </ol>
-      <nav class="wiz-crumbs" id="wizCrumbs" aria-label="מסלול הבחירה"></nav>
+      <header class="wiz-bar" id="wizBar"></header>
+      <nav class="wiz-crumbs" id="wizCrumbs" aria-label="הבחירות עד כה" hidden></nav>
       <div class="wiz-screen" id="wizScreen" aria-live="polite"></div>
     </div>
-    <div class="quick-editor" id="quickEditor"></div>
   </div>
 </section>
 

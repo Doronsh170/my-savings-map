@@ -7146,3 +7146,584 @@ body.pdf-mode .pdf-disclaimer { display: block !important; }
   .wiz-screen { padding: 15px 11px 0; }
   .wiz-step-label { font-size: 10px; }
 }
+
+
+/* ============================================================================
+   v5.0 — שכבת "אפליקציה": שפה ויזואלית חדשה לאשף ולמעטפת, mobile-first.
+   העקרונות: משטח מוגבה אחד (האשף) במקום כרטיס בתוך כרטיס, קווי הפרדה
+   דקים במקום מסגרות וצללים, לוגואים גדולים, סקאלת מרווחים של 4px,
+   וטיפוגרפיה עם היררכיה חדה. השכבה יושבת אחרונה ולכן גוברת על הקודמות.
+   ========================================================================= */
+
+:root {
+  /* מעבר מגוון קרם חמים לניטרלי קריר — זה מה שמפריד "אתר תוכן" מ"אפליקציה" */
+  --bg: #eef1f6;
+  --bg-soft: #f5f7fa;
+  --bg-deep: #e4e9f0;
+  --card: #ffffff;
+  --card-tint: #f8fafc;
+
+  --ink: #0c1a2b;
+  --ink-soft: #24374d;
+  --ink-mid: #4a5b70;
+  --ink-muted: #667a91;
+  --ink-faint: #93a1b3;
+
+  --line: #e2e8f0;
+  --line-soft: #edf1f6;
+  --line-faint: #f5f7fa;
+
+  --accent: #12294a;
+  --accent-dark: #0c1a2b;
+  --accent-soft: #eef3fa;
+  --accent-soft-2: #e3ebf7;
+  --accent-ring: rgba(18, 41, 74, .12);
+
+  --success-soft: #e8f1ea;
+  --warning: #a9803f;
+  --warning-soft: #f3ecdf;
+
+  /* צללים רכים ונמוכים — הגובה מגיע ממשטח אחד, לא מכל אלמנט */
+  --shadow-xs: 0 1px 2px rgba(12, 26, 43, .04);
+  --shadow-sm: 0 1px 3px rgba(12, 26, 43, .05);
+  --shadow-md: 0 6px 18px rgba(12, 26, 43, .06);
+  --shadow-lg: 0 18px 44px rgba(12, 26, 43, .10);
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+
+  /* סקאלת מרווחים — 4px */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+}
+
+body {
+  background: var(--bg) !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.container { padding-inline: var(--sp-4) !important; }
+
+/* --- כותרת עליונה: סרגל אפליקציה כהה --- */
+.hero.premium-hero, .premium-hero {
+  background: linear-gradient(160deg, #12294a 0%, #0c1a2b 100%) !important;
+  border: 0 !important; box-shadow: none !important; border-radius: 0 !important;
+}
+.premium-hero .topbar {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 14px var(--sp-4) !important; min-height: 0 !important;
+}
+.topbar-mark {
+  width: 34px !important; height: 34px !important; border-radius: 11px !important;
+  background: rgba(255, 255, 255, .12) !important; color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, .16) !important;
+  display: grid; place-items: center; font-size: 16px !important; font-weight: 800 !important;
+  box-shadow: none !important;
+}
+.premium-hero .topbar-title {
+  font-size: 17px !important; font-weight: 800 !important; color: #fff !important;
+  letter-spacing: -.02em; margin: 0 !important; line-height: 1.2;
+}
+.premium-hero .topbar-tag {
+  font-size: 12px !important; color: rgba(255, 255, 255, .62) !important;
+  font-weight: 500; letter-spacing: 0;
+}
+
+#searchSection { padding: var(--sp-4) 0 var(--sp-5) !important; background: transparent !important; }
+
+/* --- משטח האשף: המשטח המוגבה היחיד בעמוד --- */
+.wizard {
+  background: var(--card) !important;
+  border: 0 !important;
+  border-radius: var(--r-xl) !important;
+  box-shadow: var(--shadow-lg) !important;
+  padding: 0 0 var(--sp-5) !important;
+  overflow: hidden;
+}
+
+/* סרגל השלב: חזרה, כותרת, ופס התקדמות דק במקום stepper ממוספר */
+.wiz-bar { display: block; background: var(--card); }
+.wiz-bar-row {
+  display: grid; grid-template-columns: 40px 1fr auto; align-items: center;
+  gap: var(--sp-2); padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
+  min-height: 48px;
+}
+.wiz-back, .wiz-back-placeholder {
+  width: 40px; height: 40px; border: 0; background: none; padding: 0;
+  border-radius: 12px; cursor: pointer; position: relative;
+}
+.wiz-back-placeholder { cursor: default; }
+.wiz-back::before {
+  content: ''; position: absolute; inset: 0; margin: auto;
+  width: 9px; height: 9px;
+  border-top: 2px solid var(--ink-soft); border-right: 2px solid var(--ink-soft);
+  border-radius: 1px; transform: translateX(-2px) rotate(45deg);
+}
+.wiz-back:active { background: var(--bg-soft); }
+.wiz-bar-title {
+  text-align: center; font-size: 13px; font-weight: 700;
+  color: var(--ink-muted); letter-spacing: .01em;
+}
+.wiz-bar-reset {
+  border: 0; background: none; padding: 6px 4px; font: inherit;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-faint); cursor: pointer;
+}
+.wiz-bar-reset:active { color: var(--ink); }
+.wiz-progress { height: 3px; background: var(--line-soft); position: relative; }
+.wiz-progress-fill {
+  display: block; height: 100%; background: var(--accent);
+  border-radius: 0 2px 2px 0; transition: width .32s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* שורת ההקשר — מה כבר נבחר */
+.wiz-crumbs {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1);
+  margin: 0 !important; padding: var(--sp-3) var(--sp-4) 0 !important;
+  border: 0 !important; background: none !important;
+}
+.wiz-crumb {
+  border: 0; background: none; padding: 0; font: inherit;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-muted); cursor: pointer;
+}
+.wiz-crumb:active { color: var(--accent); }
+.wiz-crumb-sep { color: var(--ink-faint); font-size: 12px; }
+.wiz-crumb-reset { display: none; }
+
+.wiz-screen { padding: var(--sp-4) var(--sp-4) 0 !important; }
+
+/* --- טיפוגרפיה של השלב --- */
+.wiz-title {
+  font-size: 25px !important; line-height: 1.22 !important; font-weight: 800 !important;
+  letter-spacing: -.025em; color: var(--ink) !important;
+  margin: 0 0 var(--sp-2) !important; text-align: start !important;
+}
+.wiz-sub {
+  font-size: 14px !important; line-height: 1.5 !important; color: var(--ink-muted) !important;
+  margin: 0 0 var(--sp-5) !important; text-align: start !important; font-weight: 500;
+}
+
+/* --- רשת החברות: לוגו גדול, אריח שקט --- */
+.wiz-company-grid {
+  display: grid !important; grid-template-columns: 1fr 1fr !important;
+  gap: var(--sp-2) !important;
+}
+.wiz-company {
+  display: flex !important; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--sp-2) !important; min-height: 112px !important; padding: var(--sp-4) var(--sp-2) !important;
+  text-align: center !important;
+  background: var(--card) !important; border: 1px solid var(--line) !important;
+  border-radius: var(--r-lg) !important; box-shadow: none !important;
+  transition: background .15s ease, border-color .15s ease, transform .12s ease;
+}
+.wiz-company:hover, .wiz-company:focus-visible {
+  border-color: var(--accent-ring) !important; background: var(--card-tint) !important;
+  box-shadow: none !important; transform: none !important;
+}
+.wiz-company:active { background: var(--accent-soft) !important; transform: scale(.975); }
+.wiz-company-name {
+  font-size: 13px !important; font-weight: 700 !important; color: var(--ink) !important;
+  line-height: 1.25; letter-spacing: -.01em;
+}
+
+/* הלוגו עצמו נושא את הזיהוי — בלי מסגרת סביבו */
+.wiz-logo {
+  display: grid; place-items: center; position: relative;
+  width: 34px; height: 34px; flex: 0 0 auto;
+  background: none !important; border: 0 !important; border-radius: 0 !important;
+  box-shadow: none !important; padding: 0 !important;
+}
+.wiz-logo-lg { width: 54px; height: 54px; }
+.wiz-logo img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; padding: 0 !important; background: none !important;
+}
+.wiz-monogram {
+  font-size: 13px; font-weight: 800; color: var(--ink-faint);
+  letter-spacing: -.02em;
+}
+.wiz-logo-lg .wiz-monogram { font-size: 19px; }
+
+/* --- רשימת כל החברות: שורות שטוחות עם קו מפריד --- */
+.wiz-company-list {
+  display: block !important; max-height: none !important; overflow: visible !important;
+  border: 0 !important; background: none !important; margin: 0 !important; padding: 0 !important;
+}
+.wiz-company-row {
+  display: flex !important; align-items: center; gap: var(--sp-3) !important; width: 100%;
+  padding: var(--sp-3) var(--sp-1) !important; text-align: start !important;
+  background: none !important; border: 0 !important; border-radius: 0 !important;
+  border-bottom: 1px solid var(--line-soft) !important; box-shadow: none !important;
+}
+.wiz-company-row:active { background: var(--bg-soft) !important; }
+.wiz-company-row .wiz-company-name { font-size: 14.5px !important; }
+
+/* --- בחירת סוג חיסכון: שורות, לא קופסאות --- */
+.wiz-choices { display: block !important; gap: 0 !important; }
+.wiz-choice {
+  display: flex !important; align-items: center; gap: var(--sp-3); width: 100%;
+  padding: var(--sp-4) var(--sp-1) !important; text-align: start !important;
+  background: none !important; border: 0 !important; border-radius: 0 !important;
+  border-bottom: 1px solid var(--line-soft) !important; box-shadow: none !important;
+  cursor: pointer; font: inherit;
+}
+.wiz-choice:active { background: var(--bg-soft) !important; }
+.wiz-choice-text { display: block; flex: 1 1 auto; min-width: 0; }
+.wiz-choice-title {
+  display: block; font-size: 15.5px !important; font-weight: 700 !important;
+  color: var(--ink) !important; letter-spacing: -.015em; margin: 0 0 2px;
+}
+.wiz-choice-hint {
+  display: block; font-size: 12.5px !important; line-height: 1.45;
+  color: var(--ink-muted) !important; font-weight: 500;
+}
+.wiz-choices-extra { margin-top: 0 !important; }
+
+/* חץ המשך אחיד (RTL — מצביע שמאלה) */
+.wiz-chevron {
+  flex: 0 0 auto; width: 8px; height: 8px; align-self: center;
+  border-left: 2px solid var(--ink-faint); border-bottom: 2px solid var(--ink-faint);
+  border-radius: 1px; transform: rotate(45deg); transition: transform .18s ease;
+}
+.wiz-chevron.is-open { transform: rotate(135deg); }
+
+/* --- חיפוש --- */
+.wiz-field { margin: 0 0 var(--sp-3) !important; }
+.wiz-input {
+  width: 100%; box-sizing: border-box; font: inherit;
+  padding: 13px var(--sp-4) !important; font-size: 15px !important;
+  background: var(--bg-soft) !important; border: 1px solid transparent !important;
+  border-radius: var(--r-md) !important; color: var(--ink);
+  transition: background .15s ease, border-color .15s ease;
+}
+.wiz-input::placeholder { color: var(--ink-faint); }
+.wiz-input:focus {
+  outline: none; background: var(--card) !important;
+  border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* --- צ'יפים --- */
+.wiz-chips {
+  display: flex; gap: var(--sp-2); overflow-x: auto; padding: 0 0 var(--sp-3);
+  margin: 0 calc(var(--sp-4) * -1) var(--sp-1); padding-inline: var(--sp-4);
+  scrollbar-width: none;
+}
+.wiz-chips::-webkit-scrollbar { display: none; }
+.wiz-chip {
+  flex: 0 0 auto; padding: 7px 13px !important; font-size: 13px !important; font-weight: 600 !important;
+  background: var(--bg-soft) !important; color: var(--ink-mid) !important;
+  border: 0 !important; border-radius: 999px !important; box-shadow: none !important;
+}
+.wiz-chip.is-on { background: var(--accent) !important; color: #fff !important; }
+
+/* --- תוצאות מסלול: שורה שטוחה במקום כרטיס עם כפתור שחור --- */
+.wiz-results { display: block !important; gap: 0 !important; margin: 0 !important; }
+.wiz-result {
+  display: flex !important; align-items: center; gap: var(--sp-3); width: 100%;
+  padding: var(--sp-3) var(--sp-1) !important; text-align: start !important;
+  background: none !important; border: 0 !important; border-radius: 0 !important;
+  border-bottom: 1px solid var(--line-soft) !important; box-shadow: none !important;
+  cursor: pointer; font: inherit;
+}
+.wiz-result:active { background: var(--bg-soft) !important; }
+.wiz-result-body { display: block; flex: 1 1 auto; min-width: 0; }
+.wiz-result-name {
+  display: block; font-size: 14.5px !important; font-weight: 700 !important;
+  color: var(--ink) !important; line-height: 1.3; letter-spacing: -.012em; margin: 0 0 3px;
+}
+.wiz-result-meta {
+  display: block; font-size: 12px !important; color: var(--ink-muted) !important;
+  font-weight: 500; font-variant-numeric: tabular-nums;
+}
+.wiz-result-flag {
+  flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--accent);
+  background: var(--accent-soft); padding: 3px 8px; border-radius: 999px;
+}
+.wiz-result.is-chosen .wiz-result-name { color: var(--accent); }
+
+.wiz-more {
+  display: block; width: 100%; margin-top: var(--sp-4) !important;
+  padding: 12px !important; font: inherit; font-size: 14px; font-weight: 700;
+  color: var(--ink-mid) !important; background: var(--bg-soft) !important;
+  border: 0 !important; border-radius: var(--r-md) !important; cursor: pointer;
+}
+.wiz-more:active { background: var(--bg-deep) !important; }
+
+/* --- קישורי משנה --- */
+.wiz-links {
+  display: flex !important; flex-wrap: wrap; gap: var(--sp-2) !important;
+  grid-template-columns: none !important;
+  margin-top: var(--sp-5) !important; padding-top: var(--sp-4) !important;
+  border-top: 1px solid var(--line-soft) !important;
+}
+.wiz-company-grid + .wiz-links { margin-top: var(--sp-5) !important; }
+.wiz-link {
+  flex: 1 1 140px; text-align: center;
+  padding: 11px var(--sp-3) !important; font-size: 13.5px !important; font-weight: 600 !important;
+  color: var(--ink-mid) !important; background: var(--bg-soft) !important;
+  border: 0 !important; border-radius: var(--r-md) !important;
+  text-decoration: none !important; cursor: pointer;
+}
+.wiz-link::before, .wiz-link::after { content: none !important; }
+.wiz-link:active { background: var(--bg-deep) !important; }
+.wiz-link-strong { color: var(--accent) !important; background: var(--accent-soft) !important; }
+.wiz-not-found {
+  display: block !important; width: 100%; margin-top: var(--sp-4) !important;
+  background: none !important; color: var(--ink-muted) !important;
+  text-decoration: underline !important; text-underline-offset: 4px;
+  text-decoration-color: var(--line) !important;
+}
+
+.wiz-hints { margin: 0 0 var(--sp-4) !important; padding: 0 !important; list-style: none !important; }
+.wiz-hints li {
+  position: relative; padding: var(--sp-3) 0 var(--sp-3) 0;
+  padding-inline-start: var(--sp-5);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 14px; line-height: 1.45; color: var(--ink-soft);
+}
+.wiz-hints li::before {
+  content: ''; position: absolute; inset-inline-start: 2px; top: 20px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+}
+.wiz-note {
+  font-size: 12.5px !important; line-height: 1.55; color: var(--ink-muted) !important;
+  background: var(--bg-soft); border: 0 !important; border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4) !important; margin: var(--sp-4) 0 0 !important;
+}
+.wiz-empty { padding: var(--sp-6) 0; text-align: center; }
+.wiz-empty-title { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0 0 var(--sp-2); }
+.wiz-empty-note { font-size: 13px; color: var(--ink-muted); margin: 0 0 var(--sp-4); line-height: 1.5; }
+
+/* --- שלב היתרה: מסך מלא, שדה סכום גדול, CTA דביק --- */
+.wiz-picked {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4); margin: 0 0 var(--sp-5);
+  background: var(--bg-soft); border-radius: var(--r-lg);
+}
+.wiz-picked-text { min-width: 0; }
+.wiz-picked-name {
+  font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.3;
+  letter-spacing: -.012em; margin-bottom: 2px;
+}
+.wiz-picked-meta { font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+.wiz-money-field {
+  display: flex; align-items: baseline; gap: var(--sp-2);
+  border-bottom: 2px solid var(--line); padding: 0 0 var(--sp-2);
+  margin: 0 0 var(--sp-6); transition: border-color .18s ease;
+}
+.wiz-money-field:focus-within { border-color: var(--accent); }
+.wiz-money-field.is-invalid { border-color: var(--danger); animation: wizShake .3s ease; }
+@keyframes wizShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+.wiz-money-sign { font-size: 24px; font-weight: 600; color: var(--ink-faint); }
+.wiz-money-input {
+  flex: 1 1 auto; min-width: 0; border: 0; background: none; padding: 0;
+  font: inherit; font-size: 38px !important; font-weight: 800; letter-spacing: -.03em;
+  color: var(--ink); font-variant-numeric: tabular-nums; text-align: start;
+}
+.wiz-money-input:focus { outline: none; }
+.wiz-money-input::placeholder { color: var(--line); }
+.wiz-money-input::-webkit-outer-spin-button,
+.wiz-money-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.wiz-money-input { -moz-appearance: textfield; }
+
+.wiz-fee-field { display: block; margin: 0 0 var(--sp-5); }
+.wiz-fee-label {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: 13px; font-weight: 600; color: var(--ink-mid); margin-bottom: var(--sp-2);
+}
+.wiz-optional {
+  font-size: 11px; font-weight: 600; color: var(--ink-faint);
+  background: var(--bg-soft); padding: 2px 7px; border-radius: 999px;
+}
+.wiz-fee-input {
+  display: flex; align-items: center; gap: var(--sp-2);
+  background: var(--bg-soft); border-radius: var(--r-md);
+  padding: 11px var(--sp-4); border: 1px solid transparent;
+}
+.wiz-fee-input:focus-within { background: var(--card); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.wiz-fee-input input {
+  flex: 1 1 auto; min-width: 0; border: 0; background: none; padding: 0; font: inherit;
+  font-size: 15px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.wiz-fee-input input:focus { outline: none; }
+.wiz-fee-sign { font-size: 14px; font-weight: 600; color: var(--ink-faint); }
+
+.wiz-spark { height: 34px; margin: 0 0 var(--sp-5); opacity: .55; }
+.wiz-spark svg { width: 100%; height: 100%; }
+
+.wiz-cta-bar {
+  position: sticky; bottom: 0; z-index: 4;
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  padding: var(--sp-3) 0 var(--sp-2);
+  background: linear-gradient(to top, var(--card) 72%, rgba(255, 255, 255, 0));
+}
+.wiz-cta {
+  width: 100%; padding: 16px var(--sp-4); font: inherit;
+  font-size: 16px; font-weight: 700; letter-spacing: -.01em;
+  color: #fff; background: var(--accent); border: 0; border-radius: var(--r-md);
+  cursor: pointer; box-shadow: 0 6px 18px rgba(18, 41, 74, .22);
+  transition: transform .12s ease, box-shadow .18s ease;
+}
+.wiz-cta:active { transform: scale(.985); box-shadow: 0 3px 10px rgba(18, 41, 74, .2); }
+.wiz-cta-soft {
+  width: 100%; padding: 14px var(--sp-4); font: inherit;
+  font-size: 15px; font-weight: 700; color: var(--accent);
+  background: var(--accent-soft); border: 0; border-radius: var(--r-md); cursor: pointer;
+}
+.wiz-cta-ghost {
+  width: 100%; padding: 12px; font: inherit; font-size: 13.5px; font-weight: 600;
+  color: var(--ink-muted); background: none; border: 0; cursor: pointer;
+}
+
+/* --- מסך האישור --- */
+.wiz-done-mark {
+  width: 52px; height: 52px; border-radius: 50%; margin: var(--sp-2) 0 var(--sp-5);
+  background: var(--accent); position: relative;
+  animation: wizPop .34s cubic-bezier(.34, 1.56, .64, 1);
+}
+.wiz-done-mark::before {
+  content: ''; position: absolute; inset: 0; margin: auto;
+  width: 9px; height: 17px; margin-top: 15px;
+  border-right: 2.5px solid #fff; border-bottom: 2.5px solid #fff;
+  transform: rotate(45deg);
+}
+@keyframes wizPop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.wiz-done-actions { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-6); }
+.wiz-done-actions .wiz-link { flex: 1 1 auto; background: none !important; color: var(--ink-muted) !important; }
+
+/* --- המעטפת: כל עוד אין תוצאה, אין מסמך ארוך מתחת לאשף --- */
+body.pre-result #portfolioSection,
+body.pre-result #dashboard,
+body.pre-result #historySection,
+body.pre-result #detailsSection,
+body.pre-result #simulationTabSection,
+body.pre-result #bottomActions { display: none !important; }
+
+body.pre-result .site-info-section { padding: var(--sp-4) 0 0 !important; background: none !important; }
+body.pre-result .info-rows {
+  display: flex !important; flex-wrap: wrap; justify-content: center; gap: var(--sp-1) !important;
+  background: none !important; border: 0 !important; padding: 0 !important;
+}
+body.pre-result .info-row {
+  flex: 0 0 auto; width: auto !important; padding: 6px var(--sp-3) !important;
+  background: none !important; border: 0 !important; box-shadow: none !important;
+  border-radius: 999px !important; min-height: 0 !important;
+}
+body.pre-result .info-row-kicker { display: none !important; }
+body.pre-result .info-row-chevron { display: none !important; }
+body.pre-result .info-row-title {
+  font-size: 12.5px !important; font-weight: 600 !important; color: var(--ink-muted) !important;
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line);
+}
+body.pre-result .info-panel {
+  flex: 1 1 100%; margin-top: var(--sp-3) !important;
+  background: var(--card) !important; border: 0 !important;
+  box-shadow: var(--shadow-sm); border-radius: var(--r-lg) !important;
+}
+body.pre-result .site-credit { padding-top: var(--sp-5) !important; }
+
+/* --- הדשבורד: אותה שפה — פחות מסגרות, מספרים בטבלה --- */
+.metric-card, .sim-summary-card, .sim-result-card {
+  background: var(--card) !important; border: 1px solid var(--line) !important;
+  box-shadow: none !important; border-radius: var(--r-lg) !important;
+}
+.metric-value, .total, .sim-summary-value, .sim-result-value {
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
+.dashboard-toggle-section {
+  background: var(--card) !important; border: 1px solid var(--line) !important;
+  box-shadow: none !important; border-radius: var(--r-lg) !important;
+}
+
+@media (min-width: 721px) {
+  .container { max-width: 640px; margin-inline: auto; }
+  #searchSection { padding: var(--sp-8) 0 var(--sp-6) !important; }
+  .wiz-screen { padding: var(--sp-5) var(--sp-6) 0 !important; }
+  .wiz-bar-row { padding-inline: var(--sp-3) var(--sp-5); }
+  .wiz-crumbs { padding-inline: var(--sp-6) !important; }
+  .wiz-title { font-size: 28px !important; }
+  .wiz-sub { font-size: 15px !important; }
+  .wiz-company-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .wiz-chips { margin-inline: calc(var(--sp-6) * -1); padding-inline: var(--sp-6); }
+}
+
+@media (max-width: 385px) {
+  .wiz-screen { padding: var(--sp-4) var(--sp-3) 0 !important; }
+  .wiz-company { min-height: 102px !important; }
+  .wiz-logo-lg { width: 46px; height: 46px; }
+  .wiz-company-name { font-size: 12.4px !important; }
+  .wiz-title { font-size: 23px !important; }
+  .wiz-money-input { font-size: 33px !important; }
+}
+
+/* v5.0 — תיקוני איזון אחרי בדיקה במכשיר */
+.wiz-crumbs[hidden] { display: none !important; }
+.wiz-company { min-height: 104px !important; padding: var(--sp-3) var(--sp-2) !important; }
+.wiz-logo-lg { width: 48px; height: 48px; }
+.wiz-group { margin-top: var(--sp-5); }
+.wiz-group-label {
+  font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+  color: var(--ink-faint); text-transform: none; margin: 0 0 var(--sp-1);
+}
+.wiz-group .wiz-company-row { padding-block: var(--sp-3) !important; }
+.wiz-group .wiz-company-row .wiz-company-name { flex: 1 1 auto; font-size: 14px !important; }
+.wiz-group .wiz-company-row:last-child { border-bottom: 0 !important; }
+
+/* v5.0 — התאמות המשך: רצועת צ'יפים אחת, רקעים ניטרליים, מעטפת התוצאה */
+.wiz-chips { flex-wrap: nowrap !important; }
+.wiz-crumbs:not([hidden]) + .wiz-screen { padding-top: var(--sp-2) !important; }
+.wiz-spark { height: 30px; margin: 0 0 var(--sp-4); opacity: .45; overflow: hidden; }
+.wiz-spark > *:not(svg) { display: none !important; }
+
+/* הדשבורד יוצא מהגוון הקרם ומקבל את אותה מעטפת כמו האשף */
+.dashboard {
+  background: var(--bg) !important; color: var(--ink) !important;
+  padding: var(--sp-8) 0 var(--sp-6) !important;
+}
+.dashboard h2 { font-size: 22px !important; font-weight: 800 !important; letter-spacing: -.025em; }
+.dashboard .subtitle { font-size: 13px !important; color: var(--ink-muted) !important; }
+.details { background: var(--bg) !important; }
+.site-info-section { background: var(--bg) !important; }
+
+/* כרטיס בתוך כרטיס: המעטפת החיצונית של האקורדיונים יורדת */
+.dashboard-toggle-section {
+  background: transparent !important; border: 0 !important;
+  box-shadow: none !important; padding: 0 !important;
+}
+.dashboard-toggle-summary {
+  border: 1px solid var(--line) !important; background: var(--card) !important;
+  border-radius: var(--r-lg) !important; box-shadow: none !important;
+  font-size: 15.5px !important; font-weight: 700 !important; letter-spacing: -.015em;
+}
+
+/* שורת הקישורים לפני שיש תוצאה — צ'יפים בשורה, לא כרטיסים */
+body.pre-result .info-row {
+  display: inline-flex !important; flex: 0 0 auto !important;
+}
+body.pre-result .info-row-text { display: block !important; }
+
+/* v5.0 — הניצוץ יושב בתוך כרטיס המסלול, ושורת הקישורים היא שורה */
+.wiz-picked { position: relative; }
+.wiz-picked .wiz-spark {
+  flex: 0 0 auto; width: 62px; height: 26px; margin: 0 !important;
+  opacity: .4; align-self: center;
+}
+body.pre-result .info-rows { flex-direction: row !important; align-items: center; }
+body.pre-result .info-row-title { white-space: nowrap; }
+
+/* v5.0 — כיול אחרון: כרטיס המסלול הנבחר, וצמצום אוויר מיותר בראש המסך */
+.wiz-picked { flex-wrap: wrap; padding: var(--sp-3) var(--sp-4) var(--sp-2); }
+.wiz-picked-text { flex: 1 1 60%; }
+.wiz-picked .wiz-spark {
+  flex: 1 1 100%; width: auto; height: 22px; margin: var(--sp-1) 0 0 !important;
+  opacity: .35;
+}
+.wiz-bar-row { min-height: 44px; padding-block: var(--sp-2); }
+.wiz-screen { padding-top: var(--sp-3) !important; }
+.wiz-company { min-height: 100px !important; }
