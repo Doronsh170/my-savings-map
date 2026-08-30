@@ -18,6 +18,7 @@
 | הראל | `harel.png` |
 | אלטשולר שחם | `altshuler.png` |
 | הפניקס | `phoenix.png` |
+| אנליסט | `analyst.png` |
 | ילין לפידות | `yelin.png` |
 | איילון | `ayalon.png` |
 
