@@ -162,8 +162,8 @@ const PRODUCT_TYPES = [
 const PRODUCT_LABEL = {};
 PRODUCT_TYPES.forEach(item => { PRODUCT_LABEL[item.key] = item.label; });
 const PRODUCT_ORDER = PRODUCT_TYPES.map(item => item.key);
-// עד חמישה אריחים גלויים; השאר מתקפלים תחת "סוג אחר".
-const PRIMARY_PRODUCTS_SHOWN = 5;
+// עד שישה אריחים גלויים; השאר מתקפלים תחת "סוג אחר".
+const PRIMARY_PRODUCTS_SHOWN = 6;
 
 function productOf(rec) {
   const cls = String(rec.classification || '');
