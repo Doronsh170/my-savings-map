@@ -121,22 +121,20 @@ const BRAND_ALIASES = {
   'אינפיניטי': ['הלמן אלדובי', 'הלמן'],
   'מגדל': ['מקפת']
 };
-// מותג -> שם הקובץ בתיקיית logos, כולל סיומת (svg או png).
-// הרשימה מתפקדת כמניפסט: מוסיפים שורה רק אחרי שהקובץ הועלה, אחרת הדפדפן
-// ידווח על 404. בלי לוגו מוצגת מונוגרמה. פירוט: logos/README.md.
-//
-// שמונה החברות של המסך הראשון — להסיר את הערות השורות אחרי העלאת הקבצים:
-// const BRAND_LOGOS = {
-//   'הראל': 'harel.svg',
-//   'מנורה מבטחים': 'menora.svg',
-//   'הפניקס': 'phoenix.svg',
-//   'מגדל': 'migdal.svg',
-//   'כלל': 'clal.svg',
-//   'מיטב': 'meitav.svg',
-//   'אלטשולר שחם': 'altshuler.svg',
-//   'מור': 'mor.svg'
-// };
-const BRAND_LOGOS = {};
+// מותג -> שם הקובץ בתיקיית logos, כולל סיומת. חברה שאינה כאן, וכן כל כשל
+// טעינה, מוצגות במונוגרמה. מוסיפים שורה רק אחרי שהקובץ הועלה. פירוט: logos/README.md.
+const BRAND_LOGOS = {
+  'מנורה מבטחים': 'menora.png',
+  'מיטב': 'meitav.png',
+  'מור': 'mor.png',
+  'מגדל': 'migdal.png',
+  'כלל': 'clal.png',
+  'הראל': 'harel.png',
+  'אלטשולר שחם': 'altshuler.png',
+  'הפניקס': 'phoenix.png',
+  'ילין לפידות': 'yelin.png',
+  'איילון': 'ayalon.png'
+};
 
 function brandOf(rec) {
   const raw = String(rec.managing_corp || rec.parent_company_name || '').trim().replace(/[״]/g, '"').replace(/[׳]/g, "'");

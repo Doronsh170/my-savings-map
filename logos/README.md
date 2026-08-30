@@ -5,23 +5,21 @@
 
 ## שמות הקבצים
 
-`BRAND_LOGOS` ב-`scripts.js` הוא המניפסט: הוא מתחיל ריק, ומוסיפים אליו שורה
-**רק אחרי** שהקובץ הועלה לכאן — אחרת הדפדפן ידווח על 404. השמות המומלצים:
+`BRAND_LOGOS` ב-`scripts.js` הוא המניפסט. מוסיפים אליו שורה **רק אחרי** שהקובץ
+הועלה לכאן, אחרת הדפדפן ידווח על 404. המיפוי הפעיל:
 
 | חברה | קובץ |
 |---|---|
-| מנורה מבטחים | `menora.svg` |
-| הפניקס | `phoenix.svg` |
-| הראל | `harel.svg` |
-| כלל | `clal.svg` |
-| מגדל | `migdal.svg` |
-| מיטב | `meitav.svg` |
-| אלטשולר שחם | `altshuler.svg` |
-| מור | `mor.svg` |
-| אנליסט | `analyst.svg` |
-| ילין לפידות | `yelin.svg` |
-| אינפיניטי | `infinity.svg` |
-| הכשרה | `hachshara.svg` |
+| מנורה מבטחים | `menora.png` |
+| מיטב | `meitav.png` |
+| מור | `mor.png` |
+| מגדל | `migdal.png` |
+| כלל | `clal.png` |
+| הראל | `harel.png` |
+| אלטשולר שחם | `altshuler.png` |
+| הפניקס | `phoenix.png` |
+| ילין לפידות | `yelin.png` |
+| איילון | `ayalon.png` |
 
 לדוגמה, אחרי העלאת `harel.svg` מוסיפים ל-`BRAND_LOGOS`:
 
