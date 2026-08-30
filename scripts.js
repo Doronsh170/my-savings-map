@@ -121,20 +121,20 @@ const BRAND_ALIASES = {
   'אינפיניטי': ['הלמן אלדובי', 'הלמן'],
   'מגדל': ['מקפת']
 };
-// קובץ לוגו לכל מותג: logos/<slug>.svg. הרשימה מתפקדת כמניפסט — מוסיפים שורה
-// רק אחרי שהקובץ הועלה לתיקיית logos, אחרת הדפדפן ידווח על 404 בקונסול.
-// בלי לוגו מוצגת מונוגרמה. פירוט מלא: logos/README.md.
+// מותג -> שם הקובץ בתיקיית logos, כולל סיומת (svg או png).
+// הרשימה מתפקדת כמניפסט: מוסיפים שורה רק אחרי שהקובץ הועלה, אחרת הדפדפן
+// ידווח על 404. בלי לוגו מוצגת מונוגרמה. פירוט: logos/README.md.
 //
-// שמונה החברות של המסך הראשון — להסיר את הערת השורה אחרי העלאת הקובץ:
+// שמונה החברות של המסך הראשון — להסיר את הערות השורות אחרי העלאת הקבצים:
 // const BRAND_LOGOS = {
-//   'הראל': 'harel',                 // logos/harel.svg
-//   'מנורה מבטחים': 'menora',        // logos/menora.svg
-//   'הפניקס': 'phoenix',             // logos/phoenix.svg
-//   'מגדל': 'migdal',                // logos/migdal.svg
-//   'כלל': 'clal',                   // logos/clal.svg
-//   'מיטב': 'meitav',                // logos/meitav.svg
-//   'אלטשולר שחם': 'altshuler',      // logos/altshuler.svg
-//   'מור': 'mor'                     // logos/mor.svg
+//   'הראל': 'harel.svg',
+//   'מנורה מבטחים': 'menora.svg',
+//   'הפניקס': 'phoenix.svg',
+//   'מגדל': 'migdal.svg',
+//   'כלל': 'clal.svg',
+//   'מיטב': 'meitav.svg',
+//   'אלטשולר שחם': 'altshuler.svg',
+//   'מור': 'mor.svg'
 // };
 const BRAND_LOGOS = {};
 
@@ -1373,7 +1373,7 @@ function wizReset() {
 function wizLogo(entry) {
   const monogram = `<span class="wiz-monogram">${escapeHtml(entry.monogram || '?')}</span>`;
   const img = entry.logo
-    ? `<img src="logos/${escapeHtml(entry.logo)}.svg" alt="" loading="lazy" onerror="this.remove()" />`
+    ? `<img src="logos/${escapeHtml(entry.logo)}" alt="" loading="lazy" onerror="this.remove()" />`
     : '';
   return `<span class="wiz-logo" aria-hidden="true">${monogram}${img}</span>`;
 }
