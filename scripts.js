@@ -1139,11 +1139,6 @@ function resetAllData() {
   QUICK_RETURN_VISIBLE = false;
   localStorage.removeItem(STORAGE_KEY);
   renderMissingFunds();
-  const editor = document.getElementById('quickEditor');
-  if (editor) {
-    editor.classList.remove('active');
-    editor.innerHTML = '';
-  }
   renderDashboard();
   document.body.classList.remove('dashboard-reached');
   wizReset();
@@ -1157,103 +1152,18 @@ window.resetAllData = resetAllData;
 function findUserFundIndex(uid) {
   return userFunds.findIndex(item => item.fund && item.fund.uid === uid);
 }
+/* v5.0: אין יותר פאנל עריכה מתחת לרשימה — שלב היתרה הוא מסך אשף מלא.
+   הפונקציות כאן נשארו כנקודות כניסה חיצוניות ומנתבות לאשף. */
 function openQuickEditor(fund) {
-  CURRENT_EDIT_FUND = withRuntimeFlags(fund);
-  const existingIndex = findUserFundIndex(CURRENT_EDIT_FUND.uid);
-  const existing = existingIndex >= 0 ? userFunds[existingIndex] : null;
-  const balanceValue = existing && Number(existing.balance) > 0 ? Number(existing.balance) : '';
-  const feeValue = existing && Number.isFinite(existing.managementFee) ? existing.managementFee : '';
-  const sub = [CURRENT_EDIT_FUND.managing_corp, CURRENT_EDIT_FUND.classification, CURRENT_EDIT_FUND.specialization, CURRENT_EDIT_FUND.sub_specialization].filter(Boolean).join(' • ');
-  const editor = document.getElementById('quickEditor');
-  if (!editor) return;
-  editor.innerHTML = `
-    <div class="quick-editor-card">
-      <div class="quick-editor-title"><span class="source-tag ${escapeHtml(CURRENT_EDIT_FUND.source)}">${SOURCE_LABEL[CURRENT_EDIT_FUND.source]}</span>${escapeHtml(CURRENT_EDIT_FUND.fund_name)}</div>
-      <div class="quick-editor-meta">${escapeHtml(sub || '-')} • מספר קופה: ${escapeHtml(CURRENT_EDIT_FUND.fund_id || '')}</div>
-      <div class="quick-editor-spark" id="quickEditorSpark" dir="ltr"></div>
-      <div class="quick-editor-form">
-        <label class="field-group">
-          <span class="field-label">יתרה</span>
-          <span class="inline-input">
-            <input type="number" class="balance-input" id="quickBalanceInput" value="${escapeHtml(balanceValue)}" placeholder="0" min="0" inputmode="numeric" />
-            <span class="currency">₪</span>
-          </span>
-        </label>
-        <label class="field-group">
-          <span class="field-label">דמי ניהול מצבירה</span>
-          <span class="inline-input">
-            <input type="number" class="fee-input" id="quickFeeInput" value="${escapeHtml(feeValue)}" placeholder="לא הוזן" min="0" step="0.01" inputmode="decimal" />
-            <span class="currency">%</span>
-          </span>
-        </label>
-        <button type="button" class="update-dashboard-btn" onclick="commitQuickUpdate()">עדכן בדשבורד</button>
-        ${existing ? '<button type="button" class="quick-remove-btn" onclick="removeCurrentQuickFund()">הסר מהדשבורד</button>' : ''}
-      </div>
-      <div class="quick-editor-message" id="quickEditorMessage"></div>
-    </div>
-  `;
-  editor.classList.add('active');
-  renderQuickSpark(document.getElementById('quickEditorSpark'), CURRENT_EDIT_FUND);
-  editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  window.setTimeout(() => {
-    const input = document.getElementById('quickBalanceInput');
-    if (input) { input.focus({ preventScroll: true }); input.select(); }
-  }, 120);
+  if (!fund) return;
+  WIZ_FOCUS_FIELD = '';
+  const brand = fund._brand || brandOf(fund);
+  wizSet({ step: 'balance', pickUid: fund.uid, company: brand || wizard.company, product: fund._product || productOf(fund) });
+  wizScrollIntoView();
 }
-function commitQuickUpdate() {
-  if (!CURRENT_EDIT_FUND) return;
-  const balanceInput = document.getElementById('quickBalanceInput');
-  const feeInput = document.getElementById('quickFeeInput');
-  const balance = Math.max(0, Number(balanceInput ? balanceInput.value : 0) || 0);
-  const fee = normalizeUserFee(feeInput ? feeInput.value : null);
-  if (balance <= 0) {
-    alert('יש להזין יתרה גבוהה מאפס כדי לעדכן את הדשבורד.');
-    if (balanceInput) balanceInput.focus();
-    return;
-  }
-  const idx = findUserFundIndex(CURRENT_EDIT_FUND.uid);
-  const payload = {
-    fund: CURRENT_EDIT_FUND,
-    balance,
-    managementFee: fee,
-    updated_at: new Date().toISOString()
-  };
-  if (idx >= 0) userFunds[idx] = payload;
-  else userFunds.push(payload);
-  saveState();
-  renderDashboard();
-  const msg = document.getElementById('quickEditorMessage');
-  if (msg) {
-    msg.innerHTML = `
-      <div>עודכן בדשבורד.</div>
-      <div class="quick-action-row">
-        <button type="button" class="add-another-btn" onclick="prepareAnotherFund()">הוסף קופה נוספת</button>
-        <button type="button" class="go-dashboard-btn" onclick="goToDashboard()">עבור לדשבורד</button>
-        <button type="button" class="reset-all-btn" onclick="resetAllData()">איפוס הכל</button>
-      </div>
-    `;
-  }
-  wizRender();
-}
-function removeCurrentQuickFund() {
-  if (!CURRENT_EDIT_FUND) return;
-  const idx = findUserFundIndex(CURRENT_EDIT_FUND.uid);
-  if (idx >= 0) {
-    userFunds.splice(idx, 1);
-    saveState();
-    renderDashboard();
-    const msg = document.getElementById('quickEditorMessage');
-    if (msg) msg.textContent = 'הוסר מהדשבורד.';
-    wizRender();
-  }
-}
+function commitQuickUpdate() { wizCommitBalance(); }
+function removeCurrentQuickFund() { wizRemovePicked(); }
 function prepareAnotherFund() {
-  CURRENT_EDIT_FUND = null;
-  const editor = document.getElementById('quickEditor');
-  if (editor) {
-    editor.classList.remove('active');
-    editor.innerHTML = '';
-  }
   document.body.classList.remove('dashboard-reached');
   wizReset();
   wizScrollIntoView();
@@ -1339,65 +1249,174 @@ window.handleBalanceInput = handleBalanceInput;
 window.handleFeeInput = handleFeeInput;
 
 
-/* === v4.0: אשף איתור הקופה ===
+/* === v5.0: אשף איתור הקופה ===
    כל מצב האשף יושב באובייקט אחד. שדה החיפוש הוא קלט, לא מצב.
-   חברה ← סוג חיסכון ← מסלולים נפוצים, וכל השאר נחשף רק בבקשה. */
+   חברה ← סוג חיסכון ← מסלול ← יתרה, כל שלב מסך מלא אחד.
+   כל שלב דוחף רשומה להיסטוריית הדפדפן, כך שכפתור "אחורה" של המכשיר
+   מחזיר שלב אחורה במקום לצאת מהאתר. */
 
-const RESULTS_PAGE = 5;
-// כמה חברות מוצגות במסך הראשון, לפי שווי נכסים. השאר נגישות דרך "כל החברות".
+const RESULTS_PAGE = 6;
+// כמה חברות מוצגות במסך הראשון. השאר נגישות דרך "כל החברות".
 const MAIN_COMPANIES_SHOWN = 10;
+// קרנות מגזריות: דלות נכסים ולכן נופלות מדירוג ה-AUM, אך עתירות עמיתים
+// (מורים, איש קבע, עובדי רשויות). מוצמדות לסוף הרשת כדי שקהל היעד
+// המרכזי של הכלי לא ייאלץ להקליד. הדירוג עצמו נשאר לפי נכסים.
+const PINNED_COMPANIES = [
+  'קרנות השתלמות למורים ולגננות',
+  'קרן החסכון לצבא הקבע',
+  'גל לעובדי הוראה'
+];
+
+const WIZ_STEP_META = {
+  company:      { title: 'בחירת חברה',   progress: 1 },
+  allCompanies: { title: 'חיפוש חברה',   progress: 1 },
+  unknown:      { title: 'איתור החיסכון', progress: 1 },
+  typeFirst:    { title: 'סוג החיסכון',  progress: 1 },
+  product:      { title: 'סוג החיסכון',  progress: 2 },
+  results:      { title: 'בחירת מסלול',  progress: 3 },
+  balance:      { title: 'הזנת יתרה',    progress: 4 },
+  done:         { title: 'נוסף לתיק',    progress: 4 }
+};
+const WIZ_TOTAL_STEPS = 4;
+
 const wizard = {
-  step: 'company',      // company | allCompanies | unknown | typeFirst | product | results
+  step: 'company',      // company | allCompanies | unknown | typeFirst | product | results | balance | done
   company: '',
   product: '',
   chip: '',
   query: '',
   companyQuery: '',
-  expanded: false,      // נפתח רק אחרי "לא מצאת את שלך?"
+  pickUid: '',          // המסלול שנבחר, לשלב היתרה
   showExtraProducts: false,
   limit: RESULTS_PAGE,
   globalSearch: false
 };
 
+/* --- היסטוריית שלבים: כפתור "אחורה" של המכשיר --- */
+let WIZ_HISTORY_READY = false;
+let WIZ_POPPING = false;
+
+function wizSnapshot() {
+  return {
+    step: wizard.step, company: wizard.company, product: wizard.product,
+    chip: wizard.chip, query: wizard.query, companyQuery: wizard.companyQuery,
+    pickUid: wizard.pickUid, showExtraProducts: wizard.showExtraProducts,
+    limit: wizard.limit, globalSearch: wizard.globalSearch
+  };
+}
+
+// רשומת הבסיס נרשמת פעם אחת, כדי שהלחיצה הראשונה על "אחורה" תחזיר שלב
+// ולא תוציא מהאתר.
+function wizInitHistory() {
+  if (WIZ_HISTORY_READY) return;
+  history.replaceState({ wiz: wizSnapshot() }, '');
+  WIZ_HISTORY_READY = true;
+}
+
+// דחיפה להיסטוריה רק כשהמסך עצמו התחלף. הקלדה בשדה חיפוש או פתיחת עוד
+// תוצאות מחליפה את הרשומה הנוכחית, אחרת "אחורה" היה מבטל תו אחד בכל לחיצה.
+function wizPushHistory(before) {
+  if (WIZ_POPPING) return;
+  if (!WIZ_HISTORY_READY) {
+    history.replaceState({ wiz: before }, '');
+    WIZ_HISTORY_READY = true;
+  }
+  const state = { wiz: wizSnapshot() };
+  if (before.step === wizard.step) history.replaceState(state, '');
+  else history.pushState(state, '');
+}
+
+window.addEventListener('popstate', event => {
+  const snap = event.state && event.state.wiz;
+  if (!snap) return;
+  WIZ_POPPING = true;
+  Object.assign(wizard, snap);
+  WIZ_FOCUS_FIELD = '';
+  wizRender();
+  WIZ_POPPING = false;
+});
+
 function wizSet(patch) {
+  const before = wizSnapshot();
   Object.assign(wizard, patch);
+  wizPushHistory(before);
   wizRender();
 }
 function wizReset() {
+  const before = wizSnapshot();
   Object.assign(wizard, {
-    step: 'company', company: '', product: '', chip: '', query: '',
-    companyQuery: '', expanded: false, showExtraProducts: false, limit: RESULTS_PAGE, globalSearch: false
+    step: 'company', company: '', product: '', chip: '', query: '', companyQuery: '',
+    pickUid: '', showExtraProducts: false, limit: RESULTS_PAGE, globalSearch: false
   });
+  wizPushHistory(before);
   wizRender();
 }
 
-function wizLogo(entry) {
+// היעד של חץ החזרה בכל שלב. null = אין חזרה (המסך הראשון).
+function wizBackTarget() {
+  switch (wizard.step) {
+    case 'allCompanies':
+    case 'unknown':
+      return { step: 'company', companyQuery: '' };
+    case 'typeFirst':
+      return { step: 'unknown' };
+    case 'product':
+      return { step: 'company', product: '', showExtraProducts: false };
+    case 'results':
+      if (wizard.globalSearch) return { step: 'results', globalSearch: false, query: '', limit: RESULTS_PAGE };
+      if (!wizard.company) return { step: 'typeFirst' };
+      return productsForBrand(wizard.company).length > 1
+        ? { step: 'product', product: '', chip: '', query: '' }
+        : { step: 'company', product: '', chip: '', query: '' };
+    case 'balance':
+      return { step: 'results', pickUid: '' };
+    default:
+      return null;
+  }
+}
+
+function wizLogo(entry, size) {
   const monogram = `<span class="wiz-monogram">${escapeHtml(entry.monogram || '?')}</span>`;
   const img = entry.logo
     ? `<img src="logos/${escapeHtml(entry.logo)}" alt="" loading="lazy" onerror="this.remove()" />`
     : '';
-  return `<span class="wiz-logo" aria-hidden="true">${monogram}${img}</span>`;
+  return `<span class="wiz-logo${size ? ' wiz-logo-' + size : ''}" aria-hidden="true">${monogram}${img}</span>`;
 }
 
 /* --- מסך 1: מי מנהל את החיסכון --- */
 function wizScreenCompany() {
   const list = brandsForProduct(wizard.product);
   const top = list.slice(0, MAIN_COMPANIES_SHOWN);
+  const shown = {};
+  top.forEach(entry => { shown[entry.name] = 1; });
+  const pinned = PINNED_COMPANIES
+    .filter(name => !shown[name])
+    .map(name => list.filter(item => item.name === name)[0])
+    .filter(Boolean);
   const intro = wizard.product
-    ? `אילו חברות מנהלות ${escapeHtml(PRODUCT_LABEL[wizard.product] || '')}?`
-    : 'בוא נמצא את החיסכון שלך. מי מנהל אותו?';
+    ? `מי מנהל את ה${escapeHtml(PRODUCT_LABEL[wizard.product] || 'חיסכון')}?`
+    : 'מי מנהל את החיסכון שלך?';
   return `
     <h2 class="wiz-title">${intro}</h2>
-    <p class="wiz-sub">בחר את החברה שאליה שייך החיסכון. אפשר לזהות אותה בדוח או באזור האישי.</p>
+    <p class="wiz-sub">השם מופיע בדוח השנתי או באזור האישי. בלי הרשמה, בלי חיבור לחשבון.</p>
     <div class="wiz-company-grid">
       ${top.map(entry => `
         <button type="button" class="wiz-company" data-wiz="company" data-value="${escapeHtml(entry.name)}">
-          ${wizLogo(entry)}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
+          ${wizLogo(entry, 'lg')}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
         </button>`).join('')}
     </div>
+    ${pinned.length ? `
+      <div class="wiz-group">
+        <div class="wiz-group-label">קרנות מגזריות</div>
+        ${pinned.map(entry => `
+          <button type="button" class="wiz-company-row" data-wiz="company" data-value="${escapeHtml(entry.name)}">
+            ${wizLogo(entry)}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
+            <span class="wiz-chevron" aria-hidden="true"></span>
+          </button>`).join('')}
+      </div>` : ''}
     <div class="wiz-links">
-      <button type="button" class="wiz-link" data-wiz="allCompanies">כל החברות</button>
-      <button type="button" class="wiz-link" data-wiz="unknown">אני לא יודע איפה הכסף מנוהל</button>
+      <button type="button" class="wiz-link" data-wiz="allCompanies">חברה אחרת</button>
+      <button type="button" class="wiz-link" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
     </div>`;
 }
 
@@ -1413,14 +1432,11 @@ function wizScreenAllCompanies() {
         </button>`).join('')
     : `<p class="wiz-empty-note">לא מצאנו חברה בשם הזה. אפשר לנסות חלק מהשם, או לחזור ולבחור מהחברות המרכזיות.</p>`;
   return `
-    <h2 class="wiz-title">חפש את החברה שלך</h2>
-    <div class="wiz-field">
-      <input type="text" id="wizCompanySearch" class="wiz-input" placeholder="שם החברה" value="${escapeHtml(wizard.companyQuery)}" autocomplete="off" />
+    <h2 class="wiz-title">איזו חברה?</h2>
+    <div class="wiz-field wiz-field-search">
+      <input type="search" id="wizCompanySearch" class="wiz-input" placeholder="שם החברה" value="${escapeHtml(wizard.companyQuery)}" autocomplete="off" />
     </div>
-    <div class="wiz-company-list">${rows}</div>
-    <div class="wiz-links">
-      <button type="button" class="wiz-link" data-wiz="backToCompanies">חזרה לחברות המרכזיות</button>
-    </div>`;
+    <div class="wiz-company-list">${rows}</div>`;
 }
 
 /* --- מסך 3: אני לא יודע --- */
@@ -1428,15 +1444,14 @@ function wizScreenUnknown() {
   return `
     <h2 class="wiz-title">איפה אפשר למצוא את שם החברה?</h2>
     <ul class="wiz-hints">
-      <li><strong>תלוש השכר</strong> — בשורת ההפרשות לפנסיה ולהשתלמות מופיע שם החברה המנהלת.</li>
-      <li><strong>הדוח התקופתי</strong> — מגיע בדואר או במייל, ושם החברה מופיע בראש העמוד.</li>
-      <li><strong>האזור האישי</strong> — באתר חברת הביטוח, קרן הפנסיה או בית ההשקעות.</li>
+      <li>בדוח השנתי או הרבעוני שהגיע בדואר או במייל</li>
+      <li>בתלוש השכר, בשורת ההפרשות לפנסיה ולהשתלמות</li>
+      <li>באזור האישי באתר החברה המנהלת</li>
     </ul>
     <p class="wiz-note">הכלי אינו מתחבר למסלקה הפנסיונית ואינו מושך נתונים אישיים — הוא עוזר לך לאתר את הקופה במאגר הציבורי ולהזין את היתרה בעצמך.</p>
     <div class="wiz-links">
-      <button type="button" class="wiz-link wiz-link-strong" data-wiz="typeFirst">אני יודע רק מה סוג החיסכון</button>
-      <a class="wiz-link" href="https://www.gov.il/he/service/pension_savings_search" target="_blank" rel="noopener noreferrer">איתור חסכונות בהר הכסף</a>
-      <button type="button" class="wiz-link" data-wiz="backToCompanies">חזרה</button>
+      <a class="wiz-link wiz-link-strong" href="https://www.gov.il/he/service/pension_savings_search" target="_blank" rel="noopener noreferrer">איתור חסכונות בהר הכסף</a>
+      <button type="button" class="wiz-link" data-wiz="typeFirst">אני יודע רק מה סוג החיסכון</button>
     </div>`;
 }
 
@@ -1446,27 +1461,29 @@ function wizProductButton(key) {
   if (!item) return '';
   return `
     <button type="button" class="wiz-choice" data-wiz="product" data-value="${escapeHtml(item.key)}">
-      <span class="wiz-choice-title">${escapeHtml(item.label)}</span>
-      <span class="wiz-choice-hint">${escapeHtml(item.hint)}</span>
+      <span class="wiz-choice-text">
+        <span class="wiz-choice-title">${escapeHtml(item.label)}</span>
+        <span class="wiz-choice-hint">${escapeHtml(item.hint)}</span>
+      </span>
+      <span class="wiz-chevron" aria-hidden="true"></span>
     </button>`;
 }
 function wizScreenProduct() {
   const keys = wizard.company ? productsForBrand(wizard.company) : PRODUCT_ORDER.slice();
   const primary = keys.slice(0, PRIMARY_PRODUCTS_SHOWN);
   const extra = keys.slice(PRIMARY_PRODUCTS_SHOWN);
-  const title = wizard.company ? 'מה סוג החיסכון?' : 'מה סוג החיסכון שלך?';
   const sub = wizard.company
     ? `אלה סוגי החיסכון שמנוהלים ב${escapeHtml(wizard.company)}.`
-    : 'נמצא לפי הסוג, ואחר כך נבחר את החברה.';
+    : 'אם יש לך כמה סוגים, נתחיל מאחד ונוסיף את השאר אחר כך.';
   return `
-    <h2 class="wiz-title">${title}</h2>
+    <h2 class="wiz-title">איזה סוג חיסכון?</h2>
     <p class="wiz-sub">${sub}</p>
     <div class="wiz-choices">
       ${primary.map(wizProductButton).join('')}
       ${extra.length ? `
         <button type="button" class="wiz-choice wiz-choice-more" data-wiz="moreProducts">
-          <span class="wiz-choice-title">סוג אחר</span>
-          <span class="wiz-choice-hint">מוצרים נוספים שמנוהלים בחברה</span>
+          <span class="wiz-choice-text"><span class="wiz-choice-title">סוג אחר</span></span>
+          <span class="wiz-chevron${wizard.showExtraProducts ? ' is-open' : ''}" aria-hidden="true"></span>
         </button>
         <div class="wiz-choices wiz-choices-extra" id="wizExtraProducts" ${wizard.showExtraProducts ? '' : 'hidden'}>
           ${extra.map(wizProductButton).join('')}
@@ -1475,17 +1492,17 @@ function wizScreenProduct() {
 }
 
 /* --- מסך 5: מסלולים --- */
-function wizResultCard(rec) {
-  const chosen = userFunds.some(item => item.fund && item.fund.uid === rec.uid);
+function wizResultRow(rec) {
+  const chosen = findUserFundIndex(rec.uid) >= 0;
   return `
-    <div class="wiz-result${chosen ? ' is-chosen' : ''}">
-      <div class="wiz-result-body">
-        <div class="wiz-result-name">${escapeHtml(rec.fund_name)}</div>
-        <div class="wiz-result-meta">${escapeHtml(trackLabel(rec))}</div>
-        <div class="wiz-result-id">מספר קופה ${escapeHtml(rec.fund_id || '')}</div>
-      </div>
-      <button type="button" class="wiz-pick" data-wiz="pick" data-value="${escapeHtml(rec.uid)}">${chosen ? 'ערוך' : 'בחר'}</button>
-    </div>`;
+    <button type="button" class="wiz-result${chosen ? ' is-chosen' : ''}" data-wiz="pick" data-value="${escapeHtml(rec.uid)}">
+      <span class="wiz-result-body">
+        <span class="wiz-result-name">${escapeHtml(rec.fund_name)}</span>
+        <span class="wiz-result-meta">${escapeHtml(trackLabel(rec))} · קופה ${escapeHtml(rec.fund_id || '')}</span>
+      </span>
+      ${chosen ? '<span class="wiz-result-flag">בתיק</span>' : ''}
+      <span class="wiz-chevron" aria-hidden="true"></span>
+    </button>`;
 }
 function wizFilteredResults() {
   const scope = wizard.globalSearch
@@ -1523,59 +1540,149 @@ function wizScreenResults() {
         </div>
       </div>`;
   } else {
-    body = `<div class="wiz-results">${visible.map(wizResultCard).join('')}</div>`;
+    body = `<div class="wiz-results">${visible.map(wizResultRow).join('')}</div>`;
   }
 
-  const disclosure = wizard.expanded
-    ? `
-      <div class="wiz-disclosure">
-        ${chips.length ? `<div class="wiz-chips">
-          ${chips.map(chip => `<button type="button" class="wiz-chip${wizard.chip === chip.key ? ' is-on' : ''}" data-wiz="chip" data-value="${escapeHtml(chip.key)}">${escapeHtml(chip.label)}</button>`).join('')}
-        </div>` : ''}
-        <div class="wiz-field">
-          <input type="text" id="wizTrackSearch" class="wiz-input" placeholder="חיפוש לפי שם המסלול או מספר קופה" value="${escapeHtml(wizard.query)}" autocomplete="off" />
-        </div>
-        ${results.length > visible.length ? '<button type="button" class="wiz-more" data-wiz="more">הצג עוד מסלולים</button>' : ''}
-      </div>`
-    : `<button type="button" class="wiz-link wiz-not-found" data-wiz="expand">לא מצאת את שלך?</button>`;
-
-  const title = wizard.globalSearch ? 'חיפוש בכל החברות' : 'נתחיל מהמסלולים הנפוצים';
+  // שם המסלול הוא מה שכתוב בדוח שביד המשתמש — זה הקלט המהיר ביותר שיש לו,
+  // ולכן שדה החיפוש גלוי מיד. הצ'יפים נשארים מתחתיו כסינון משני.
+  const title = wizard.globalSearch ? 'חיפוש בכל החברות' : 'איזה מסלול?';
   return `
     <h2 class="wiz-title">${title}</h2>
-    <p class="wiz-sub">בחר את המסלול שמופיע בדוח שלך, ואז נזין את היתרה.</p>
+    <p class="wiz-sub">בחר את המסלול שמופיע בדוח שלך. ${results.length} מסלולים${wizard.query || wizard.chip ? ' תואמים' : ''}.</p>
+    <div class="wiz-field wiz-field-search">
+      <input type="search" id="wizTrackSearch" class="wiz-input" placeholder="חיפוש לפי שם מסלול או מספר קופה" value="${escapeHtml(wizard.query)}" autocomplete="off" />
+    </div>
+    ${chips.length ? `<div class="wiz-chips">
+      ${chips.map(chip => `<button type="button" class="wiz-chip${wizard.chip === chip.key ? ' is-on' : ''}" data-wiz="chip" data-value="${escapeHtml(chip.key)}">${escapeHtml(chip.label)}</button>`).join('')}
+    </div>` : ''}
     ${body}
-    ${disclosure}`;
+    ${results.length > visible.length ? '<button type="button" class="wiz-more" data-wiz="more">הצג עוד מסלולים</button>' : ''}
+    ${wizard.globalSearch ? '' : '<button type="button" class="wiz-link wiz-not-found" data-wiz="globalSearch">המסלול לא ברשימה? חפש בכל החברות</button>'}`;
 }
 
-/* --- פירורי לחם --- */
+/* --- מסך 6: יתרה. מסך מלא, לא פאנל מתחת לרשימה. --- */
+function wizPickedFund() {
+  if (!wizard.pickUid) return null;
+  return DATA.filter(item => item.uid === wizard.pickUid)[0] || null;
+}
+function wizScreenBalance() {
+  const rec = wizPickedFund();
+  if (!rec) return wizScreenResults();
+  const existingIndex = findUserFundIndex(rec.uid);
+  const existing = existingIndex >= 0 ? userFunds[existingIndex] : null;
+  const balanceValue = existing && Number(existing.balance) > 0 ? Number(existing.balance) : '';
+  const feeValue = existing && Number.isFinite(existing.managementFee) ? existing.managementFee : '';
+  const brand = BRAND_BY_NAME[rec._brand];
+  return `
+    <div class="wiz-picked">
+      ${brand ? wizLogo(brand, 'lg') : ''}
+      <div class="wiz-picked-text">
+        <div class="wiz-picked-name">${escapeHtml(rec.fund_name)}</div>
+        <div class="wiz-picked-meta">${escapeHtml(trackLabel(rec))} · קופה ${escapeHtml(rec.fund_id || '')}</div>
+      </div>
+      <div class="wiz-spark" id="quickEditorSpark" dir="ltr"></div>
+    </div>
+    <h2 class="wiz-title">כמה צבור במסלול הזה?</h2>
+    <p class="wiz-sub">היתרה נשמרת בדפדפן שלך בלבד ואינה נשלחת לשום מקום.</p>
+    <div class="wiz-money-field">
+      <span class="wiz-money-sign" aria-hidden="true">₪</span>
+      <input type="number" class="wiz-money-input" id="quickBalanceInput" value="${escapeHtml(balanceValue)}" placeholder="0" min="0" inputmode="numeric" enterkeyhint="done" />
+    </div>
+    <label class="wiz-fee-field">
+      <span class="wiz-fee-label">דמי ניהול מצבירה <span class="wiz-optional">לא חובה</span></span>
+      <span class="wiz-fee-input">
+        <input type="number" id="quickFeeInput" value="${escapeHtml(feeValue)}" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+        <span class="wiz-fee-sign">%</span>
+      </span>
+    </label>
+    <div class="wiz-cta-bar">
+      <button type="button" class="wiz-cta" data-wiz="commit">הוסף לתיק</button>
+      ${existing ? '<button type="button" class="wiz-cta-ghost" data-wiz="removePicked">הסר מהתיק</button>' : ''}
+    </div>`;
+}
+
+/* --- מסך 7: אישור והמשך. הקופה השנייה מתחילה קרוב יותר ליעד. --- */
+function wizScreenDone() {
+  const rec = wizPickedFund();
+  const count = userFunds.length;
+  const total = userFunds.reduce((sum, item) => sum + (Number(item.balance) || 0), 0);
+  return `
+    <div class="wiz-done-mark" aria-hidden="true"></div>
+    <h2 class="wiz-title">${rec ? escapeHtml(rec.fund_name) : 'המוצר'} נוסף לתיק</h2>
+    <p class="wiz-sub">${count} ${count === 1 ? 'מוצר' : 'מוצרים'} בתיק · ${fmtCurrency(total)} סה״כ</p>
+    <div class="wiz-done-actions">
+      <button type="button" class="wiz-cta" data-wiz="dashboard">הצג את התמונה המלאה</button>
+      ${wizard.company ? `<button type="button" class="wiz-cta-soft" data-wiz="anotherSameCompany">עוד מוצר ב${escapeHtml(wizard.company)}</button>` : ''}
+      <button type="button" class="wiz-link" data-wiz="reset">מוצר בחברה אחרת</button>
+    </div>`;
+}
+
+/* --- סרגל עליון: חזרה, כותרת שלב, פס התקדמות --- */
+function wizRenderBar() {
+  const bar = document.getElementById('wizBar');
+  if (!bar) return;
+  const meta = WIZ_STEP_META[wizard.step] || WIZ_STEP_META.company;
+  const back = wizBackTarget();
+  const pct = Math.round(meta.progress / WIZ_TOTAL_STEPS * 100);
+  bar.innerHTML = `
+    <div class="wiz-bar-row">
+      ${back ? '<button type="button" class="wiz-back" data-wiz="back" aria-label="חזרה"></button>' : '<span class="wiz-back-placeholder" aria-hidden="true"></span>'}
+      <span class="wiz-bar-title">${escapeHtml(meta.title)}</span>
+      ${wizard.step === 'company' ? '<span class="wiz-back-placeholder" aria-hidden="true"></span>' : '<button type="button" class="wiz-bar-reset" data-wiz="reset">התחל מחדש</button>'}
+    </div>
+    <div class="wiz-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${WIZ_TOTAL_STEPS}" aria-valuenow="${meta.progress}">
+      <span class="wiz-progress-fill" style="width:${pct}%"></span>
+    </div>`;
+}
+
+/* --- שורת ההקשר: מה כבר נבחר --- */
 function wizRenderCrumbs() {
   const wrap = document.getElementById('wizCrumbs');
   if (!wrap) return;
   const parts = [];
-  if (wizard.company) {
+  if (wizard.step === 'done') { wrap.innerHTML = ''; wrap.hidden = true; return; }
+  if (wizard.company && wizard.step !== 'company') {
     parts.push(`<button type="button" class="wiz-crumb" data-wiz="crumbCompany">${escapeHtml(wizard.company)}</button>`);
   }
-  if (wizard.product && wizard.step === 'results') {
+  if (wizard.product && (wizard.step === 'results' || wizard.step === 'balance')) {
     parts.push(`<button type="button" class="wiz-crumb" data-wiz="crumbProduct">${escapeHtml(PRODUCT_LABEL[wizard.product] || '')}</button>`);
   }
-  wrap.innerHTML = parts.length
-    ? `<span class="wiz-crumb-sep-wrap">${parts.join('<span class="wiz-crumb-sep" aria-hidden="true">›</span>')}</span>
-       <button type="button" class="wiz-crumb wiz-crumb-reset" data-wiz="reset">התחל מחדש</button>`
-    : '';
+  wrap.innerHTML = parts.join('<span class="wiz-crumb-sep" aria-hidden="true">·</span>');
+  wrap.hidden = !parts.length;
 }
 
 function wizRender() {
   const screen = document.getElementById('wizScreen');
   if (!screen) return;
+  wizInitHistory();
   let html = '';
   if (wizard.step === 'allCompanies') html = wizScreenAllCompanies();
   else if (wizard.step === 'unknown') html = wizScreenUnknown();
   else if (wizard.step === 'product' || wizard.step === 'typeFirst') html = wizScreenProduct();
   else if (wizard.step === 'results') html = wizScreenResults();
+  else if (wizard.step === 'balance') html = wizScreenBalance();
+  else if (wizard.step === 'done') html = wizScreenDone();
   else html = wizScreenCompany();
   screen.innerHTML = html;
+  const wrap = document.getElementById('wizard');
+  if (wrap) wrap.dataset.step = wizard.step;
+  wizRenderBar();
   wizRenderCrumbs();
+  wizSyncShell();
+  if (wizard.step === 'balance') {
+    const rec = wizPickedFund();
+    if (rec) renderQuickSpark(document.getElementById('quickEditorSpark'), withRuntimeFlags(rec));
+    const input = document.getElementById('quickBalanceInput');
+    if (input && !WIZ_FOCUS_FIELD) window.setTimeout(() => { input.focus({ preventScroll: true }); input.select(); }, 120);
+  }
   wizRestoreFocus();
+}
+
+// כל עוד אין מוצר בתיק, מתחת לאשף אין דשבורד ואין טקסטים ארוכים —
+// רק שורת קישורים דקה. זה מה שמפריד בין "אפליקציה" ל"מסמך גלילה".
+function wizSyncShell() {
+  document.body.classList.toggle('pre-result', !userFunds.length);
+  document.body.classList.toggle('wiz-flow', wizard.step !== 'done');
 }
 
 // שמירת מיקוד וסמן בשדות החיפוש אחרי רינדור מחדש.
@@ -1593,42 +1700,93 @@ function wizAfterCompany(name) {
   const products = productsForBrand(name);
   // סוג יחיד אצל החברה — אין מה לשאול, קופצים ישר למסלולים.
   if (products.length === 1) {
-    wizSet({ company: name, product: products[0], step: 'results', chip: '', query: '', expanded: false, limit: RESULTS_PAGE, globalSearch: false });
+    wizSet({ company: name, product: products[0], step: 'results', chip: '', query: '', limit: RESULTS_PAGE, globalSearch: false });
     return;
   }
-  wizSet({ company: name, product: '', step: 'product', expanded: false });
+  wizSet({ company: name, product: '', step: 'product', showExtraProducts: false });
+}
+
+/* --- שמירת היתרה --- */
+function wizCommitBalance() {
+  const rec = wizPickedFund();
+  if (!rec) return;
+  const balanceInput = document.getElementById('quickBalanceInput');
+  const feeInput = document.getElementById('quickFeeInput');
+  const balance = Math.max(0, Number(balanceInput ? balanceInput.value : 0) || 0);
+  const fee = normalizeUserFee(feeInput ? feeInput.value : null);
+  if (balance <= 0) {
+    const field = document.querySelector('.wiz-money-field');
+    if (field) {
+      field.classList.add('is-invalid');
+      window.setTimeout(() => field.classList.remove('is-invalid'), 1600);
+    }
+    if (balanceInput) balanceInput.focus();
+    return;
+  }
+  const fund = withRuntimeFlags(rec);
+  const idx = findUserFundIndex(fund.uid);
+  const payload = { fund, balance, managementFee: fee, updated_at: new Date().toISOString() };
+  if (idx >= 0) userFunds[idx] = payload;
+  else userFunds.push(payload);
+  saveState();
+  renderDashboard();
+  WIZ_FOCUS_FIELD = '';
+  wizSet({ step: 'done' });
+  wizScrollIntoView();
+}
+function wizRemovePicked() {
+  const rec = wizPickedFund();
+  if (!rec) return;
+  const idx = findUserFundIndex(rec.uid);
+  if (idx >= 0) {
+    userFunds.splice(idx, 1);
+    saveState();
+    renderDashboard();
+  }
+  wizSet({ step: 'results', pickUid: '' });
 }
 
 function wizHandle(action, value) {
+  if (action === 'back') {
+    const target = wizBackTarget();
+    if (target) { WIZ_FOCUS_FIELD = ''; history.back(); }
+    return;
+  }
   if (action === 'company') {
     if (wizard.product) {
-      wizSet({ company: value, step: 'results', chip: '', query: '', expanded: false, limit: RESULTS_PAGE, globalSearch: false });
+      wizSet({ company: value, step: 'results', chip: '', query: '', limit: RESULTS_PAGE, globalSearch: false });
       return;
     }
     wizAfterCompany(value);
     return;
   }
   if (action === 'allCompanies') { WIZ_FOCUS_FIELD = 'wizCompanySearch'; wizSet({ step: 'allCompanies', companyQuery: '' }); return; }
-  if (action === 'backToCompanies') { WIZ_FOCUS_FIELD = ''; wizSet({ step: 'company', companyQuery: '' }); return; }
   if (action === 'unknown') { wizSet({ step: 'unknown' }); return; }
-  if (action === 'typeFirst') { wizSet({ step: 'typeFirst', company: '', product: '', expanded: false }); return; }
+  if (action === 'typeFirst') { wizSet({ step: 'typeFirst', company: '', product: '' }); return; }
   if (action === 'moreProducts') { wizSet({ showExtraProducts: !wizard.showExtraProducts }); return; }
   if (action === 'product') {
-    if (wizard.step === 'typeFirst') { wizSet({ product: value, step: 'company', expanded: false }); return; }
-    wizSet({ product: value, step: 'results', chip: '', query: '', expanded: false, limit: RESULTS_PAGE, globalSearch: false });
+    if (wizard.step === 'typeFirst') { wizSet({ product: value, step: 'company' }); return; }
+    wizSet({ product: value, step: 'results', chip: '', query: '', limit: RESULTS_PAGE, globalSearch: false });
     return;
   }
-  if (action === 'expand') { WIZ_FOCUS_FIELD = ''; wizSet({ expanded: true }); return; }
   if (action === 'chip') { wizSet({ chip: wizard.chip === value ? '' : value, limit: RESULTS_PAGE }); return; }
   if (action === 'more') { wizSet({ limit: wizard.limit + RESULTS_PAGE }); return; }
   if (action === 'clearFilters') { WIZ_FOCUS_FIELD = ''; wizSet({ chip: '', query: '', limit: RESULTS_PAGE }); return; }
-  if (action === 'globalSearch') { wizSet({ globalSearch: true, limit: RESULTS_PAGE }); return; }
-  if (action === 'crumbCompany') { wizSet({ step: 'company', product: '', chip: '', query: '', expanded: false, globalSearch: false }); return; }
-  if (action === 'crumbProduct') { wizSet({ step: 'product', chip: '', query: '', expanded: false, globalSearch: false }); return; }
-  if (action === 'reset') { wizReset(); return; }
-  if (action === 'pick') {
-    const rec = DATA.filter(item => item.uid === value)[0];
-    if (rec) addFund(rec);
+  if (action === 'globalSearch') { WIZ_FOCUS_FIELD = 'wizTrackSearch'; wizSet({ globalSearch: true, limit: RESULTS_PAGE }); return; }
+  if (action === 'crumbCompany') { wizSet({ step: 'company', product: '', chip: '', query: '', globalSearch: false }); return; }
+  if (action === 'crumbProduct') { wizSet({ step: 'product', chip: '', query: '', globalSearch: false }); return; }
+  if (action === 'reset') { WIZ_FOCUS_FIELD = ''; wizReset(); wizScrollIntoView(); return; }
+  if (action === 'pick') { WIZ_FOCUS_FIELD = ''; wizSet({ step: 'balance', pickUid: value }); wizScrollIntoView(); return; }
+  if (action === 'commit') { wizCommitBalance(); return; }
+  if (action === 'removePicked') { wizRemovePicked(); return; }
+  if (action === 'dashboard') { goToDashboard(); return; }
+  if (action === 'anotherSameCompany') {
+    // הקופה השנייה של אותו משתמש היא כמעט תמיד באותה חברה. חוזרים לשלב
+    // הסוג (או ישר למסלולים) במקום להתחיל מרשת החברות.
+    const products = wizard.company ? productsForBrand(wizard.company) : [];
+    if (products.length > 1) wizSet({ step: 'product', product: '', pickUid: '', showExtraProducts: false });
+    else wizSet({ step: 'results', pickUid: '', chip: '', query: '', limit: RESULTS_PAGE, globalSearch: false });
+    wizScrollIntoView();
     return;
   }
 }
@@ -1636,6 +1794,7 @@ function wizHandle(action, value) {
 document.addEventListener('click', event => {
   const trigger = event.target.closest('[data-wiz]');
   if (!trigger || !document.getElementById('wizard') || !document.getElementById('wizard').contains(trigger)) return;
+  if (trigger.tagName === 'A') return;
   event.preventDefault();
   wizHandle(trigger.dataset.wiz, trigger.dataset.value || '');
 });
@@ -1647,6 +1806,13 @@ document.addEventListener('input', event => {
   if (event.target.id === 'wizTrackSearch') {
     WIZ_FOCUS_FIELD = 'wizTrackSearch';
     wizSet({ query: event.target.value, limit: RESULTS_PAGE });
+  }
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Enter') return;
+  if (event.target.id === 'quickBalanceInput' || event.target.id === 'quickFeeInput') {
+    event.preventDefault();
+    wizCommitBalance();
   }
 });
 
