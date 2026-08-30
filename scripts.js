@@ -1343,10 +1343,8 @@ window.handleFeeInput = handleFeeInput;
    חברה ← סוג חיסכון ← מסלולים נפוצים, וכל השאר נחשף רק בבקשה. */
 
 const RESULTS_PAGE = 5;
-// כמה חברות מוצגות במסך הראשון, והחברות שמוצמדות אליו גם כשאינן בין הגדולות
-// בנכסים. השאר נגישות דרך "כל החברות".
+// כמה חברות מוצגות במסך הראשון, לפי שווי נכסים. השאר נגישות דרך "כל החברות".
 const MAIN_COMPANIES_SHOWN = 10;
-const PINNED_COMPANIES = ['ילין לפידות', 'איילון'];
 const wizard = {
   step: 'company',      // company | allCompanies | unknown | typeFirst | product | results
   company: '',
@@ -1383,11 +1381,7 @@ function wizLogo(entry) {
 /* --- מסך 1: מי מנהל את החיסכון --- */
 function wizScreenCompany() {
   const list = brandsForProduct(wizard.product);
-  const pinned = list.filter(entry => PINNED_COMPANIES.indexOf(entry.name) > -1);
-  const head = list.slice(0, MAIN_COMPANIES_SHOWN - pinned.length);
-  const top = head
-    .concat(pinned.filter(entry => head.indexOf(entry) === -1))
-    .sort((a, b) => b.assets - a.assets);
+  const top = list.slice(0, MAIN_COMPANIES_SHOWN);
   const intro = wizard.product
     ? `אילו חברות מנהלות ${escapeHtml(PRODUCT_LABEL[wizard.product] || '')}?`
     : 'בוא נמצא את החיסכון שלך. מי מנהל אותו?';
