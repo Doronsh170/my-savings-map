@@ -123,7 +123,19 @@ const BRAND_ALIASES = {
 };
 // קובץ לוגו לכל מותג: logos/<slug>.svg. הרשימה מתפקדת כמניפסט — מוסיפים שורה
 // רק אחרי שהקובץ הועלה לתיקיית logos, אחרת הדפדפן ידווח על 404 בקונסול.
-// המיפוי המלא המומלץ מתועד ב-logos/README.md. בלי לוגו מוצגת מונוגרמה.
+// בלי לוגו מוצגת מונוגרמה. פירוט מלא: logos/README.md.
+//
+// שמונה החברות של המסך הראשון — להסיר את הערת השורה אחרי העלאת הקובץ:
+// const BRAND_LOGOS = {
+//   'הראל': 'harel',                 // logos/harel.svg
+//   'מנורה מבטחים': 'menora',        // logos/menora.svg
+//   'הפניקס': 'phoenix',             // logos/phoenix.svg
+//   'מגדל': 'migdal',                // logos/migdal.svg
+//   'כלל': 'clal',                   // logos/clal.svg
+//   'מיטב': 'meitav',                // logos/meitav.svg
+//   'אלטשולר שחם': 'altshuler',      // logos/altshuler.svg
+//   'מור': 'mor'                     // logos/mor.svg
+// };
 const BRAND_LOGOS = {};
 
 function brandOf(rec) {
