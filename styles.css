@@ -7727,3 +7727,303 @@ body.pre-result .info-row-title { white-space: nowrap; }
 .wiz-bar-row { min-height: 44px; padding-block: var(--sp-2); }
 .wiz-screen { padding-top: var(--sp-3) !important; }
 .wiz-company { min-height: 100px !important; }
+
+
+/* ============================================================================
+   v5.1 — מצב בהיר וכהה.
+   הצבעים הסמנטיים יושבים על :root, והמצב הכהה מחליף אותם בלבד. שלושה
+   טוקנים חדשים נדרשו כי בבהיר "הדגש" הוא הדבר הכהה ביותר במסך, ובכהה
+   הוא הבהיר ביותר — אותו משתנה לא יכול לשרת את שניהם.
+   ========================================================================= */
+
+:root {
+  --accent-fill: var(--accent);   /* מילוי של כפתור ראשי, צ'יפ נבחר, פס התקדמות */
+  --on-accent-fill: #ffffff;      /* טקסט מעל המילוי הזה */
+  --logo-plate: transparent;      /* משטח מאחורי לוגו — נדרש רק בכהה */
+  --hero-from: #12294a;
+  --hero-to: #0c1a2b;
+
+  --chart-pos: #12294a;
+  --chart-neg: #c53637;
+  --chart-line: #12294a;
+  --chart-spark: #93a1b3;
+  --chart-stock: #12294a;
+  --chart-foreign: #b08949;
+  --chart-fx: #6d8299;
+  --chart-liquid: #8a6b1f;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e1319;
+  --bg-soft: #1a212a;
+  --bg-deep: #232b36;
+  --card: #161c24;
+  --card-tint: #1b222b;
+
+  --ink: #e8edf3;
+  --ink-soft: #ccd5df;
+  --ink-mid: #a6b2c0;
+  --ink-muted: #8593a3;
+  --ink-faint: #68768a;
+
+  --line: #28313d;
+  --line-soft: #222a34;
+  --line-faint: #1b222b;
+
+  --accent: #8fb4ff;
+  --accent-dark: #b9cfff;
+  --accent-soft: #1d2941;
+  --accent-soft-2: #24314c;
+  --accent-ring: rgba(143, 180, 255, .22);
+  --accent-fill: #dee7f6;
+  --on-accent-fill: #0e1319;
+
+  --success-soft: #16281d;
+  --warning: #d3a961;
+  --warning-soft: #2c2415;
+  --danger: #e2686a;
+  --danger-soft: #33191b;
+
+  --logo-plate: #f3f5f8;
+  --hero-from: #18202b;
+  --hero-to: #0e1319;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, .34);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, .38);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, .44);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, .52);
+
+  --chart-pos: #8fb4ff;
+  --chart-neg: #e2686a;
+  --chart-line: #8fb4ff;
+  --chart-spark: #68768a;
+  --chart-stock: #8fb4ff;
+  --chart-foreign: #d3a961;
+  --chart-fx: #7f93ab;
+  --chart-liquid: #c2a05a;
+
+  color-scheme: dark;
+}
+
+/* --- כפתור החלפת המצב --- */
+.theme-toggle {
+  margin-inline-start: auto; flex: 0 0 auto;
+  width: 38px; height: 38px; padding: 0; border-radius: 12px; cursor: pointer;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .14);
+  color: rgba(255, 255, 255, .9);
+  transition: background .15s ease, transform .12s ease;
+}
+.theme-toggle:hover { background: rgba(255, 255, 255, .17); }
+.theme-toggle:active { transform: scale(.94); }
+.theme-toggle:focus-visible { outline: 2px solid rgba(255, 255, 255, .6); outline-offset: 2px; }
+.theme-icon {
+  width: 19px; height: 19px; display: block;
+  fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.theme-icon-moon { display: none; fill: currentColor; stroke: none; }
+:root[data-theme="dark"] .theme-icon-sun { display: none; }
+:root[data-theme="dark"] .theme-icon-moon { display: block; }
+
+/* --- שימושים שבהם הדגש הוא מילוי ולא טקסט --- */
+.wiz-progress-fill { background: var(--accent-fill) !important; }
+.wiz-chip.is-on { background: var(--accent-fill) !important; color: var(--on-accent-fill) !important; }
+.wiz-cta {
+  background: var(--accent-fill) !important; color: var(--on-accent-fill) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .18) !important;
+}
+.wiz-done-mark { background: var(--accent-fill) !important; }
+.wiz-done-mark::before { border-color: var(--on-accent-fill) !important; }
+
+/* --- לוגואים: המותגים הם כהים על רקע שקוף, ונעלמים על משטח כהה --- */
+:root[data-theme="dark"] .wiz-logo {
+  background: var(--logo-plate) !important;
+  border-radius: 12px; padding: 5px !important; box-sizing: border-box;
+}
+:root[data-theme="dark"] .wiz-logo-lg { border-radius: 14px; padding: 7px !important; }
+:root[data-theme="dark"] .wiz-logo img { inset: 5px; width: auto; height: auto; }
+:root[data-theme="dark"] .wiz-logo-lg img { inset: 7px; }
+:root[data-theme="dark"] .wiz-monogram { color: #5d6a7c; }
+
+/* --- משטחים עם צבע קשיח שאינו עובר דרך הטוקנים --- */
+.hero.premium-hero, .premium-hero {
+  background: linear-gradient(160deg, var(--hero-from) 0%, var(--hero-to) 100%) !important;
+}
+:root[data-theme="dark"] .premium-hero { border-bottom: 1px solid var(--line) !important; }
+:root[data-theme="dark"] .wizard { border: 1px solid var(--line) !important; }
+:root[data-theme="dark"] body { background: var(--bg) !important; }
+:root[data-theme="dark"] .loading { color: var(--ink-muted) !important; }
+:root[data-theme="dark"] .site-credit,
+:root[data-theme="dark"] .site-copyright { color: var(--ink-faint) !important; }
+
+/* --- הדפסה ו-PDF תמיד בהירים, גם כשהמסך כהה --- */
+@media print {
+  :root, :root[data-theme="dark"] {
+    --bg: #ffffff; --bg-soft: #f5f7fa; --bg-deep: #e4e9f0;
+    --card: #ffffff; --card-tint: #f8fafc;
+    --ink: #0c1a2b; --ink-soft: #24374d; --ink-mid: #4a5b70;
+    --ink-muted: #667a91; --ink-faint: #93a1b3;
+    --line: #e2e8f0; --line-soft: #edf1f6; --line-faint: #f5f7fa;
+    --accent: #12294a; --accent-fill: #12294a; --on-accent-fill: #ffffff;
+    --accent-soft: #eef3fa; --logo-plate: transparent;
+    --chart-pos: #12294a; --chart-neg: #c53637; --chart-line: #12294a;
+    --chart-spark: #93a1b3; --chart-stock: #12294a; --chart-foreign: #b08949;
+    --chart-fx: #6d8299; --chart-liquid: #8a6b1f;
+    color-scheme: light;
+  }
+  .theme-toggle { display: none !important; }
+}
+
+/* v5.1 — תיקונים אחרי בדיקה בכהה */
+/* תמונה מוחלפת עם inset ורוחב auto חוזרת לגודל הטבעי שלה, לא נמתחת למסגרת. */
+:root[data-theme="dark"] .wiz-logo img {
+  inset: 5px; width: calc(100% - 10px); height: calc(100% - 10px);
+}
+:root[data-theme="dark"] .wiz-logo-lg img {
+  inset: 7px; width: calc(100% - 14px); height: calc(100% - 14px);
+}
+:root[data-theme="dark"] .wiz-logo { background: #eef1f6 !important; }
+:root[data-theme="dark"] .wiz-monogram { color: #7b8798; }
+/* האייקון מראה את היעד של הלחיצה, בהתאמה ל-aria-label */
+.theme-icon-sun { display: none; }
+.theme-icon-moon { display: block; }
+:root[data-theme="dark"] .theme-icon-sun { display: block; }
+:root[data-theme="dark"] .theme-icon-moon { display: none; }
+
+/* ----------------------------------------------------------------------------
+   v5.1 — משטחים שנצבעו בקוד קשיח בשכבות הקודמות.
+   התחילית :root[data-theme="dark"] מוסיפה מספיק ספציפיות כדי לגבור עליהן
+   בלי לגעת בשכבות עצמן.
+   -------------------------------------------------------------------------- */
+:root[data-theme="dark"] .hero,
+:root[data-theme="dark"] footer,
+:root[data-theme="dark"] .footer-disclaimer-details summary {
+  background: var(--card) !important; color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+:root[data-theme="dark"] .footer-disclaimer-text { background: var(--bg-soft) !important; color: var(--ink-mid) !important; }
+
+:root[data-theme="dark"] .dashboard { background: var(--bg) !important; color: var(--ink) !important; }
+:root[data-theme="dark"] .dashboard .metric-card,
+:root[data-theme="dark"] .dashboard .metric-card:hover,
+:root[data-theme="dark"] .metric-card,
+:root[data-theme="dark"] .metric-card:hover,
+:root[data-theme="dark"] .sim-summary-card,
+:root[data-theme="dark"] .sim-result-card,
+:root[data-theme="dark"] .quick-editor-card,
+:root[data-theme="dark"] .fund-card,
+:root[data-theme="dark"] .missing-funds-notice {
+  background: var(--card) !important; color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+:root[data-theme="dark"] .dashboard .source-mix-item,
+:root[data-theme="dark"] .source-mix-item,
+:root[data-theme="dark"] .source-mix {
+  background: var(--bg-soft) !important; color: var(--ink-soft) !important;
+  border-color: var(--line) !important;
+}
+:root[data-theme="dark"] .total,
+:root[data-theme="dark"] .metric-value,
+:root[data-theme="dark"] .dashboard h2 { color: var(--ink) !important; }
+:root[data-theme="dark"] .total-label,
+:root[data-theme="dark"] .metric-label,
+:root[data-theme="dark"] .dashboard .metric-label,
+:root[data-theme="dark"] .dashboard .subtitle,
+:root[data-theme="dark"] .perf-note,
+:root[data-theme="dark"] .sim-disclaimer,
+:root[data-theme="dark"] .action-note { color: var(--ink-muted) !important; }
+:root[data-theme="dark"] .metric-bar { background: var(--bg-deep) !important; }
+
+:root[data-theme="dark"] .action-btn,
+:root[data-theme="dark"] .dashboard .action-btn,
+:root[data-theme="dark"] .bottom-actions .action-btn,
+:root[data-theme="dark"] .external-link-btn,
+:root[data-theme="dark"] .guidance-toggle-btn {
+  background: var(--card) !important; color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+:root[data-theme="dark"] .sim-run-btn {
+  background: var(--accent-fill) !important; color: var(--on-accent-fill) !important;
+}
+
+:root[data-theme="dark"] .dashboard-toggle-summary,
+:root[data-theme="dark"] .info-row,
+:root[data-theme="dark"] .history-table-details summary {
+  background: var(--card) !important; color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+:root[data-theme="dark"] .info-panel,
+:root[data-theme="dark"] .guidance-content,
+:root[data-theme="dark"] .dashboard-toggle-content {
+  background: var(--bg-soft) !important; color: var(--ink-soft) !important;
+  border-color: var(--line) !important;
+}
+:root[data-theme="dark"] .info-row-kicker { color: var(--warning) !important; }
+:root[data-theme="dark"] .info-row-chevron { border-color: var(--ink-faint) !important; }
+
+:root[data-theme="dark"] .table-wrap { background: var(--card) !important; border-color: var(--line) !important; }
+:root[data-theme="dark"] table { color: var(--ink-soft) !important; }
+:root[data-theme="dark"] th {
+  background: var(--bg-soft) !important; color: var(--ink-mid) !important;
+  border-color: var(--line) !important;
+}
+:root[data-theme="dark"] td { border-color: var(--line-soft) !important; }
+:root[data-theme="dark"] tbody tr:hover td { background: var(--bg-soft) !important; }
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] .sim-field input,
+:root[data-theme="dark"] .balance-input,
+:root[data-theme="dark"] .fee-input {
+  background: var(--bg-soft) !important; color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+:root[data-theme="dark"] input::placeholder { color: var(--ink-faint) !important; }
+:root[data-theme="dark"] .wiz-money-input { background: none !important; border: 0 !important; }
+:root[data-theme="dark"] .wiz-money-input::placeholder { color: var(--line) !important; }
+:root[data-theme="dark"] .wiz-input:focus { background: var(--card) !important; }
+
+:root[data-theme="dark"] .history-options label,
+:root[data-theme="dark"] .history-grid > * {
+  background: var(--card) !important; border-color: var(--line) !important; color: var(--ink-soft) !important;
+}
+:root[data-theme="dark"] .chart-grid line,
+:root[data-theme="dark"] .chart svg line { stroke: var(--line) !important; }
+:root[data-theme="dark"] .chart text,
+:root[data-theme="dark"] svg text { fill: var(--ink-muted) !important; }
+
+/* v5.1 — צבעי הישויות (חשיפות, תשואה, תגיות מקור) בכהה */
+:root[data-theme="dark"] {
+  --stock: #8fb4ff;
+  --foreign: #d3a961;
+  --fx: #7f93ab;
+  --liquid: #c2a05a;
+  --pos: #8fb4ff;
+  --neg: #e2686a;
+  --gemel-tag: #8fb4ff;
+  --pensia-tag: #7f93ab;
+  --bituach-tag: #d3a961;
+}
+/* המספר יושב ב-span פנימי שנצבע ישירות בשכבה קודמת */
+:root[data-theme="dark"] .metric-value span,
+:root[data-theme="dark"] .total span,
+:root[data-theme="dark"] .sim-result-value span,
+:root[data-theme="dark"] .sim-summary-value span {
+  color: inherit !important; -webkit-text-fill-color: currentColor !important;
+}
+:root[data-theme="dark"] .metric-value .pct { color: var(--ink-muted) !important; -webkit-text-fill-color: var(--ink-muted) !important; }
+/* התגית מקבלת משטח כהה משכבה קודמת, ולכן הטקסט עליה חייב להיות בהיר */
+:root[data-theme="dark"] .source-tag { color: var(--ink) !important; }
+
+/* v5.1 — טוקנים מדור קודם שעדיין נצרכים, וערכי תשואה בטבלאות */
+:root[data-theme="dark"] {
+  --gold: #d3a961;
+  --gold-soft: #2c2415;
+  --secondary: #8fb4ff;
+}
+:root[data-theme="dark"] .positive,
+:root[data-theme="dark"] .dashboard .positive,
+:root[data-theme="dark"] td.positive { color: var(--pos) !important; }
+:root[data-theme="dark"] .negative,
+:root[data-theme="dark"] .dashboard .negative,
+:root[data-theme="dark"] td.negative { color: var(--neg) !important; }

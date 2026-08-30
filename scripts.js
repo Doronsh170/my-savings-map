@@ -640,16 +640,16 @@ function initSimulationCalculator() {
 
 /* === מגמה חודשית של התיק — גרפים מתוך היסטוריית המאגר === */
 
-const CHART_COLORS = { pos: '#102743', neg: '#c53637', line: '#102743', spark: '#8d949e' };
+const CHART_COLORS = { pos: 'var(--chart-pos)', neg: 'var(--chart-neg)', line: 'var(--chart-line)', spark: 'var(--chart-spark)' };
 
 /* המדדים הזמינים לגרפי המגמה. הצבעים תואמים את צבעי הישויות בדשבורד
    ועברו בדיקת ניגודיות מול המשטח. */
 const HIST_METRICS = [
   { id: 'yield', field: 'hist_yield', label: 'תשואה חודשית משוקללת', type: 'column', color: null, digits: 2 },
-  { id: 'stock', field: 'hist_stock', label: 'חשיפה למניות של התיק', type: 'line', color: '#102743', digits: 1 },
-  { id: 'foreign', field: 'hist_foreign', label: 'חשיפה לחו״ל', type: 'line', color: '#dcaf61', digits: 1 },
-  { id: 'fx', field: 'hist_fx', label: 'חשיפה למט״ח', type: 'line', color: '#7488a1', digits: 1 },
-  { id: 'liquid', field: 'hist_liquid', label: 'נכסים סחירים', type: 'line', color: '#8a6b1f', digits: 1 },
+  { id: 'stock', field: 'hist_stock', label: 'חשיפה למניות של התיק', type: 'line', color: 'var(--chart-stock)', digits: 1 },
+  { id: 'foreign', field: 'hist_foreign', label: 'חשיפה לחו״ל', type: 'line', color: 'var(--chart-foreign)', digits: 1 },
+  { id: 'fx', field: 'hist_fx', label: 'חשיפה למט״ח', type: 'line', color: 'var(--chart-fx)', digits: 1 },
+  { id: 'liquid', field: 'hist_liquid', label: 'נכסים סחירים', type: 'line', color: 'var(--chart-liquid)', digits: 1 },
 ];
 const HIST_DEFAULT_SELECTED = ['yield', 'stock'];
 const HIST_PREFS_KEY = 'pension_dashboard_hist_charts_v1';
@@ -1249,6 +1249,58 @@ window.handleBalanceInput = handleBalanceInput;
 window.handleFeeInput = handleFeeInput;
 
 
+/* === v5.1: מצב בהיר וכהה ===
+   ברירת המחדל היא העדפת המערכת, ומשתנה איתה בזמן אמת. ברגע שהמשתמש בוחר
+   ידנית, הבחירה ננעלת ונשמרת בדפדפן — אותה שכבה שבה נשמרות היתרות. */
+
+const THEME_KEY = 'savings_theme';
+const themeMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+function readStoredTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    return saved === 'dark' || saved === 'light' ? saved : '';
+  } catch (error) {
+    return '';
+  }
+}
+function systemTheme() {
+  return themeMedia && themeMedia.matches ? 'dark' : 'light';
+}
+function activeTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+}
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  // צבע ממשק הדפדפן במובייל — אחרת פס הכתובת נשאר בהיר מעל מסך כהה.
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'dark' ? '#0e1319' : '#12294a');
+  const btn = document.getElementById('themeToggle');
+  if (btn) {
+    const next = theme === 'dark' ? 'בהיר' : 'כהה';
+    btn.setAttribute('aria-label', 'מעבר למצב ' + next);
+    btn.setAttribute('title', 'מצב ' + next);
+    btn.setAttribute('aria-pressed', String(theme === 'dark'));
+  }
+}
+function toggleTheme() {
+  const next = activeTheme() === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem(THEME_KEY, next); } catch (error) { /* אחסון חסום — התצוגה עדיין מתחלפת */ }
+  applyTheme(next);
+}
+function initTheme() {
+  applyTheme(readStoredTheme() || systemTheme());
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.addEventListener('click', toggleTheme);
+  // כל עוד לא נבחר מצב ידנית, שינוי בהעדפת המערכת נכנס לתוקף מיד.
+  if (themeMedia && themeMedia.addEventListener) {
+    themeMedia.addEventListener('change', event => {
+      if (!readStoredTheme()) applyTheme(event.matches ? 'dark' : 'light');
+    });
+  }
+}
+window.toggleTheme = toggleTheme;
+
 /* === v5.0: אשף איתור הקופה ===
    כל מצב האשף יושב באובייקט אחד. שדה החיפוש הוא קלט, לא מצב.
    חברה ← סוג חיסכון ← מסלול ← יתרה, כל שלב מסך מלא אחד.
@@ -1821,6 +1873,9 @@ function wizScrollIntoView() {
   if (section && section.scrollIntoView) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+
+// מחוץ לטעינת הנתונים: מחליף המצב חייב לעבוד גם אם המאגר נכשל.
+initTheme();
 
 (async function init() {
   try {
