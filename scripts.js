@@ -542,6 +542,33 @@ const SIM_RAW_YIELDS = {
 };
 const SIM_RISK_LABELS = { low: 'סיכון נמוך', medium: 'סיכון בינוני', high: 'סיכון גבוה' };
 
+/* החשיפה למניות שכל אחת משלוש סדרות התשואה מייצגת. הערכים נגזרו מהמאגר
+   עצמו: חציון החשיפה במסלולי אג"ח הוא 0.3%, במסלולים הכלליים 50.1%
+   ובמסלולי המניות 98.5%. */
+const SIM_TRACK_ANCHORS = [
+  { track: 'low', stock: 0 },
+  { track: 'medium', stock: 50 },
+  { track: 'high', stock: 100 }
+];
+/* התשואה השנתית נגזרת מהחשיפה למניות בפועל, בשקלול רציף בין הסדרות.
+   סיווג לשלוש קטגוריות נתן תוצאה זהה לכל תיק באותה קטגוריה — קרן פנסיה
+   מקיפה (כ-70% מניות) וקרן משלימה (כ-100%) קיבלו אותו ערך עתידי. */
+function simAnnualYield(yearIndex, stockPct) {
+  const pct = Math.max(0, Math.min(100, Number(stockPct) || 0));
+  const yieldOf = anchor => {
+    const series = SIM_RAW_YIELDS[anchor.track];
+    return series[yearIndex % series.length] || 0;
+  };
+  for (let i = 1; i < SIM_TRACK_ANCHORS.length; i++) {
+    const lower = SIM_TRACK_ANCHORS[i - 1];
+    const upper = SIM_TRACK_ANCHORS[i];
+    if (pct <= upper.stock) {
+      const weight = (pct - lower.stock) / (upper.stock - lower.stock);
+      return yieldOf(lower) + (yieldOf(upper) - yieldOf(lower)) * weight;
+    }
+  }
+  return yieldOf(SIM_TRACK_ANCHORS[SIM_TRACK_ANCHORS.length - 1]);
+}
 function getSimulationRiskTrack(stockPct) {
   const pct = Number(stockPct) || 0;
   if (pct <= 10) return 'low';
@@ -610,8 +637,6 @@ function runHistoricalSimulation() {
   if (totalBalance <= 0) return;
 
   const stockPct = weightedMetric('stock_pct', totalBalance);
-  const track = getSimulationRiskTrack(stockPct);
-  const yields = SIM_RAW_YIELDS[track];
   const monthly = Math.max(0, Number(document.getElementById('simMonthlyInput')?.value) || 0);
   const years = readSimYears();
   const feePct = readSimFeePct(weightedUserManagementFee(totalBalance));
@@ -632,7 +657,7 @@ function runHistoricalSimulation() {
   const monthlyFee = (feePct / 100) / 12;
 
   for (let y = 0; y < years; y++) {
-    const annualYield = (yields[y % yields.length] || 0) / 100;
+    const annualYield = simAnnualYield(y, stockPct) / 100;
     const monthlyYield = annualYield / 12;
     for (let m = 0; m < 12; m++) {
       amount += amount * monthlyYield;
