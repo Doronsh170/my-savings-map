@@ -526,7 +526,7 @@ function renderDashboard() {
   [perfToggle, detailsToggle, simulationToggle].forEach(section => {
     if (section) section.open = false;
   });
-  const simulationResults = document.getElementById('simResults');
+  const simulationResults = document.getElementById('simResultsBlock');
   if (simulationResults) simulationResults.hidden = true;
   const simulationTabSection = document.getElementById('simulationTabSection');
   if (simulationTabSection) simulationTabSection.style.display = 'block';
@@ -551,6 +551,19 @@ function getSimulationRiskTrack(stockPct) {
 function fmtSimCurrency(value) {
   return Math.round(Number(value) || 0).toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 });
 }
+/* ברירת המחדל לאינפלציה: 2% — אמצע יעד האינפלציה של בנק ישראל (1%-3%). */
+const SIM_DEFAULT_INFLATION = 2;
+function fmtSimPercent(value, digits = 2) {
+  const num = Number(value) || 0;
+  return num.toFixed(digits) + '%';
+}
+function readSimInflationPct() {
+  const input = document.getElementById('simInflationInput');
+  const raw = Number(input?.value);
+  const pct = Number.isFinite(raw) ? Math.max(0, Math.min(20, raw)) : SIM_DEFAULT_INFLATION;
+  if (input) input.value = String(pct);
+  return pct;
+}
 function refreshSimulationDefaults() {
   const totalBalance = getTotalBalance();
   const stockPct = weightedMetric('stock_pct', totalBalance);
@@ -568,6 +581,11 @@ function refreshSimulationDefaults() {
   if (riskEl) riskEl.textContent = totalBalance > 0 ? SIM_RISK_LABELS[track] : '-';
   if (feeDisplayEl) feeDisplayEl.textContent = Number.isFinite(fee) ? fee.toFixed(2) + '%' : 'לא הוזן';
   if (feeInput && !feeInput.dataset.userEdited && Number.isFinite(fee)) feeInput.value = fee.toFixed(2);
+
+  const inflationInput = document.getElementById('simInflationInput');
+  if (inflationInput && !inflationInput.dataset.userEdited && !inflationInput.value) {
+    inflationInput.value = String(SIM_DEFAULT_INFLATION);
+  }
 }
 function runHistoricalSimulation() {
   const totalBalance = getTotalBalance();
@@ -583,10 +601,19 @@ function runHistoricalSimulation() {
   const feePct = Math.max(0, Number(feeInput?.value) || 0);
   if (feeInput) feeInput.value = feePct ? feePct.toFixed(2) : '';
 
+  const inflationPct = readSimInflationPct();
+  const monthlyInflation = Math.pow(1 + inflationPct / 100, 1 / 12) - 1;
+
   // יתרה קיימת היא הון התחלתי בלבד, לא הפקדה נוספת.
   // לכן סך ההפקדות שמוצג בתוצאות כולל רק הפקדות עתידיות שהמשתמש הזין.
   let amount = totalBalance;
   let futureContributions = 0;
+  // ההפקדות העתידיות במונחי היום: כל הפקדה מנוכה באינפלציה שנצברה עד מועדה.
+  let futureContributionsReal = 0;
+  // מדד צמיחה של שקל בודד — משמש לחישוב התשואה השנתית הממוצעת נטו.
+  let growthIndex = 1;
+  // מקדם השחיקה המצטבר של האינפלציה.
+  let priceIndex = 1;
   const monthlyFee = (feePct / 100) / 12;
 
   for (let y = 0; y < years; y++) {
@@ -595,18 +622,30 @@ function runHistoricalSimulation() {
     for (let m = 0; m < 12; m++) {
       amount += amount * monthlyYield;
       amount -= amount * monthlyFee;
+      growthIndex *= (1 + monthlyYield) * (1 - monthlyFee);
+      priceIndex *= (1 + monthlyInflation);
       if (monthly > 0) {
         amount += monthly;
         futureContributions += monthly;
+        futureContributionsReal += monthly / priceIndex;
       }
     }
   }
 
   const gain = amount - totalBalance - futureContributions;
+  const realAmount = amount / priceIndex;
+  const realGain = realAmount - totalBalance - futureContributionsReal;
+  const nominalAnnual = (Math.pow(growthIndex, 1 / years) - 1) * 100;
+  const realAnnual = ((1 + nominalAnnual / 100) / (1 + inflationPct / 100) - 1) * 100;
+
   const finalEl = document.getElementById('simFinalAmount');
   const contribEl = document.getElementById('simTotalContrib');
   const gainEl = document.getElementById('simGainAmount');
-  const resultsEl = document.getElementById('simResults');
+  const realFinalEl = document.getElementById('simRealFinalAmount');
+  const realGainEl = document.getElementById('simRealGainAmount');
+  const realAnnualEl = document.getElementById('simRealAnnualReturn');
+  const inflationLabelEl = document.getElementById('simInflationLabel');
+  const resultsEl = document.getElementById('simResultsBlock');
 
   if (finalEl) finalEl.textContent = fmtSimCurrency(amount);
   if (contribEl) contribEl.textContent = fmtSimCurrency(futureContributions);
@@ -615,6 +654,16 @@ function runHistoricalSimulation() {
     gainEl.classList.toggle('sim-positive', gain >= 0);
     gainEl.classList.toggle('sim-negative', gain < 0);
   }
+  if (realFinalEl) realFinalEl.textContent = fmtSimCurrency(realAmount);
+  if (realGainEl) {
+    realGainEl.textContent = fmtSimCurrency(realGain);
+    realGainEl.classList.toggle('sim-positive', realGain >= 0);
+    realGainEl.classList.toggle('sim-negative', realGain < 0);
+  }
+  if (realAnnualEl) {
+    realAnnualEl.textContent = 'נומינלית ' + fmtSimPercent(nominalAnnual) + ' · ריאלית ' + fmtSimPercent(realAnnual);
+  }
+  if (inflationLabelEl) inflationLabelEl.textContent = fmtSimPercent(inflationPct, 1);
   if (resultsEl) resultsEl.hidden = false;
 }
 function initSimulationCalculator() {
@@ -627,6 +676,11 @@ function initSimulationCalculator() {
   if (feeInput && !feeInput.dataset.bound) {
     feeInput.addEventListener('input', () => { feeInput.dataset.userEdited = '1'; });
     feeInput.dataset.bound = '1';
+  }
+  const inflationInput = document.getElementById('simInflationInput');
+  if (inflationInput && !inflationInput.dataset.bound) {
+    inflationInput.addEventListener('input', () => { inflationInput.dataset.userEdited = '1'; });
+    inflationInput.dataset.bound = '1';
   }
   const details = document.getElementById('simulationDetails');
   if (details && !details.dataset.bound) {

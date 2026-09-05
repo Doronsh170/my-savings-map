@@ -7727,3 +7727,29 @@ body.pre-result .info-row-title { white-space: nowrap; }
 .wiz-bar-row { min-height: 44px; padding-block: var(--sp-2); }
 .wiz-screen { padding-top: var(--sp-3) !important; }
 .wiz-company { min-height: 100px !important; }
+
+
+/* ==================== שכבה (v5.1-real-return) ==================== */
+/* v5.1: תשואה ריאלית וסכום ריאלי במחשבון הסימולציה */
+.sim-form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+}
+.sim-results-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--ink-mid);
+  letter-spacing: 0.02em;
+  margin-top: 18px;
+}
+.sim-results-title + .sim-results { margin-top: 8px; }
+.sim-results-block[hidden] { display: none !important; }
+.sim-real-note {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+@media (max-width: 760px) {
+  .sim-form-grid { grid-template-columns: 1fr; }
+}
+#simRealAnnualReturn { font-size: 15px; line-height: 1.35; }
