@@ -254,19 +254,19 @@
         <div class="sim-form-grid" aria-label="הגדרות סימולציה">
           <label class="sim-field">
             <span>הפקדה חודשית</span>
-            <input id="simMonthlyInput" type="number" min="0" step="100" inputmode="numeric" placeholder="לדוגמה 1,000" />
+            <input id="simMonthlyInput" type="number" min="0" step="100" inputmode="numeric" placeholder="0" />
           </label>
           <label class="sim-field">
             <span>מספר שנים</span>
-            <input id="simYearsInput" type="number" min="1" max="30" step="1" value="10" inputmode="numeric" />
+            <input id="simYearsInput" type="number" min="1" max="30" step="1" inputmode="numeric" placeholder="10" />
           </label>
           <label class="sim-field">
             <span>דמי ניהול שנתיים לחישוב</span>
-            <input id="simFeeInput" type="number" min="0" max="5" step="0.01" inputmode="decimal" placeholder="אם לא הוזן" />
+            <input id="simFeeInput" type="number" min="0" max="5" step="0.01" inputmode="decimal" placeholder="0" />
           </label>
           <label class="sim-field">
             <span>אינפלציה שנתית מוערכת</span>
-            <input id="simInflationInput" type="number" min="0" max="20" step="0.1" value="2" inputmode="decimal" placeholder="2" />
+            <input id="simInflationInput" type="number" min="0" max="20" step="0.1" inputmode="decimal" placeholder="2" />
           </label>
           <button type="button" class="sim-run-btn" id="simRunBtn">הרץ סימולציה</button>
         </div>
@@ -302,7 +302,10 @@
             </div>
             <div class="sim-result-card">
               <div class="sim-result-label">תשואה שנתית ממוצעת</div>
-              <div class="sim-result-value" id="simRealAnnualReturn">-</div>
+              <div class="sim-result-value sim-result-dual">
+                <span id="simAnnualNominal">-</span>
+                <span id="simAnnualReal">-</span>
+              </div>
             </div>
           </div>
           <div class="sim-real-note">הסכום הריאלי הוא כוח הקנייה של אותו סכום במחירי היום: כמה הוא שווה בשקלים של היום אחרי שהאינפלציה שוחקת אותו. הרווח הריאלי מנוכה גם הוא — ההפקדות העתידיות מתורגמות לשקלים של היום.</div>
