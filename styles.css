@@ -7752,4 +7752,38 @@ body.pre-result .info-row-title { white-space: nowrap; }
 @media (max-width: 760px) {
   .sim-form-grid { grid-template-columns: 1fr; }
 }
-#simRealAnnualReturn { font-size: 15px; line-height: 1.35; }
+/* התשואה השנתית מוצגת בשתי שורות — נומינלית מעל ריאלית, בלי מפריד. */
+.sim-result-dual { font-size: 15px; line-height: 1.35; }
+.sim-result-dual span { display: block; }
+
+/* הסרת מוצר שנוסף בטעות. הכפתור יושב בתא השם — העמודה היחידה שתמיד
+   נראית, כי טבלת הפירוט נגללת לרוחב. */
+.row-remove-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  line-height: 1;
+  margin-left: 8px;
+  vertical-align: middle;
+  flex: 0 0 auto;
+}
+.row-remove-btn:hover {
+  border-color: var(--neg);
+  color: var(--neg);
+  background: #fff5f5;
+}
+.row-remove-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media print {
+  .row-remove-btn { display: none !important; }
+}

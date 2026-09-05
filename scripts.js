@@ -502,7 +502,7 @@ function renderDashboard() {
       const weight = balance / totalBalance * 100;
       return `
         <tr>
-          <td><span class="source-tag ${escapeHtml(f.source)}">${SOURCE_LABEL[f.source]}</span> ${escapeHtml(f.fund_name)}</td>
+          <td><button type="button" class="row-remove-btn" data-remove-uid="${escapeHtml(f.uid)}" title="הסרת המוצר מהדוח" aria-label="הסרת ${escapeHtml(f.fund_name)} מהדוח">✕</button><span class="source-tag ${escapeHtml(f.source)}">${SOURCE_LABEL[f.source]}</span> ${escapeHtml(f.fund_name)}</td>
           <td class="num">${weight.toFixed(1)}%</td>
           <td class="num">${fmtPct(f.stock_pct, 1)}</td>
           <td class="num">${fmtPct(f.foreign_pct, 1)}</td>
@@ -553,16 +553,38 @@ function fmtSimCurrency(value) {
 }
 /* ברירת המחדל לאינפלציה: 2% — אמצע יעד האינפלציה של בנק ישראל (1%-3%). */
 const SIM_DEFAULT_INFLATION = 2;
+const SIM_DEFAULT_YEARS = 10;
 function fmtSimPercent(value, digits = 2) {
   const num = Number(value) || 0;
   return num.toFixed(digits) + '%';
 }
+/* השדות נשארים ריקים; ערך ריק פירושו ברירת המחדל שמופיעה ב-placeholder.
+   כותבים חזרה לשדה רק כשהמשתמש הקליד ערך מחוץ לטווח, כדי שיראה את הקיטום. */
 function readSimInflationPct() {
   const input = document.getElementById('simInflationInput');
-  const raw = Number(input?.value);
-  const pct = Number.isFinite(raw) ? Math.max(0, Math.min(20, raw)) : SIM_DEFAULT_INFLATION;
-  if (input) input.value = String(pct);
+  const raw = input && input.value !== '' ? Number(input.value) : NaN;
+  if (!Number.isFinite(raw)) return SIM_DEFAULT_INFLATION;
+  const pct = Math.max(0, Math.min(20, raw));
+  if (pct !== raw) input.value = String(pct);
   return pct;
+}
+/* דמי הניהול: ריק = דמי הניהול המשוקללים שהמשתמש הזין לקופות (ה-placeholder). */
+function readSimFeePct(fallbackFee) {
+  const input = document.getElementById('simFeeInput');
+  const raw = input && input.value !== '' ? Number(input.value) : NaN;
+  if (!Number.isFinite(raw)) return Number.isFinite(fallbackFee) ? fallbackFee : 0;
+  const pct = Math.max(0, Math.min(5, raw));
+  if (pct !== raw) input.value = String(pct);
+  return pct;
+}
+/* מספר השנים: ריק = 10 שנים (ה-placeholder). */
+function readSimYears() {
+  const input = document.getElementById('simYearsInput');
+  const raw = input && input.value !== '' ? Number(input.value) : NaN;
+  if (!Number.isFinite(raw)) return SIM_DEFAULT_YEARS;
+  const years = Math.max(1, Math.min(30, Math.round(raw)));
+  if (years !== raw) input.value = String(years);
+  return years;
 }
 function refreshSimulationDefaults() {
   const totalBalance = getTotalBalance();
@@ -580,12 +602,8 @@ function refreshSimulationDefaults() {
   if (stockEl) stockEl.textContent = Number.isFinite(stockPct) ? stockPct.toFixed(1) + '%' : '-';
   if (riskEl) riskEl.textContent = totalBalance > 0 ? SIM_RISK_LABELS[track] : '-';
   if (feeDisplayEl) feeDisplayEl.textContent = Number.isFinite(fee) ? fee.toFixed(2) + '%' : 'לא הוזן';
-  if (feeInput && !feeInput.dataset.userEdited && Number.isFinite(fee)) feeInput.value = fee.toFixed(2);
-
-  const inflationInput = document.getElementById('simInflationInput');
-  if (inflationInput && !inflationInput.dataset.userEdited && !inflationInput.value) {
-    inflationInput.value = String(SIM_DEFAULT_INFLATION);
-  }
+  // דמי הניהול מוצגים כ-placeholder ולא כערך, כדי שהשדה יישאר ריק.
+  if (feeInput) feeInput.placeholder = Number.isFinite(fee) ? fee.toFixed(2) : '0';
 }
 function runHistoricalSimulation() {
   const totalBalance = getTotalBalance();
@@ -595,11 +613,8 @@ function runHistoricalSimulation() {
   const track = getSimulationRiskTrack(stockPct);
   const yields = SIM_RAW_YIELDS[track];
   const monthly = Math.max(0, Number(document.getElementById('simMonthlyInput')?.value) || 0);
-  const yearsInput = Number(document.getElementById('simYearsInput')?.value) || 10;
-  const years = Math.max(1, Math.min(30, Math.round(yearsInput)));
-  const feeInput = document.getElementById('simFeeInput');
-  const feePct = Math.max(0, Number(feeInput?.value) || 0);
-  if (feeInput) feeInput.value = feePct ? feePct.toFixed(2) : '';
+  const years = readSimYears();
+  const feePct = readSimFeePct(weightedUserManagementFee(totalBalance));
 
   const inflationPct = readSimInflationPct();
   const monthlyInflation = Math.pow(1 + inflationPct / 100, 1 / 12) - 1;
@@ -643,7 +658,8 @@ function runHistoricalSimulation() {
   const gainEl = document.getElementById('simGainAmount');
   const realFinalEl = document.getElementById('simRealFinalAmount');
   const realGainEl = document.getElementById('simRealGainAmount');
-  const realAnnualEl = document.getElementById('simRealAnnualReturn');
+  const annualNominalEl = document.getElementById('simAnnualNominal');
+  const annualRealEl = document.getElementById('simAnnualReal');
   const inflationLabelEl = document.getElementById('simInflationLabel');
   const resultsEl = document.getElementById('simResultsBlock');
 
@@ -660,9 +676,8 @@ function runHistoricalSimulation() {
     realGainEl.classList.toggle('sim-positive', realGain >= 0);
     realGainEl.classList.toggle('sim-negative', realGain < 0);
   }
-  if (realAnnualEl) {
-    realAnnualEl.textContent = 'נומינלית ' + fmtSimPercent(nominalAnnual) + ' · ריאלית ' + fmtSimPercent(realAnnual);
-  }
+  if (annualNominalEl) annualNominalEl.textContent = 'נומינלית ' + fmtSimPercent(nominalAnnual);
+  if (annualRealEl) annualRealEl.textContent = 'ריאלית ' + fmtSimPercent(realAnnual);
   if (inflationLabelEl) inflationLabelEl.textContent = fmtSimPercent(inflationPct, 1);
   if (resultsEl) resultsEl.hidden = false;
 }
@@ -671,16 +686,6 @@ function initSimulationCalculator() {
   if (runBtn && !runBtn.dataset.bound) {
     runBtn.addEventListener('click', runHistoricalSimulation);
     runBtn.dataset.bound = '1';
-  }
-  const feeInput = document.getElementById('simFeeInput');
-  if (feeInput && !feeInput.dataset.bound) {
-    feeInput.addEventListener('input', () => { feeInput.dataset.userEdited = '1'; });
-    feeInput.dataset.bound = '1';
-  }
-  const inflationInput = document.getElementById('simInflationInput');
-  if (inflationInput && !inflationInput.dataset.bound) {
-    inflationInput.addEventListener('input', () => { inflationInput.dataset.userEdited = '1'; });
-    inflationInput.dataset.bound = '1';
   }
   const details = document.getElementById('simulationDetails');
   if (details && !details.dataset.bound) {
@@ -1316,6 +1321,30 @@ function removeFund(idx) {
   saveState();
   renderFunds();
 }
+/* הסרת מוצר שנוסף בטעות, מתוך טבלת הפירוט בדשבורד. */
+function removeFundByUid(uid) {
+  const idx = findUserFundIndex(uid);
+  if (idx < 0) return;
+  const label = (userFunds[idx].fund && userFunds[idx].fund.fund_name) || 'המוצר';
+  if (!window.confirm(`להסיר את "${label}" מהדוח?`)) return;
+  // ציור הדשבורד מחדש סוגר את כל האקורדיונים. שומרים את מצבם כדי
+  // שהמשתמש יישאר בטבלה שממנה מחק, גם כשהוא מוחק כמה מוצרים ברצף.
+  const openState = Array.from(document.querySelectorAll('.dashboard-toggle-section')).map(section => [section, section.open]);
+  removeFund(idx);
+  openState.forEach(([section, wasOpen]) => { section.open = wasOpen; });
+  if (getTotalBalance() <= 0) {
+    // הדוח התרוקן — הדשבורד מוסתר ממילא, אז מחזירים את המשתמש לאשף.
+    document.body.classList.remove('dashboard-reached');
+    wizReset();
+    wizScrollIntoView();
+  }
+}
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('[data-remove-uid]');
+  if (!trigger) return;
+  removeFundByUid(trigger.getAttribute('data-remove-uid'));
+});
+
 function handleBalanceInput(idx, value, immediate = false) {
   if (balanceInputTimers[idx]) clearTimeout(balanceInputTimers[idx]);
   const run = () => updateBalance(idx, value);
@@ -1348,6 +1377,7 @@ function updateManagementFee(idx, value) {
   renderDashboard();
 }
 window.removeFund = removeFund;
+window.removeFundByUid = removeFundByUid;
 window.updateBalance = updateBalance;
 window.updateManagementFee = updateManagementFee;
 window.handleBalanceInput = handleBalanceInput;
