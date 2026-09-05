@@ -1149,22 +1149,73 @@ function saveAsPDF() {
 window.addEventListener('afterprint', () => {
   window.setTimeout(() => { document.body.classList.remove('pdf-mode'); restorePrintLayout(); }, 250);
 });
-async function shareWhatsApp() {
+/* תקציב האורך של הטקסט אחרי קידוד ל-URL. טקסט בעברית תופח פי ~6 בקידוד,
+   ודוח עם הרבה מוצרים מייצר כתובת ארוכה מדי שהשרת של ווטסאפ דוחה (414) —
+   ואז הלחיצה במחשב נראית כאילו היא פשוט לא עובדת. */
+const WHATSAPP_URL_TEXT_BUDGET = 5500;
+function fitShareTextForUrl(text) {
+  if (encodeURIComponent(text).length <= WHATSAPP_URL_TEXT_BUDGET) return text;
+  const lines = text.split('\n');
+  // שומרים מקום לשורת ההסבר על הקיצור שתתווסף בהמשך.
+  const budgetWhileTrimming = WHATSAPP_URL_TEXT_BUDGET - 300;
+  let trimmed = 0;
+  // מקצרים קודם את שורות פירוט המוצרים, מהקטנות (בסוף הרשימה) כלפי מעלה.
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (encodeURIComponent(lines.join('\n')).length <= budgetWhileTrimming) break;
+    if (lines[i].startsWith('- ')) {
+      lines.splice(i, 1);
+      trimmed++;
+    }
+  }
+  if (trimmed > 0) {
+    const marker = lines.indexOf('פירוט מוצרים:');
+    const note = `(הפירוט קוצר ב-${trimmed} מוצרים כדי שהקישור יישלח במלואו — הפירוט המלא בדשבורד)`;
+    if (marker >= 0) lines.splice(marker + 1, 0, note);
+    else lines.push(note);
+  }
+  let out = lines.join('\n');
+  // רשת ביטחון: גם בלי שורות פירוט הטקסט עדיין ארוך מדי.
+  while (out.length > 0 && encodeURIComponent(out).length > WHATSAPP_URL_TEXT_BUDGET) {
+    out = out.slice(0, Math.floor(out.length * 0.9));
+  }
+  return out;
+}
+function buildWhatsAppUrl(text) {
+  return 'https://wa.me/?text=' + encodeURIComponent(fitShareTextForUrl(text));
+}
+/* פתיחת חלון חייבת לקרות באותו tick של הלחיצה, אחרת חוסמי הפופאפים
+   במחשב בולעים אותה בשקט. מחזיר false אם החלון נחסם. */
+function openShareUrl(url) {
+  let win = null;
+  try {
+    win = window.open(url, '_blank');
+  } catch (error) {
+    win = null;
+  }
+  if (!win) return false;
+  try { win.opener = null; } catch (error) { /* חלון חוצה-מקור — אין מה לנקות */ }
+  return true;
+}
+function shareWhatsApp() {
   if (!hasReportData()) {
     alert('כדי לשלוח לווטסאפ צריך להוסיף לפחות מוצר אחד ולהזין יתרה.');
     return;
   }
   const text = buildShareText();
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: 'דשבורד חשיפות חיסכון', text });
-      return;
-    } catch (error) {
+  const url = buildWhatsAppUrl(text);
+  // שיתוף מקורי רק במכשירי מגע. במחשב navigator.share קיים בחלק
+  // מהדפדפנים אך נכשל, והנפילה חזרה לפתיחת חלון קורית כבר אחרי ה-await —
+  // כלומר בלי מחוות משתמש, ולכן נחסמת. במחשב ניגשים ישירות לווטסאפ.
+  const touchDevice = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  if (touchDevice && typeof navigator.share === 'function') {
+    navigator.share({ title: 'דשבורד חשיפות חיסכון', text }).catch(error => {
       if (error && error.name === 'AbortError') return;
-    }
+      // ניווט בטאב הנוכחי אינו נחסם גם ללא מחוות משתמש.
+      window.location.href = url;
+    });
+    return;
   }
-  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
-  window.open(url, '_blank', 'noopener,noreferrer');
+  if (!openShareUrl(url)) window.location.href = url;
 }
 function goToDashboard() {
   if (!hasReportData()) {
