@@ -36,7 +36,7 @@ SOURCES = {
     },
     'bituach': {
         'label': 'ביטוח',
-        'group_label': 'פוליסות חיסכון / ביטוחי מנהלים',
+        'group_label': 'פוליסות חיסכון',
         'legal_id_col': 'PARENT_COMPANY_LEGAL_ID',
     },
 }
