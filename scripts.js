@@ -15,7 +15,7 @@ const STORAGE_KEY = 'pension_dashboard_funds_v3';
 const SOURCE_LABEL = {
   gemelnet: 'גמל',
   pensia: 'פנסיה',
-  bituach: 'ביטוח מנהלים',
+  bituach: 'פוליסת חיסכון',
 };
 const SOURCE_DOT_COLOR = {
   gemelnet: '#102743',
@@ -154,7 +154,7 @@ const PRODUCT_TYPES = [
   { key: 'hishtalmut',  label: 'קרן השתלמות',      hint: 'נפתחת דרך המעסיק, וניתנת למשיכה אחרי שש שנים' },
   { key: 'gemel',       label: 'קופת גמל',         hint: 'חיסכון פנסיוני שאינו קרן פנסיה, נמשך בדרך כלל כקצבה' },
   { key: 'invest',      label: 'גמל להשקעה',       hint: 'חיסכון פרטי שאפשר למשוך בכל עת' },
-  { key: 'insurance',   label: 'ביטוח מנהלים / פוליסת חיסכון', hint: 'חיסכון בחברת ביטוח, לרוב דרך סוכן — ותיק או חדש' },
+  { key: 'insurance',   label: 'פוליסת חיסכון',    hint: 'חיסכון פיננסי בחברת ביטוח, שנפתח לרוב דרך סוכן' },
   { key: 'child',       label: 'חיסכון לכל ילד',   hint: 'החיסכון שנפתח לילד עם קצבת הילדים' },
   { key: 'pitzuim',     label: 'מרכזית לפיצויים',  hint: 'קופה על שם המעסיק לכיסוי פיצויי פיטורים' }
 ];
@@ -167,8 +167,9 @@ const PRIMARY_PRODUCTS_SHOWN = 6;
 function productOf(rec) {
   const cls = String(rec.classification || '');
   if (rec.source === 'pensia') return 'pensia';
-  // כל מוצרי הביטוח תחת סוג אחד: classification מתאר תקופת הנפקה ואינו מבחין
-  // באמינות בין ביטוח מנהלים לפוליסת חיסכון. המשתמש מזהה את המסלול בתוצאות.
+  // ביטוח נט אינו מסמן אילו מסלולים שייכים לביטוח מנהלים: ה-classification מתאר
+  // תקופת הנפקה בלבד. לכן הקטגוריה מציגה פוליסות חיסכון בלבד (ראו
+  // isLegacyInsurancePolicy), ולא מתיימרת לזהות ביטוחי מנהלים.
   if (rec.source === 'bituach') return 'insurance';
   if (cls.indexOf('השתלמות') > -1) return 'hishtalmut';
   if (cls.indexOf('לילד') > -1) return 'child';
@@ -250,17 +251,27 @@ function trackLabel(rec) {
 let BRANDS = [];
 let BRAND_BY_NAME = {};
 
+// פוליסות שהונפקו לפני 2004 ("קרן ח'/ט'/י'" ודומותיהן) הן פוליסות ביטוח מנהלים
+// ותיקות, והמאגר אינו מאפשר לזהות אותן מול פוליסות חיסכון. כדי שהקטגוריה תכיל
+// פוליסות חיסכון בלבד, הן אינן ניתנות לבחירה. קופה כזו שכבר נשמרה בתיק ממשיכה
+// להיטען ולהיספר, כדי שיתרה שהוזנה לא תימחק.
+function isLegacyInsurancePolicy(rec) {
+  return rec.source === 'bituach' && String(rec.classification || '').indexOf('2004') === -1;
+}
+
 function isSelectableFund(rec) {
-  return rec.is_active && (Number(rec.total_assets) || 0) > 0;
+  return rec.is_active && (Number(rec.total_assets) || 0) > 0 && !isLegacyInsurancePolicy(rec);
 }
 
 function buildWizardIndexes() {
   const map = {};
   DATA.forEach(rec => {
-    if (!isSelectableFund(rec)) return;
+    // השדות הנגזרים מחושבים גם לקופות שאינן ניתנות לבחירה, כדי שקופה שנשמרה
+    // בתיק בעבר תמשיך להציג מותג וסוג מוצר; האינדקס עצמו נבנה מהבחירות בלבד.
     rec._brand = brandOf(rec);
     rec._product = productOf(rec);
     rec._searchText = normalizeText([rec.fund_name, rec.fund_id, rec.specialization, rec.sub_specialization, rec.classification].filter(Boolean).join(' '));
+    if (!isSelectableFund(rec)) return;
     let entry = map[rec._brand];
     if (!entry) {
       entry = map[rec._brand] = {
