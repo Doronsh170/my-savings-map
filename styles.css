@@ -3022,19 +3022,10 @@
     font-weight: 700;
     letter-spacing: 0.01em;
   }
-  .site-copyright {
-    margin-top: 6px;
-    color: #8d949e;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.015em;
-  }
   .landing-credit, .flow-credit, .dashboard-credit { display: none !important; }
   body.pdf-mode .site-credit { display: block !important; color: #44576e !important; }
-  body.pdf-mode .site-copyright { color: #44576e !important; }
   @media print {
     .site-credit { display: block !important; color: #44576e !important; font-size: 8px !important; padding-top: 4px !important; }
-    .site-copyright { color: #44576e !important; font-size: 7px !important; margin-top: 2px !important; }
   }
 
 
@@ -7786,4 +7777,46 @@ body.pre-result .info-row-title { white-space: nowrap; }
 }
 @media print {
   .row-remove-btn { display: none !important; }
+}
+
+/* === גילוי נאות בתחתית הדף ===================================== */
+/* יושב מעל שורת הקרדיט, גלוי תמיד, ונשאר גם בדוח המודפס. */
+.site-disclosure {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 26px 28px 0;
+  border-top: 1px solid var(--line, #e3ded6);
+  text-align: center;
+}
+.site-disclosure-title {
+  margin: 0 0 8px;
+  text-align: center;
+  color: #44576e;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.site-disclosure-text {
+  max-width: 880px;
+  margin: 0 auto;
+  color: #5c646f;
+  font-size: 11.5px;
+  line-height: 1.7;
+  font-weight: 500;
+}
+.site-disclosure + .site-credit { padding-top: 18px; }
+@media (max-width: 760px) {
+  .site-disclosure { padding: 22px 20px 0; }
+  .site-disclosure-text { font-size: 11px; line-height: 1.65; }
+}
+body.pdf-mode .site-disclosure { display: block !important; }
+@media print {
+  .site-disclosure {
+    display: block !important;
+    break-before: avoid !important;
+    break-inside: avoid !important;
+    padding-top: 8px !important;
+  }
+  .site-disclosure-title { font-size: 8px !important; margin-bottom: 3px !important; color: #44576e !important; }
+  .site-disclosure-text { font-size: 7.5px !important; line-height: 1.5 !important; color: #44576e !important; }
 }
