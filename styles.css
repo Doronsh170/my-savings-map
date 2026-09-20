@@ -7586,7 +7586,6 @@ body {
 }
 @keyframes wizPop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .wiz-done-actions { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-6); }
-.wiz-done-actions .wiz-link { flex: 1 1 auto; background: none !important; color: var(--ink-muted) !important; }
 
 /* --- המעטפת: כל עוד אין תוצאה, אין מסמך ארוך מתחת לאשף --- */
 body.pre-result #portfolioSection,
@@ -7819,4 +7818,36 @@ body.pdf-mode .site-disclosure { display: block !important; }
   }
   .site-disclosure-title { font-size: 8px !important; margin-bottom: 3px !important; color: #44576e !important; }
   .site-disclosure-text { font-size: 7.5px !important; line-height: 1.5 !important; color: #44576e !important; }
+}
+
+/* === מסך האישור: שלוש אפשרויות שוות במשקל ====================== */
+/* אין כאן פעולה ראשית אחת, ולכן שלושת הכפתורים זהים — אותו גודל, אותו
+   צבע, אותו משקל. min-height שומר על גובה זהה גם כששם חברה ארוך
+   ("אלטשולר שחם") נשבר לשתי שורות. */
+.wiz-done-btn {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px var(--sp-4);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -.01em;
+  text-align: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, transform .12s ease;
+}
+.wiz-done-btn:hover { background: var(--accent-soft-2); }
+.wiz-done-btn:active { transform: scale(.985); }
+.wiz-done-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
