@@ -1772,7 +1772,9 @@ function wizScreenBalance() {
     </div>`;
 }
 
-/* --- מסך 7: אישור והמשך. הקופה השנייה מתחילה קרוב יותר ליעד. --- */
+/* --- מסך 7: אישור והמשך. הקופה השנייה מתחילה קרוב יותר ליעד.
+   שלוש האפשרויות זהות במשקל: אין כאן צעד "נכון" אחד — מי שסיים רוצה
+   לראות את התמונה, ומי שיש לו עוד קופות רוצה להוסיף אותן לפני כן. --- */
 function wizScreenDone() {
   const rec = wizPickedFund();
   const count = userFunds.length;
@@ -1782,9 +1784,9 @@ function wizScreenDone() {
     <h2 class="wiz-title">${rec ? escapeHtml(rec.fund_name) : 'המוצר'} נוסף לתיק</h2>
     <p class="wiz-sub">${count} ${count === 1 ? 'מוצר' : 'מוצרים'} בתיק · ${fmtCurrency(total)} סה״כ</p>
     <div class="wiz-done-actions">
-      <button type="button" class="wiz-cta" data-wiz="dashboard">הצג את התמונה המלאה</button>
-      ${wizard.company ? `<button type="button" class="wiz-cta-soft" data-wiz="anotherSameCompany">עוד מוצר ב${escapeHtml(wizard.company)}</button>` : ''}
-      <button type="button" class="wiz-link" data-wiz="reset">מוצר בחברה אחרת</button>
+      <button type="button" class="wiz-done-btn" data-wiz="dashboard">הצג את התמונה המלאה</button>
+      ${wizard.company ? `<button type="button" class="wiz-done-btn" data-wiz="anotherSameCompany">עוד מוצר ב${escapeHtml(wizard.company)}</button>` : ''}
+      <button type="button" class="wiz-done-btn" data-wiz="reset">מוצר בחברה אחרת</button>
     </div>`;
 }
 
