@@ -545,43 +545,44 @@ function cmpGapText(row) {
 function renderComparison(item) {
   const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
   if (!cmp) return '';
-  const rows = cmp.rows.map(row => `
-    <div class="cmp-row">
-      <div class="cmp-row-head">
-        <span class="cmp-row-label">${escapeHtml(row.label)}</span>
-        <span class="cmp-row-mine">${cmpFormat(row.mine, row.digits)}</span>
-      </div>
-      <div class="cmp-row-peers">ממוצע מסלולים דומים: ${cmpFormat(row.peers, row.digits)}</div>
-      ${cmpGapText(row) ? `<div class="cmp-row-gap">${escapeHtml(cmpGapText(row))}</div>` : ''}
+  const boxes = cmp.rows.map(row => `
+    <div class="cmp-box">
+      <div class="cmp-box-label">${escapeHtml(row.label.replace('תשואה מצטברת ל־3 שנים', 'תשואה 3 שנים'))}</div>
+      <div class="cmp-box-value">${cmpFormat(row.mine, row.digits)}</div>
+      <div class="cmp-box-peer">ממוצע מסלולים דומים<strong>${cmpFormat(row.peers, row.digits)}</strong></div>
     </div>`).join('');
-
-  const hasYield = cmp.rows.some(row => row.key === 'yield');
-  const yieldRow = cmp.rows.filter(row => row.key === 'yield')[0];
-  const annualYield = yieldRow && typeof yieldRow.annual === 'number' ? yieldRow.annual : null;
-  const fundFees = cmp.rows.filter(row => typeof row.fund === 'number')
-    .map(row => `<li>${escapeHtml(row.label)} — הממוצע בפועל במסלול שלך: ${row.fund.toFixed(2)}%</li>`).join('');
   return `
     <section class="cmp-section">
       <h5 class="cmp-heading">איך המסלול שלי ביחס למסלולים דומים?</h5>
-      <div class="cmp-rows">${rows}</div>
-      <details class="cmp-details">
-        <summary>איך חושבה ההשוואה?</summary>
-        <div class="cmp-details-body">
-          <p>ההשוואה נעשית מול מסלולים מאותו סוג מוצר ומאותה קטגוריית השקעה בלבד.</p>
-          <ul>
-            <li>תשואה וחשיפה: ${escapeHtml(cmp.yieldGroup)} — ${cmp.yieldCount} מסלולים.</li>
-            <li>דמי ניהול: ${escapeHtml(cmp.feeGroup)} — ${cmp.feeCount} מסלולים. אוכלוסיית היעד נלקחת בחשבון כאן, כי הסכם סקטוריאלי משפיע על המחיר.</li>
-            ${fundFees}
-          </ul>
-          <p>מסלול שחשיפתו הממוצעת למניות בשנתיים האחרונות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה אינו נכלל בממוצעים.</p>
-          ${hasYield
-            ? '<p>בממוצע התשואה נספרים רק מסלולים עם ותק של שלוש שנים לפחות, שממשיכים לדווח. התשואה היא תשואת המסלול ברוטו, לפני דמי ניהול, ואינה התשואה האישית שלך.</p>'
-              + (annualYield !== null ? `<p>התשואה המוצגת היא מצטברת לשלוש שנים — שווה ערך ל-${annualYield.toFixed(2)}% בשנה בממוצע. אתרי השוואה אחרים מציגים לעתים דווקא את הממוצע השנתי.</p>` : '')
-            : '<p>תשואה ל־3 שנים אינה מוצגת כאן: למסלול או לקבוצת ההשוואה אין ותק מלא של שלוש שנים.</p>'}
-          <p>הנתונים מדיווחי גמל־נט, פנסיה־נט וביטוח־נט. קבוצת ההשוואה כוללת מסלולים פעילים בלבד.</p>
-        </div>
-      </details>
+      <div class="cmp-boxes">${boxes}</div>
     </section>`;
+}
+
+/* המתודולוגיה יושבת בתוך "עוד נתונים על המסלול": מי שרוצה לדעת איך חושבה
+   ההשוואה ימצא, ומי שרק רוצה את המספר לא נתקל בה. */
+function renderComparisonMethod(item) {
+  const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
+  if (!cmp) return '';
+  const yieldRow = cmp.rows.filter(row => row.key === 'yield')[0];
+  const annual = yieldRow && typeof yieldRow.annual === 'number' ? yieldRow.annual : null;
+  const fundFees = cmp.rows.filter(row => typeof row.fund === 'number')
+    .map(row => `<li>${escapeHtml(row.label)} — הממוצע בפועל במסלול שלך: ${row.fund.toFixed(2)}%</li>`).join('');
+  return `
+    <div class="cmp-method">
+      <h6 class="cmp-method-title">איך חושבה ההשוואה?</h6>
+      <p>ההשוואה נעשית מול מסלולים מאותו סוג מוצר ומאותה קטגוריית השקעה בלבד.</p>
+      <ul>
+        <li>תשואה וחשיפה: ${escapeHtml(cmp.yieldGroup)} — ${cmp.yieldCount} מסלולים.</li>
+        <li>דמי ניהול: ${escapeHtml(cmp.feeGroup)} — ${cmp.feeCount} מסלולים. אוכלוסיית היעד נלקחת בחשבון כאן, כי הסכם סקטוריאלי משפיע על המחיר.</li>
+        ${fundFees}
+      </ul>
+      <p>מסלול שחשיפתו הממוצעת למניות בשנתיים האחרונות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה אינו נכלל בממוצעים.</p>
+      ${yieldRow
+        ? '<p>בממוצע התשואה נספרים רק מסלולים עם ותק של שלוש שנים לפחות, שממשיכים לדווח. התשואה היא תשואת המסלול ברוטו, לפני דמי ניהול, ואינה התשואה האישית שלך.</p>'
+          + (annual !== null ? `<p>התשואה המוצגת היא מצטברת לשלוש שנים — שווה ערך ל-${annual.toFixed(2)}% בשנה בממוצע. אתרי השוואה אחרים מציגים לעתים דווקא את הממוצע השנתי.</p>` : '')
+        : '<p>תשואה ל־3 שנים אינה מוצגת כאן: למסלול או לקבוצת ההשוואה אין ותק מלא של שלוש שנים.</p>'}
+      <p>הנתונים מדיווחי גמל־נט, פנסיה־נט וביטוח־נט. קבוצת ההשוואה כוללת מסלולים פעילים בלבד.</p>
+    </div>`;
 }
 
 function brandsForProduct(product) {
@@ -803,28 +804,36 @@ function renderDashboard() {
       // ועשר עמודות מספרים חייבו גלילה אופקית בכל מסך.
       const cell = (label, value, cls) =>
         `<div class="detail-cell"><dt>${label}</dt><dd class="${cls || ''}">${value}</dd></div>`;
+      // הכרטיס מציג שלושה־ארבעה מספרים: מה יש לי מול ממוצע מסלולים דומים.
+      // שאר הנתונים נשארים זמינים, מקופלים, כדי שהמסך יישאר קריא.
+      const comparison = renderComparison(item);
+      const extras = `
+        <dl class="detail-card-grid">
+          ${comparison ? '' : cell('מניות', fmtPct(f.stock_pct, 1))}
+          ${cell('חו״ל', fmtPct(f.foreign_pct, 1))}
+          ${cell('מט״ח', fmtPct(f.fx_pct, 1))}
+          ${cell('נכסים סחירים', fmtPct(f.liquid_pct, 1))}
+          ${cell('תשואה חודשית', fmtPct(f.monthly_yield, 2), metricClass(f.monthly_yield))}
+          ${cell('מתחילת השנה', fmtPct(f.ytd_yield, 2), metricClass(f.ytd_yield))}
+          ${comparison ? '' : cell('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2), metricClass(f.yield_trailing_3yrs))}
+          ${comparison ? '' : cell('דמי ניהול שהזנת', fmtUserFee(item.managementFee))}
+        </dl>`;
       return `
         <article class="detail-card">
           <div class="detail-card-head">
             <h4 class="detail-card-name"><span class="source-tag ${escapeHtml(f.source)}">${SOURCE_LABEL[f.source]}</span> ${escapeHtml(f.fund_name)}</h4>
+            <span class="detail-card-balance">${fmtCurrency(balance)}</span>
             <button type="button" class="row-remove-btn" data-remove-uid="${escapeHtml(f.uid)}" title="הסרת המוצר מהדוח" aria-label="הסרת ${escapeHtml(f.fund_name)} מהדוח">✕</button>
           </div>
           <div class="detail-weight">
             <span class="detail-weight-text">משקל בתיק <strong>${weight.toFixed(1)}%</strong></span>
             <span class="detail-weight-track" aria-hidden="true"><span class="detail-weight-fill" style="width:${Math.min(100, weight).toFixed(1)}%"></span></span>
           </div>
-          <dl class="detail-card-grid">
-            ${cell('מניות', fmtPct(f.stock_pct, 1))}
-            ${cell('חו״ל', fmtPct(f.foreign_pct, 1))}
-            ${cell('מט״ח', fmtPct(f.fx_pct, 1))}
-            ${cell('נכסים סחירים', fmtPct(f.liquid_pct, 1))}
-            ${cell('תשואה חודשית', fmtPct(f.monthly_yield, 2), metricClass(f.monthly_yield))}
-            ${cell('מתחילת השנה', fmtPct(f.ytd_yield, 2), metricClass(f.ytd_yield))}
-            ${cell('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2), metricClass(f.yield_trailing_3yrs))}
-            ${cell('דמי ניהול שהזנת', fmtUserFee(item.managementFee))}
-          </dl>
           ${f.is_stale ? `<p class="detail-stale">הנתונים למסלול זה עודכנו לאחרונה ב-${fmtPeriod(f.report_period)}. הוא אינו נכלל בהשוואה למסלולים דומים.</p>` : ''}
-          ${renderComparison(item)}
+          ${comparison}
+          ${comparison
+            ? `<details class="detail-extra"><summary>עוד נתונים על המסלול</summary><div class="detail-extra-body">${extras}${renderComparisonMethod(item)}</div></details>`
+            : extras}
         </article>
       `;
     }).join('');
