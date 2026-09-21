@@ -90,7 +90,7 @@ EXPOSURE_FIELDS = [
 SLIM_DROP_FIELDS = [
     'source_label', 'parent_company_id', 'current_date',
     'actuarial_adjustment',
-    'yield_trailing_5yrs', 'avg_annual_yield_3yrs', 'avg_annual_yield_5yrs',
+    'yield_trailing_5yrs', 'avg_annual_yield_5yrs',
     'standard_deviation', 'alpha', 'sharpe_ratio',
     'stock_exp_abs', 'foreign_exp_abs', 'fx_exp_abs', 'legal_id',
 ]

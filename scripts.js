@@ -423,6 +423,11 @@ function cmpHasTenure(rec) {
 function cmpIsComparable(rec) {
   return rec._cmpCategory !== 'unclassified' && rec._cmpCategory !== 'personal';
 }
+/* מסלול שהפסיק לדווח לפני חודשים אינו בר־השוואה: התשואה המצטברת שלו נספרת
+   עד חודש הדיווח שלו, ולא עד החודש שכל השאר מדווחים בו. */
+function cmpIsFresh(rec) {
+  return monthDiff(rec.report_period, DATASET_MAX_PERIOD) <= 3;
+}
 
 let CMP_YIELD_GROUPS = {};
 let CMP_FEE_GROUPS = {};
@@ -435,7 +440,7 @@ function buildComparisonIndexes() {
     rec._cmpCategory = cmpCategory(rec);
     rec._cmpPopulation = cmpPopulation(rec);
     rec._cmpExposure = cmpAvgExposure(rec);
-    if (!isSelectableFund(rec) || !cmpIsComparable(rec)) return;
+    if (!isSelectableFund(rec) || !cmpIsComparable(rec) || !cmpIsFresh(rec)) return;
     const yKey = rec._cmpProduct + '|' + rec._cmpCategory;
     const fKey = yKey + '|' + rec._cmpPopulation;
     (CMP_YIELD_GROUPS[yKey] = CMP_YIELD_GROUPS[yKey] || []).push(rec);
@@ -474,7 +479,7 @@ function cmpGroupLabel(rec, withPopulation) {
 
 /* התוצאה שהמסך מציג: הנתון שלך, ממוצע המסלולים הדומים, והפער. */
 function compareToPeers(rec, userFee, userDepositFee) {
-  if (!rec || !cmpIsComparable(rec)) return null;
+  if (!rec || !cmpIsComparable(rec) || !cmpIsFresh(rec)) return null;
   const self = uid => uid !== rec.uid;
   const yieldPeers = cmpFilterByExposure(CMP_YIELD_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory] || [])
     .filter(r => self(r.uid));
@@ -493,9 +498,10 @@ function compareToPeers(rec, userFee, userDepositFee) {
   const aged = yieldPeers.filter(cmpHasTenure);
   if (cmpHasTenure(rec) && aged.length >= CMP_MIN_PEERS && typeof rec.yield_trailing_3yrs === 'number') {
     out.rows.push({
-      key: 'yield', label: 'תשואה ל־3 שנים', digits: 1,
+      key: 'yield', label: 'תשואה מצטברת ל־3 שנים', digits: 1,
       mine: rec.yield_trailing_3yrs,
       peers: cmpMean(aged.map(r => r.yield_trailing_3yrs)),
+      annual: rec.avg_annual_yield_3yrs,
       note: 'תשואת המסלול ברוטו, לפני דמי ניהול. לא התשואה האישית שלך.'
     });
   }
@@ -550,6 +556,8 @@ function renderComparison(item) {
     </div>`).join('');
 
   const hasYield = cmp.rows.some(row => row.key === 'yield');
+  const yieldRow = cmp.rows.filter(row => row.key === 'yield')[0];
+  const annualYield = yieldRow && typeof yieldRow.annual === 'number' ? yieldRow.annual : null;
   const fundFees = cmp.rows.filter(row => typeof row.fund === 'number')
     .map(row => `<li>${escapeHtml(row.label)} — הממוצע בפועל במסלול שלך: ${row.fund.toFixed(2)}%</li>`).join('');
   return `
@@ -567,7 +575,8 @@ function renderComparison(item) {
           </ul>
           <p>מסלול שחשיפתו הממוצעת למניות בשנתיים האחרונות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה אינו נכלל בממוצעים.</p>
           ${hasYield
-            ? '<p>בממוצע התשואה נספרים רק מסלולים עם ותק של שלוש שנים לפחות. התשואה היא תשואת המסלול ברוטו, לפני דמי ניהול, ואינה התשואה האישית שלך.</p>'
+            ? '<p>בממוצע התשואה נספרים רק מסלולים עם ותק של שלוש שנים לפחות, שממשיכים לדווח. התשואה היא תשואת המסלול ברוטו, לפני דמי ניהול, ואינה התשואה האישית שלך.</p>'
+              + (annualYield !== null ? `<p>התשואה המוצגת היא מצטברת לשלוש שנים — שווה ערך ל-${annualYield.toFixed(2)}% בשנה בממוצע. אתרי השוואה אחרים מציגים לעתים דווקא את הממוצע השנתי.</p>` : '')
             : '<p>תשואה ל־3 שנים אינה מוצגת כאן: למסלול או לקבוצת ההשוואה אין ותק מלא של שלוש שנים.</p>'}
           <p>הנתונים מדיווחי גמל־נט, פנסיה־נט וביטוח־נט. קבוצת ההשוואה כוללת מסלולים פעילים בלבד.</p>
         </div>
@@ -814,6 +823,7 @@ function renderDashboard() {
             ${cell('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2), metricClass(f.yield_trailing_3yrs))}
             ${cell('דמי ניהול שהזנת', fmtUserFee(item.managementFee))}
           </dl>
+          ${f.is_stale ? `<p class="detail-stale">הנתונים למסלול זה עודכנו לאחרונה ב-${fmtPeriod(f.report_period)}. הוא אינו נכלל בהשוואה למסלולים דומים.</p>` : ''}
           ${renderComparison(item)}
         </article>
       `;
