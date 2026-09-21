@@ -183,17 +183,6 @@
         <div class="perf-note">תיאור בלבד: ממוצע משוקלל לפי היתרות שהוזנו, מתוך נתוני המסלולים הציבוריים בחודשים שבהם קיים דיווח במאגר. ההיסטוריה מצטברת עם עדכוני המאגר החודשיים.</div>
         <div class="history-options" id="historyOptions" role="group" aria-label="בחירת הגרפים המוצגים"></div>
         <div class="history-grid" id="historyGrid"></div>
-        <details class="history-table-details">
-          <summary>טבלת הנתונים</summary>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>חודש</th><th class="num">תשואה חודשית משוקללת</th><th class="num">חשיפה למניות</th><th class="num">חשיפה לחו״ל</th><th class="num">חשיפה למט״ח</th><th class="num">נכסים סחירים</th></tr>
-              </thead>
-              <tbody id="historyTableRows"></tbody>
-            </table>
-          </div>
-        </details>
       </div>
     </details>
   </div>
@@ -206,25 +195,7 @@
         <span>פירוט לפי מוצר</span>
         <span class="dashboard-toggle-hint">פתח / סגור</span>
       </summary>
-      <div class="table-wrap dashboard-toggle-content">
-        <table>
-          <thead>
-            <tr>
-              <th>מוצר</th>
-              <th class="num">משקל</th>
-              <th class="num">מניות</th>
-              <th class="num">חו״ל</th>
-              <th class="num">מט״ח</th>
-              <th class="num">סחיר</th>
-              <th class="num">חודשי</th>
-              <th class="num">YTD</th>
-              <th class="num">3Y מצטבר</th>
-              <th class="num">דמי ניהול שהוזנו</th>
-            </tr>
-          </thead>
-          <tbody id="detailsRows"></tbody>
-        </table>
-      </div>
+      <div class="dashboard-toggle-content detail-cards" id="detailsRows"></div>
     </details>
   </div>
 </section>

@@ -511,19 +511,31 @@ function renderDashboard() {
       const f = item.fund;
       const balance = Number(item.balance) || 0;
       const weight = balance / totalBalance * 100;
+      // כרטיס למוצר במקום שורת טבלה: עמודת התוכן של האתר רחבה כ-600px,
+      // ועשר עמודות מספרים חייבו גלילה אופקית בכל מסך.
+      const cell = (label, value, cls) =>
+        `<div class="detail-cell"><dt>${label}</dt><dd class="${cls || ''}">${value}</dd></div>`;
       return `
-        <tr>
-          <td><button type="button" class="row-remove-btn" data-remove-uid="${escapeHtml(f.uid)}" title="הסרת המוצר מהדוח" aria-label="הסרת ${escapeHtml(f.fund_name)} מהדוח">✕</button><span class="source-tag ${escapeHtml(f.source)}">${SOURCE_LABEL[f.source]}</span> ${escapeHtml(f.fund_name)}</td>
-          <td class="num">${weight.toFixed(1)}%</td>
-          <td class="num">${fmtPct(f.stock_pct, 1)}</td>
-          <td class="num">${fmtPct(f.foreign_pct, 1)}</td>
-          <td class="num">${fmtPct(f.fx_pct, 1)}</td>
-          <td class="num">${fmtPct(f.liquid_pct, 1)}</td>
-          <td class="num ${metricClass(f.monthly_yield)}">${fmtPct(f.monthly_yield, 2)}</td>
-          <td class="num ${metricClass(f.ytd_yield)}">${fmtPct(f.ytd_yield, 2)}</td>
-          <td class="num ${metricClass(f.yield_trailing_3yrs)}">${fmtPct(f.yield_trailing_3yrs, 2)}</td>
-          <td class="num">${fmtUserFee(item.managementFee)}</td>
-        </tr>
+        <article class="detail-card">
+          <div class="detail-card-head">
+            <h4 class="detail-card-name"><span class="source-tag ${escapeHtml(f.source)}">${SOURCE_LABEL[f.source]}</span> ${escapeHtml(f.fund_name)}</h4>
+            <button type="button" class="row-remove-btn" data-remove-uid="${escapeHtml(f.uid)}" title="הסרת המוצר מהדוח" aria-label="הסרת ${escapeHtml(f.fund_name)} מהדוח">✕</button>
+          </div>
+          <div class="detail-weight">
+            <span class="detail-weight-text">משקל בתיק <strong>${weight.toFixed(1)}%</strong></span>
+            <span class="detail-weight-track" aria-hidden="true"><span class="detail-weight-fill" style="width:${Math.min(100, weight).toFixed(1)}%"></span></span>
+          </div>
+          <dl class="detail-card-grid">
+            ${cell('מניות', fmtPct(f.stock_pct, 1))}
+            ${cell('חו״ל', fmtPct(f.foreign_pct, 1))}
+            ${cell('מט״ח', fmtPct(f.fx_pct, 1))}
+            ${cell('נכסים סחירים', fmtPct(f.liquid_pct, 1))}
+            ${cell('תשואה חודשית', fmtPct(f.monthly_yield, 2), metricClass(f.monthly_yield))}
+            ${cell('מתחילת השנה', fmtPct(f.ytd_yield, 2), metricClass(f.ytd_yield))}
+            ${cell('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2), metricClass(f.yield_trailing_3yrs))}
+            ${cell('דמי ניהול שהזנת', fmtUserFee(item.managementFee))}
+          </dl>
+        </article>
       `;
     }).join('');
   document.getElementById('detailsRows').innerHTML = rows;
@@ -1059,19 +1071,6 @@ function renderHistorySection(activeItems) {
     }
   }
 
-  const tbody = document.getElementById('historyTableRows');
-  if (tbody) {
-    tbody.innerHTML = hist.map(h => `
-      <tr>
-        <td>${escapeHtml(monthName(h.period))}</td>
-        <td class="num ${metricClass(h.values.yield)}">${fmtOf(HIST_METRICS[0])(h.values.yield)}</td>
-        <td class="num">${fmtOf(HIST_METRICS[1])(h.values.stock)}</td>
-        <td class="num">${fmtOf(HIST_METRICS[2])(h.values.foreign)}</td>
-        <td class="num">${fmtOf(HIST_METRICS[3])(h.values.fx)}</td>
-        <td class="num">${fmtOf(HIST_METRICS[4])(h.values.liquid)}</td>
-      </tr>
-    `).join('');
-  }
 }
 
 /* ספארקליין קטן של תשואת הקופה בעורך המהיר */
@@ -1145,7 +1144,7 @@ function preparePrintLayout() {
   // information. Closed <details> are hidden by the browser via
   // content-visibility, which CSS overrides cannot reliably defeat, so we open
   // them explicitly here.
-  const sections = document.querySelectorAll('.dashboard-toggle-section, .history-table-details');
+  const sections = document.querySelectorAll('.dashboard-toggle-section');
   PRINT_PREV_OPEN = [];
   sections.forEach(section => {
     PRINT_PREV_OPEN.push([section, section.open]);

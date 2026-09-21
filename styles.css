@@ -6557,14 +6557,6 @@
 .history-chart .hit-target:focus-visible + .bar-mark,
 .history-chart .hit-target.is-hover + .bar-mark { opacity: 0.78; }
 .history-chart .crosshair { stroke: var(--ink-faint); stroke-width: 1; }
-.history-table-details { margin-top: 14px; }
-.history-table-details summary {
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-mid);
-  padding: 4px 0;
-}
 .chart-tooltip {
   position: fixed;
   z-index: 200;
@@ -6689,8 +6681,7 @@ body.pdf-mode .pdf-disclaimer { display: block !important; }
   }
 
   /* Force every collapsible section fully open, defeating content-visibility. */
-  .dashboard-toggle-section > .dashboard-toggle-content,
-  .history-table-details > .table-wrap {
+  .dashboard-toggle-section > .dashboard-toggle-content {
     display: block !important;
     content-visibility: visible !important;
     overflow: visible !important;
@@ -6727,8 +6718,7 @@ body.pdf-mode .pdf-disclaimer { display: block !important; }
      the content that follows it. */
   .dashboard h2,
   .details h2,
-  .dashboard-toggle-summary,
-  .history-table-details > summary {
+  .dashboard-toggle-summary {
     break-after: avoid-page !important;
     page-break-after: avoid !important;
     break-inside: avoid !important;
@@ -6760,22 +6750,10 @@ body.pdf-mode .pdf-disclaimer { display: block !important; }
   tfoot { display: table-footer-group; }
   tr { break-inside: avoid !important; }
 
-  /* Monthly history data table = appendix on its OWN page, kept whole so it is
-     never split with the charts above it. It fits one A4 landscape page. */
-  .history-table-details {
-    break-before: page;
-    break-inside: avoid;
-    margin-top: 0 !important;
-  }
-  .history-table-details > summary { font-weight: 700 !important; font-size: 11px !important; margin-bottom: 6px !important; }
-  .history-table-details table { font-size: 8px !important; }
-  .history-table-details th { font-size: 7.5px !important; }
-  .history-table-details th, .history-table-details td { padding: 2.5px 4px !important; }
-
   /* The per-product breakdown and the closing disclaimer + credit line share
      one clean final page, so the report never ends with a stranded footer. */
   #detailsSection { break-before: page; }
-  #detailsSection .table-wrap { break-inside: avoid; }
+  #detailsSection .detail-card { break-inside: avoid; }
   .pdf-disclaimer {
     break-before: avoid !important;
     break-inside: avoid !important;
@@ -7850,4 +7828,64 @@ body.pdf-mode .site-disclosure { display: block !important; }
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* === פירוט לפי מוצר: כרטיס למוצר במקום טבלה ====================== */
+/* העמודה המרכזית של האתר רחבה כ-600px בכל מסך, ולכן טבלה של עשר עמודות
+   חייבה גלילה אופקית. הכרטיס מציג את אותם נתונים בלי גלילה בכלל. */
+.detail-cards { display: flex; flex-direction: column; gap: var(--sp-3); }
+.detail-card {
+  padding: var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--card);
+}
+.detail-card-head { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.detail-card-name {
+  flex: 1 1 auto; margin: 0;
+  font-size: 14px; font-weight: 800; line-height: 1.45; color: var(--ink);
+}
+.detail-card-head .row-remove-btn { margin: 0; flex: 0 0 auto; }
+
+.detail-weight { margin: 11px 0 14px; }
+.detail-weight-text { font-size: 12.5px; font-weight: 600; color: var(--ink-muted); }
+.detail-weight-text strong { font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.detail-weight-track {
+  display: block; height: 5px; margin-top: 6px;
+  border-radius: 3px; background: var(--line-soft); overflow: hidden;
+}
+.detail-weight-fill { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+
+.detail-card-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 10px; margin: 0;
+}
+.detail-cell { min-width: 0; }
+.detail-cell dt {
+  font-size: 11px; font-weight: 600; color: var(--ink-faint);
+  line-height: 1.3; margin-bottom: 3px;
+}
+.detail-cell dd {
+  margin: 0; font-size: 14px; font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1.25;
+}
+.detail-cell dd.positive { color: var(--pos, #1c7a4a); }
+.detail-cell dd.negative { color: var(--neg, #c53637); }
+
+@media (max-width: 520px) {
+  .detail-card { padding: var(--sp-3); }
+  .detail-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 10px; }
+  .detail-card-name { font-size: 13.5px; }
+}
+
+@media print {
+  .detail-cards { gap: 6px !important; }
+  .detail-card { padding: 7px 9px !important; border-color: #d5cfc6 !important; }
+  .detail-card-name { font-size: 10px !important; }
+  .detail-weight { margin: 5px 0 7px !important; }
+  .detail-weight-text { font-size: 8.5px !important; }
+  .detail-card-grid { grid-template-columns: repeat(8, minmax(0, 1fr)) !important; gap: 4px 6px !important; }
+  .detail-cell dt { font-size: 7px !important; margin-bottom: 1px !important; }
+  .detail-cell dd { font-size: 9px !important; }
+  .row-remove-btn { display: none !important; }
 }
