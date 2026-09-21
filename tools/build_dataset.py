@@ -85,9 +85,11 @@ EXPOSURE_FIELDS = [
 # שדות שהדשבורד לא קורא. בברירת מחדל הם מושמטים מהפלט כדי להקטין את
 # הקובץ שנטען בדפדפן; --full משאיר אותם. הבדיקות רצות על הנתונים המלאים
 # לפני ההשמטה.
+# inception_date, first_seen_period ודמי הניהול נשארים: השוואת המסלול לקבוצתו
+# נשענת עליהם (ותק של 36 חודשים, ודמי ניהול ממוצעים בפועל).
 SLIM_DROP_FIELDS = [
-    'source_label', 'parent_company_id', 'inception_date', 'current_date',
-    'avg_annual_management_fee', 'avg_deposit_fee', 'actuarial_adjustment',
+    'source_label', 'parent_company_id', 'current_date',
+    'actuarial_adjustment',
     'yield_trailing_5yrs', 'avg_annual_yield_3yrs', 'avg_annual_yield_5yrs',
     'standard_deviation', 'alpha', 'sharpe_ratio',
     'stock_exp_abs', 'foreign_exp_abs', 'fx_exp_abs', 'legal_id',
@@ -114,7 +116,7 @@ OUTPUT_FIELD_ORDER = [
     'yield_trailing_5yrs', 'avg_annual_yield_3yrs', 'avg_annual_yield_5yrs',
     'standard_deviation', 'alpha', 'sharpe_ratio', 'liquid_pct',
     'stock_exp_abs', 'foreign_exp_abs', 'fx_exp_abs',
-    'stock_pct', 'foreign_pct', 'fx_pct', 'legal_id', 'is_active',
+    'stock_pct', 'foreign_pct', 'fx_pct', 'legal_id', 'is_active', 'first_seen_period',
     'hist_start', 'hist_yield', 'hist_stock', 'hist_foreign', 'hist_fx', 'hist_liquid',
 ]
 
@@ -298,6 +300,7 @@ def build_source(source, path, warnings):
     latest = {}
     periods = []
     fund_months = {}
+    first_seen = {}
     dropped_pct = [0]
     for row in rows:
         fid = to_str(row.get('FUND_ID')).strip()
@@ -308,6 +311,8 @@ def build_source(source, path, warnings):
         key = fid
         if key not in latest or period > latest[key][0]:
             latest[key] = (period, row)
+        if key not in first_seen or period < first_seen[key]:
+            first_seen[key] = period
         ta = to_num(row.get('TOTAL_ASSETS'))
 
         def exposure_pct(col):
@@ -368,6 +373,10 @@ def build_source(source, path, warnings):
 
         rec['legal_id'] = to_str(row.get(cfg['legal_id_col'])) if cfg['legal_id_col'] in headers else ''
         rec['is_active'] = bool(rec['total_assets'] and rec['total_assets'] > 0)
+        # החודש הראשון שבו הקופה מופיעה במקור. מתמזג עם הקובץ הקודם דרך --prev,
+        # ולכן הוא רק מקדים עם הזמן ומשמש ראיית ותק היכן שאין תאריך הקמה
+        # (ביטוח-נט אינו מפרסם INCEPTION_DATE).
+        rec['first_seen_period'] = first_seen.get(fid)
         set_history(rec, *build_history(fund_months.get(fid, {}), period))
         funds.append({k: rec.get(k) for k in OUTPUT_FIELD_ORDER})
 
@@ -594,6 +603,9 @@ def main():
                 set_history(f, *build_history(
                     history_points_from_record(f), f['report_period'],
                     history_points_from_record(pf)))
+            prev_seen = pf.get('first_seen_period') if pf else None
+            if prev_seen and (not f.get('first_seen_period') or prev_seen < f['first_seen_period']):
+                f['first_seen_period'] = prev_seen
     errors, val_warnings = validate(payload, prev)
     report(errors, warnings + val_warnings)
     if errors:

@@ -298,6 +298,283 @@ function buildWizardIndexes() {
   BRANDS.forEach(entry => { BRAND_BY_NAME[entry.name] = entry; });
 }
 
+/* === השוואה למסלולים דומים =======================================
+   הסיווג דטרמיניסטי: לכל מסלול קטגוריית השוואה אחת, נגזרת מהשדות
+   הרשמיים (גמל-נט) או משם המסלול (פנסיה-נט וביטוח-נט). שתי קבוצות
+   נפרדות: תשואה נקבעת ממדיניות ההשקעה בלבד, ודמי ניהול מושווים בתוך
+   אותה אוכלוסיית יעד, כי הסכם סקטוריאלי משפיע על המחיר ולא על המדיניות. */
+
+const CMP_MIN_PEERS = 5;
+const CMP_TENURE_MONTHS = 36;   // ותק נדרש כדי להיכלל בממוצע התשואה
+const CMP_EXPOSURE_GAP = 20;    // נק׳ אחוז מחציון הקבוצה — מוציא מההשוואה
+const CMP_EXPOSURE_MIN_MONTHS = 18;
+
+// סוגי מוצר שלעולם אינם מתערבבים זה בזה.
+const CMP_PRODUCT_LABEL = {
+  hishtalmut: 'קרן השתלמות', gemel: 'קופת גמל', invest: 'גמל להשקעה',
+  child: 'חיסכון לכל ילד', pitzuim: 'מרכזית לפיצויים',
+  pension_new: 'קרן פנסיה מקיפה', pension_general: 'קרן פנסיה כללית',
+  policy: 'פוליסת חיסכון'
+};
+function cmpProduct(rec) {
+  if (rec.source === 'pensia') return String(rec.classification || '').indexOf('חדשות') > -1 ? 'pension_new' : 'pension_general';
+  if (rec.source === 'bituach') return 'policy';
+  return rec._product === 'pensia' ? 'gemel' : rec._product;
+}
+function cmpPopulation(rec) {
+  const t = normalizeText(rec.target_population);
+  if (!t || t.indexOf('כלל האוכלוסי') > -1) return 'public';
+  if (t.indexOf('סקטור') > -1) return 'sector';
+  if (t.indexOf('מפעל') > -1 || t.indexOf('גוף') > -1) return 'workplace';
+  return 'other';
+}
+
+// וטו על שם המסלול, לפני כל השאר: השדות הרשמיים בגמל-נט גסים מדי. קופה
+// ששמה "אג״ח עד 25% מניות" מסווגת שם "מניות", ומסלול בניהול אישי "כללי".
+const CMP_NAME_VETO = [
+  ['personal', /בניהול אישי|בניהול עצמי|\bira\b/],
+  ['bonds_credit', /ללא מניות/],
+  ['bonds_equity_sleeve', /עד \d+ ?% ?ב?מניות|עד \d+ ?% ?מניות/],
+  ['bonds_credit', /(מחקה|עוקב) מדד.*(ממשלת|אג ?ח|שקלי|צמוד|ריבית)/],
+  ['bonds_equity_sleeve', /(אג ?ח|אשראי).*מניות/]
+];
+// הכלל הראשון שמתאים קובע. הסדר הוא ההגדרה.
+const CMP_RULES = [
+  ['pensioners', /מקבלי קצבה|לפנסיונרים|למקבלי פנסיה/],
+  ['guaranteed', /מבטיח תשואה/],
+  ['annuity_existing', /קצבה לזכאים/],
+  ['personal', /בניהול אישי|בניהול עצמי|\bira\b/],
+  ['target_date', /יעד לפרישה|יעד פרישה/],
+  ['child_low', /חיסכון לילד.*סיכון מועט/],
+  ['child_mid', /חיסכון לילד.*סיכון בינוני/],
+  ['child_high', /חיסכון לילד.*סיכון גבוה/],
+  ['age_under_50', /עד 50|50 ומטה|לבני 50 ומטה|גילאי 50 ומטה/],
+  ['age_50_60', /\b50 60\b|50 עד 60|גילאי 50 עד 60|לבני 50 60/],
+  ['age_60_plus', /60 ומעלה|מעל 60|לבני 60|גילאי 60/],
+  ['esg', /קיימות|אחראי/],
+  ['sp500', /s&p ?500|s and p ?500|sp ?500|מדד 500|s&p|s and p(?![a-z])/],
+  ['index_equity', /עוקב מדדי מניות|עוקב מדד מניות|מחקה מדד|תל אביב|ת ?א 35|נאסדק|msci/],
+  ['bonds_credit', /אג ?ח|אגח|אשראי|ממשלת|ממשלתי|צמוד מדד/],
+  ['equity', /(^|\s)מניות($|\s)|מנייתי|משולב מניות/],
+  ['money_market', /כספי|שקלי/],
+  ['halacha', /הלכ|שריעה|איסלאמ|מסורת/],
+  ['foreign', /(^|\s)חו ל($|\s)|(^|\s)חול($|\s)|גלובלי/],
+  ['index_mixed', /עוקב מדדים/],
+  ['mixed_tradable', /משולב/],
+  ['general', /(^|\s)כללי($|\s)|מדרגות|חכ ?מ|גמיש/]
+];
+const CMP_CATEGORY_LABEL = {
+  general: 'מסלול כללי', equity: 'מסלול מנייתי', sp500: 'עוקב S&P 500',
+  index_equity: 'עוקב מדדי מניות', index_mixed: 'עוקב מדדים', mixed_tradable: 'משולב סחיר',
+  bonds_credit: 'אג״ח ואשראי', bonds_equity_sleeve: 'אג״ח עם רכיב מניות',
+  money_market: 'כספי / שקלי', age_under_50: 'לפי גיל — עד 50',
+  age_50_60: 'לפי גיל — 50 עד 60', age_60_plus: 'לפי גיל — 60 ומעלה',
+  target_date: 'יעד לפרישה', halacha: 'מסלול הלכתי', esg: 'קיימות',
+  foreign: 'חו״ל', pensioners: 'למקבלי קצבה', annuity_existing: 'קצבה לזכאים קיימים',
+  guaranteed: 'מבטיח תשואה', personal: 'בניהול אישי',
+  child_low: 'לילד — סיכון מועט', child_mid: 'לילד — סיכון בינוני', child_high: 'לילד — סיכון גבוה'
+};
+
+function cmpCategory(rec) {
+  const name = normalizeText(rec.fund_name);
+  for (const [key, pattern] of CMP_NAME_VETO) {
+    if (pattern.test(name)) return key;
+  }
+  // גמל-נט מפרסם סיווג רשמי; בפנסיה ובביטוח השם הוא כל מה שיש.
+  const texts = rec.source === 'gemelnet'
+    ? [normalizeText(rec.sub_specialization), normalizeText(rec.specialization), name]
+    : [name];
+  for (const text of texts) {
+    if (!text) continue;
+    for (const [key, pattern] of CMP_RULES) {
+      if (pattern.test(text)) {
+        if (key !== 'target_date') return key;
+        const year = text.match(/20\d\d/);
+        return year ? 'target_date_' + year[0] : 'target_date';
+      }
+    }
+  }
+  return 'unclassified';
+}
+
+/* חשיפה ממוצעת לאורך עד 24 חודשים. חשיפה של חודש בודד תנודתית מדי מכדי
+   להוציא מסלול מהשוואה, ולכן נדרשים לפחות 18 חודשי נתונים. */
+function cmpAvgExposure(rec) {
+  const series = (rec.hist_stock || []).filter(v => typeof v === 'number');
+  if (series.length < CMP_EXPOSURE_MIN_MONTHS) return null;
+  return series.reduce((sum, v) => sum + v, 0) / series.length;
+}
+/* ותק בחודשים. היכן שאין תאריך הקמה (ביטוח-נט) משמש חודש הדיווח הראשון
+   שנראה במאגר, שמצטבר מעדכון לעדכון. */
+function cmpTenureMonths(rec) {
+  const period = Number(rec.report_period);
+  if (!period) return null;
+  const inception = rec.inception_date;
+  if (inception && inception.length >= 7) {
+    return monthDiff(Number(inception.slice(0, 4) + inception.slice(5, 7)), period);
+  }
+  if (rec.first_seen_period) return monthDiff(Number(rec.first_seen_period), period);
+  return null;
+}
+function cmpHasTenure(rec) {
+  const months = cmpTenureMonths(rec);
+  return months !== null && months >= CMP_TENURE_MONTHS;
+}
+function cmpIsComparable(rec) {
+  return rec._cmpCategory !== 'unclassified' && rec._cmpCategory !== 'personal';
+}
+
+let CMP_YIELD_GROUPS = {};
+let CMP_FEE_GROUPS = {};
+
+function buildComparisonIndexes() {
+  CMP_YIELD_GROUPS = {};
+  CMP_FEE_GROUPS = {};
+  DATA.forEach(rec => {
+    rec._cmpProduct = cmpProduct(rec);
+    rec._cmpCategory = cmpCategory(rec);
+    rec._cmpPopulation = cmpPopulation(rec);
+    rec._cmpExposure = cmpAvgExposure(rec);
+    if (!isSelectableFund(rec) || !cmpIsComparable(rec)) return;
+    const yKey = rec._cmpProduct + '|' + rec._cmpCategory;
+    const fKey = yKey + '|' + rec._cmpPopulation;
+    (CMP_YIELD_GROUPS[yKey] = CMP_YIELD_GROUPS[yKey] || []).push(rec);
+    (CMP_FEE_GROUPS[fKey] = CMP_FEE_GROUPS[fKey] || []).push(rec);
+  });
+}
+
+function cmpMedian(values) {
+  if (!values.length) return null;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+function cmpMean(values) {
+  const nums = values.filter(v => typeof v === 'number' && isFinite(v));
+  return nums.length ? nums.reduce((sum, v) => sum + v, 0) / nums.length : null;
+}
+
+/* מסלול שחשיפתו הממוצעת רחוקה מהקבוצה סווג לאותה קטגוריה אך מתנהג אחרת,
+   ולכן אינו משתתף בממוצעים. */
+function cmpFilterByExposure(members) {
+  const exposures = members.map(r => r._cmpExposure).filter(v => typeof v === 'number');
+  const median = cmpMedian(exposures);
+  if (median === null) return members;
+  return members.filter(r => typeof r._cmpExposure !== 'number' || Math.abs(r._cmpExposure - median) <= CMP_EXPOSURE_GAP);
+}
+
+function cmpGroupLabel(rec, withPopulation) {
+  let label = (CMP_PRODUCT_LABEL[rec._cmpProduct] || '') + ' · ' + (CMP_CATEGORY_LABEL[rec._cmpCategory] || 'מסלול');
+  if (withPopulation) {
+    if (rec._cmpPopulation === 'sector') label += ' · לעובדי סקטור';
+    if (rec._cmpPopulation === 'workplace') label += ' · לעובדי מקום עבודה';
+  }
+  return label;
+}
+
+/* התוצאה שהמסך מציג: הנתון שלך, ממוצע המסלולים הדומים, והפער. */
+function compareToPeers(rec, userFee, userDepositFee) {
+  if (!rec || !cmpIsComparable(rec)) return null;
+  const self = uid => uid !== rec.uid;
+  const yieldPeers = cmpFilterByExposure(CMP_YIELD_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory] || [])
+    .filter(r => self(r.uid));
+  const feePeers = cmpFilterByExposure(CMP_FEE_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory + '|' + rec._cmpPopulation] || [])
+    .filter(r => self(r.uid));
+  if (yieldPeers.length < CMP_MIN_PEERS && feePeers.length < CMP_MIN_PEERS) return null;
+
+  const out = {
+    yieldGroup: cmpGroupLabel(rec, false), yieldCount: yieldPeers.length,
+    feeGroup: cmpGroupLabel(rec, true), feeCount: feePeers.length,
+    isPension: rec.source === 'pensia', rows: []
+  };
+
+  // תשואה: רק מסלולים עם שלוש שנות ותק נספרים. השדה מוגדר במקור כתשואה
+  // מצטברת לשלוש שנים, ומסלול צעיר מדווח בו תקופה קצרה יותר.
+  const aged = yieldPeers.filter(cmpHasTenure);
+  if (cmpHasTenure(rec) && aged.length >= CMP_MIN_PEERS && typeof rec.yield_trailing_3yrs === 'number') {
+    out.rows.push({
+      key: 'yield', label: 'תשואה ל־3 שנים', digits: 1,
+      mine: rec.yield_trailing_3yrs,
+      peers: cmpMean(aged.map(r => r.yield_trailing_3yrs)),
+      note: 'תשואת המסלול ברוטו, לפני דמי ניהול. לא התשואה האישית שלך.'
+    });
+  }
+  if (feePeers.length >= CMP_MIN_PEERS) {
+    out.rows.push({
+      key: 'fee', label: out.isPension ? 'דמי ניהול מהצבירה' : 'דמי ניהול', digits: 2,
+      mine: userFee, fund: rec.avg_annual_management_fee,
+      peers: cmpMean(feePeers.map(r => r.avg_annual_management_fee))
+    });
+    if (out.isPension) {
+      out.rows.push({
+        key: 'deposit_fee', label: 'דמי ניהול מההפקדות', digits: 2,
+        mine: userDepositFee, fund: rec.avg_deposit_fee,
+        peers: cmpMean(feePeers.map(r => r.avg_deposit_fee))
+      });
+    }
+  }
+  if (yieldPeers.length >= CMP_MIN_PEERS && typeof rec.stock_pct === 'number') {
+    out.rows.push({
+      key: 'stock', label: 'חשיפה למניות', digits: 0,
+      mine: rec.stock_pct, peers: cmpMean(yieldPeers.map(r => r.stock_pct))
+    });
+  }
+  return out.rows.length ? out : null;
+}
+
+/* תקציר ההשוואה בתוך כרטיס המוצר: הנתון שלך, ממוצע המסלולים הדומים, והפער.
+   בלי חציון, אחוזון או דירוג — הפירוט המתודולוגי נפתח בלחיצה. */
+function cmpFormat(value, digits) {
+  return typeof value === 'number' && isFinite(value) ? value.toFixed(digits) + '%' : 'לא הוזן';
+}
+function cmpGapText(row) {
+  if (typeof row.mine !== 'number' || typeof row.peers !== 'number') return '';
+  const gap = row.mine - row.peers;
+  const unit = row.key === 'yield' ? ' נק׳' : '%';
+  const shown = Math.abs(gap).toFixed(row.digits);
+  // פער שמתעגל לאפס בדיוק שמוצג הוא פער שהמשתמש אינו רואה, ולכן "זהה".
+  if (Number(shown) === 0) return 'זהה לממוצע';
+  return shown + unit + (gap > 0 ? ' מעל הממוצע' : ' מתחת לממוצע');
+}
+function renderComparison(item) {
+  const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
+  if (!cmp) return '';
+  const rows = cmp.rows.map(row => `
+    <div class="cmp-row">
+      <div class="cmp-row-head">
+        <span class="cmp-row-label">${escapeHtml(row.label)}</span>
+        <span class="cmp-row-mine">${cmpFormat(row.mine, row.digits)}</span>
+      </div>
+      <div class="cmp-row-peers">ממוצע מסלולים דומים: ${cmpFormat(row.peers, row.digits)}</div>
+      ${cmpGapText(row) ? `<div class="cmp-row-gap">${escapeHtml(cmpGapText(row))}</div>` : ''}
+    </div>`).join('');
+
+  const hasYield = cmp.rows.some(row => row.key === 'yield');
+  const fundFees = cmp.rows.filter(row => typeof row.fund === 'number')
+    .map(row => `<li>${escapeHtml(row.label)} — הממוצע בפועל במסלול שלך: ${row.fund.toFixed(2)}%</li>`).join('');
+  return `
+    <section class="cmp-section">
+      <h5 class="cmp-heading">איך המסלול שלי ביחס למסלולים דומים?</h5>
+      <div class="cmp-rows">${rows}</div>
+      <details class="cmp-details">
+        <summary>איך חושבה ההשוואה?</summary>
+        <div class="cmp-details-body">
+          <p>ההשוואה נעשית מול מסלולים מאותו סוג מוצר ומאותה קטגוריית השקעה בלבד.</p>
+          <ul>
+            <li>תשואה וחשיפה: ${escapeHtml(cmp.yieldGroup)} — ${cmp.yieldCount} מסלולים.</li>
+            <li>דמי ניהול: ${escapeHtml(cmp.feeGroup)} — ${cmp.feeCount} מסלולים. אוכלוסיית היעד נלקחת בחשבון כאן, כי הסכם סקטוריאלי משפיע על המחיר.</li>
+            ${fundFees}
+          </ul>
+          <p>מסלול שחשיפתו הממוצעת למניות בשנתיים האחרונות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה אינו נכלל בממוצעים.</p>
+          ${hasYield
+            ? '<p>בממוצע התשואה נספרים רק מסלולים עם ותק של שלוש שנים לפחות. התשואה היא תשואת המסלול ברוטו, לפני דמי ניהול, ואינה התשואה האישית שלך.</p>'
+            : '<p>תשואה ל־3 שנים אינה מוצגת כאן: למסלול או לקבוצת ההשוואה אין ותק מלא של שלוש שנים.</p>'}
+          <p>הנתונים מדיווחי גמל־נט, פנסיה־נט וביטוח־נט. קבוצת ההשוואה כוללת מסלולים פעילים בלבד.</p>
+        </div>
+      </details>
+    </section>`;
+}
+
 function brandsForProduct(product) {
   if (!product) return BRANDS;
   return BRANDS.filter(entry => entry.products[product]);
@@ -327,6 +604,7 @@ function saveState() {
     fund_name: item.fund.fund_name || '',
     balance: item.balance || 0,
     management_fee: Number.isFinite(item.managementFee) ? item.managementFee : null,
+    deposit_fee: Number.isFinite(item.depositFee) ? item.depositFee : null,
     updated_at: item.updated_at || new Date().toISOString()
   }));
   // קופות שנעלמו מהמאגר נשמרות כפי שהן, כדי שהיתרה שהוזנה לא תימחק בשקט.
@@ -343,6 +621,7 @@ function loadState() {
         fund: withRuntimeFlags(rec),
         balance: Number(item.balance) || 0,
         managementFee: normalizeUserFee(item.management_fee),
+        depositFee: normalizeUserFee(item.deposit_fee),
         updated_at: item.updated_at
       });
       else if (item.uid) missingSavedFunds.push(item);
@@ -535,6 +814,7 @@ function renderDashboard() {
             ${cell('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2), metricClass(f.yield_trailing_3yrs))}
             ${cell('דמי ניהול שהזנת', fmtUserFee(item.managementFee))}
           </dl>
+          ${renderComparison(item)}
         </article>
       `;
     }).join('');
@@ -1742,6 +2022,9 @@ function wizScreenBalance() {
   const existing = existingIndex >= 0 ? userFunds[existingIndex] : null;
   const balanceValue = existing && Number(existing.balance) > 0 ? Number(existing.balance) : '';
   const feeValue = existing && Number.isFinite(existing.managementFee) ? existing.managementFee : '';
+  // בפנסיה נגבים שני דמי ניהול נפרדים, ובהשוואה הם מוצגים בנפרד.
+  const isPension = rec.source === 'pensia';
+  const depositFeeValue = existing && Number.isFinite(existing.depositFee) ? existing.depositFee : '';
   const brand = BRAND_BY_NAME[rec._brand];
   return `
     <div class="wiz-picked">
@@ -1765,6 +2048,13 @@ function wizScreenBalance() {
         <span class="wiz-fee-sign">%</span>
       </span>
     </label>
+    ${isPension ? `<label class="wiz-fee-field">
+      <span class="wiz-fee-label">דמי ניהול מההפקדות <span class="wiz-optional">לא חובה</span></span>
+      <span class="wiz-fee-input">
+        <input type="number" id="quickDepositFeeInput" value="${escapeHtml(depositFeeValue)}" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+        <span class="wiz-fee-sign">%</span>
+      </span>
+    </label>` : ''}
     <div class="wiz-cta-bar">
       <button type="button" class="wiz-cta" data-wiz="commit">הוסף לתיק</button>
       ${existing ? '<button type="button" class="wiz-cta-ghost" data-wiz="removePicked">הסר מהתיק</button>' : ''}
@@ -1884,8 +2174,10 @@ function wizCommitBalance() {
   if (!rec) return;
   const balanceInput = document.getElementById('quickBalanceInput');
   const feeInput = document.getElementById('quickFeeInput');
+  const depositFeeInput = document.getElementById('quickDepositFeeInput');
   const balance = Math.max(0, Number(balanceInput ? balanceInput.value : 0) || 0);
   const fee = normalizeUserFee(feeInput ? feeInput.value : null);
+  const depositFee = normalizeUserFee(depositFeeInput ? depositFeeInput.value : null);
   if (balance <= 0) {
     const field = document.querySelector('.wiz-money-field');
     if (field) {
@@ -1897,7 +2189,7 @@ function wizCommitBalance() {
   }
   const fund = withRuntimeFlags(rec);
   const idx = findUserFundIndex(fund.uid);
-  const payload = { fund, balance, managementFee: fee, updated_at: new Date().toISOString() };
+  const payload = { fund, balance, managementFee: fee, depositFee, updated_at: new Date().toISOString() };
   if (idx >= 0) userFunds[idx] = payload;
   else userFunds.push(payload);
   saveState();
@@ -1982,7 +2274,8 @@ document.addEventListener('input', event => {
 });
 document.addEventListener('keydown', event => {
   if (event.key !== 'Enter') return;
-  if (event.target.id === 'quickBalanceInput' || event.target.id === 'quickFeeInput') {
+  if (event.target.id === 'quickBalanceInput' || event.target.id === 'quickFeeInput'
+      || event.target.id === 'quickDepositFeeInput') {
     event.preventDefault();
     wizCommitBalance();
   }
@@ -2007,6 +2300,7 @@ function wizScrollIntoView() {
     loadState();
     renderMissingFunds();
     buildWizardIndexes();
+    buildComparisonIndexes();
     wizRender();
     renderFunds();
   } catch (error) {
