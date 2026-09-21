@@ -1059,19 +1059,6 @@ function renderHistorySection(activeItems) {
     }
   }
 
-  const tbody = document.getElementById('historyTableRows');
-  if (tbody) {
-    tbody.innerHTML = hist.map(h => `
-      <tr>
-        <td>${escapeHtml(monthName(h.period))}</td>
-        <td class="num ${metricClass(h.values.yield)}">${fmtOf(HIST_METRICS[0])(h.values.yield)}</td>
-        <td class="num">${fmtOf(HIST_METRICS[1])(h.values.stock)}</td>
-        <td class="num">${fmtOf(HIST_METRICS[2])(h.values.foreign)}</td>
-        <td class="num">${fmtOf(HIST_METRICS[3])(h.values.fx)}</td>
-        <td class="num">${fmtOf(HIST_METRICS[4])(h.values.liquid)}</td>
-      </tr>
-    `).join('');
-  }
 }
 
 /* ספארקליין קטן של תשואת הקופה בעורך המהיר */
@@ -1145,7 +1132,7 @@ function preparePrintLayout() {
   // information. Closed <details> are hidden by the browser via
   // content-visibility, which CSS overrides cannot reliably defeat, so we open
   // them explicitly here.
-  const sections = document.querySelectorAll('.dashboard-toggle-section, .history-table-details');
+  const sections = document.querySelectorAll('.dashboard-toggle-section');
   PRINT_PREV_OPEN = [];
   sections.forEach(section => {
     PRINT_PREV_OPEN.push([section, section.open]);

@@ -6557,14 +6557,6 @@
 .history-chart .hit-target:focus-visible + .bar-mark,
 .history-chart .hit-target.is-hover + .bar-mark { opacity: 0.78; }
 .history-chart .crosshair { stroke: var(--ink-faint); stroke-width: 1; }
-.history-table-details { margin-top: 14px; }
-.history-table-details summary {
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-mid);
-  padding: 4px 0;
-}
 .chart-tooltip {
   position: fixed;
   z-index: 200;
@@ -6689,8 +6681,7 @@ body.pdf-mode .pdf-disclaimer { display: block !important; }
   }
 
   /* Force every collapsible section fully open, defeating content-visibility. */
-  .dashboard-toggle-section > .dashboard-toggle-content,
-  .history-table-details > .table-wrap {
+  .dashboard-toggle-section > .dashboard-toggle-content {
     display: block !important;
     content-visibility: visible !important;
     overflow: visible !important;
@@ -6727,8 +6718,7 @@ body.pdf-mode .pdf-disclaimer { display: block !important; }
      the content that follows it. */
   .dashboard h2,
   .details h2,
-  .dashboard-toggle-summary,
-  .history-table-details > summary {
+  .dashboard-toggle-summary {
     break-after: avoid-page !important;
     page-break-after: avoid !important;
     break-inside: avoid !important;
@@ -6759,18 +6749,6 @@ body.pdf-mode .pdf-disclaimer { display: block !important; }
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
   tr { break-inside: avoid !important; }
-
-  /* Monthly history data table = appendix on its OWN page, kept whole so it is
-     never split with the charts above it. It fits one A4 landscape page. */
-  .history-table-details {
-    break-before: page;
-    break-inside: avoid;
-    margin-top: 0 !important;
-  }
-  .history-table-details > summary { font-weight: 700 !important; font-size: 11px !important; margin-bottom: 6px !important; }
-  .history-table-details table { font-size: 8px !important; }
-  .history-table-details th { font-size: 7.5px !important; }
-  .history-table-details th, .history-table-details td { padding: 2.5px 4px !important; }
 
   /* The per-product breakdown and the closing disclaimer + credit line share
      one clean final page, so the report never ends with a stranded footer. */
