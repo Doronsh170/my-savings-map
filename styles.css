@@ -7889,3 +7889,41 @@ body.pdf-mode .site-disclosure { display: block !important; }
   .detail-cell dd { font-size: 9px !important; }
   .row-remove-btn { display: none !important; }
 }
+
+/* === השוואה למסלולים דומים, בתוך כרטיס המוצר ===================== */
+/* התקציר גלוי תמיד; רק המתודולוגיה מתקפלת. */
+.cmp-section { margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--line-soft); }
+.cmp-heading { margin: 0 0 12px; font-size: 13px; font-weight: 800; color: var(--ink); }
+.cmp-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.cmp-row { min-width: 0; }
+.cmp-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cmp-row-label { font-size: 11.5px; font-weight: 600; color: var(--ink-muted); }
+.cmp-row-mine { font-size: 16px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.cmp-row-peers { margin-top: 3px; font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.cmp-row-gap { margin-top: 2px; font-size: 11.5px; font-weight: 600; color: var(--ink-mid); }
+
+.cmp-details { margin-top: 14px; }
+.cmp-details > summary {
+  cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-mid);
+  padding: 2px 0; list-style: none;
+}
+.cmp-details > summary::-webkit-details-marker { display: none; }
+.cmp-details > summary::after { content: ' ›'; }
+.cmp-details[open] > summary::after { content: ' ⌄'; }
+.cmp-details-body { margin-top: 8px; font-size: 11.5px; line-height: 1.6; color: var(--ink-faint); }
+.cmp-details-body p { margin: 0 0 7px; }
+.cmp-details-body ul { margin: 0 0 7px; padding-inline-start: 16px; }
+.cmp-details-body li { margin-bottom: 3px; }
+
+@media (max-width: 520px) {
+  .cmp-rows { grid-template-columns: 1fr; gap: 11px; }
+  .cmp-row-mine { font-size: 15px; }
+}
+@media print {
+  .cmp-details { display: none !important; }
+  .cmp-section { margin-top: 8px !important; padding-top: 7px !important; }
+  .cmp-heading { font-size: 9px !important; margin-bottom: 5px !important; }
+  .cmp-rows { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 4px 6px !important; }
+  .cmp-row-label, .cmp-row-peers, .cmp-row-gap { font-size: 7px !important; }
+  .cmp-row-mine { font-size: 9px !important; }
+}
