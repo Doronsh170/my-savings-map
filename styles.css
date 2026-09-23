@@ -7956,3 +7956,37 @@ body.pdf-mode .site-disclosure { display: block !important; }
   flex: 0 0 auto; font-size: 13px; font-weight: 800;
   color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+
+/* === עריכה והוספה מתוך הדשבורד ================================== */
+.dashboard-edit-actions {
+  display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px;
+}
+.dashboard-edit-actions .action-btn { flex: 1 1 180px; }
+.row-edit-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 11px;
+  cursor: pointer;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.row-edit-btn:hover { border-color: var(--accent); }
+.row-edit-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* שורת עדכניות וכיסוי הנתונים בראש הדוח. */
+.coverage-note span { display: block; }
+.coverage-note.coverage-warn span + span { font-weight: 700; }
+
+@media print {
+  .dashboard-edit-actions, .row-edit-btn { display: none !important; }
+}
+@media print {
+  /* שורת העדכניות והכיסוי היא חלק מהדוח עצמו, בניגוד לשאר ההערות. */
+  .perf-note.coverage-note { display: block !important; color: #3a4350 !important; font-size: 8.5px !important; margin: 2px 0 8px !important; }
+}
