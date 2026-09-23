@@ -83,12 +83,53 @@ function check(name, ok, detail) {
     await page.click('text=עריכת יתרות ודמי ניהול');
     await page.locator('.row-edit-btn').first().click();
     check('edit button opens the balance form', await page.isVisible('#quickBalanceInput'));
+    // 4א. הסבר ההשוואה ופרטי המסלול בחלונות נפרדים, בלי אקורדיון.
+    await page.evaluate(() => closeInfoDialog());
+    await page.evaluate(() => goToDashboard());
+    await page.evaluate(() => { document.querySelector('.details-toggle-section').open = true; });
+    check('no accordion inside product cards', (await page.locator('.detail-card details').count()) === 0);
+    const card = page.locator('.detail-card', { has: page.locator('.cmp-section') }).first();
+    await card.locator('text=איך מחושבת ההשוואה?').click();
+    const methodBody = await page.textContent('#infoDialogBody');
+    check('method dialog opens with methodology only',
+      await page.isVisible('#infoDialog') && /ההשוואה נעשית מול מסלולים/.test(methodBody) && (await page.locator('#infoDialogBody .detail-card-grid').count()) === 0);
+    await page.click('.info-dialog-x');
+    check('X closes the dialog', !(await page.isVisible('#infoDialog')));
+    await card.locator('text=פרטים נוספים על המסלול').click();
+    const fundBody = await page.textContent('#infoDialogBody');
+    check('details dialog opens with track data only',
+      await page.isVisible('#infoDialog') && /חו״ל/.test(fundBody) && !/ההשוואה נעשית/.test(fundBody));
+    await page.click('.info-dialog-close');
+    check('"סגור" closes the dialog', !(await page.isVisible('#infoDialog')));
+    await card.locator('text=פרטים נוספים על המסלול').click();
+    await page.keyboard.press('Escape');
+    check('Escape closes the dialog', !(await page.isVisible('#infoDialog')));
+
     check('add-product button exists on dashboard', (await page.locator('.dashboard-edit-actions >> text=הוספת מוצר').count()) === 1);
 
-    // 5. הסימולציה מוסתרת, והמרת התשואה גאומטרית.
+    // 5. המחשבון: גלוי, שני מצבים, ברירת מחדל היסטורית, המרה גאומטרית.
     await seed(page, [{ uid: pick.a.uid, balance: 100000 }]);
     await page.reload(); await ready(page);
-    check('simulation hidden in public build', !(await page.isVisible('#simulationTabSection')));
+    check('calculator visible', await page.isVisible('#simulationTabSection'));
+    check('default mode is historical', await page.evaluate(() => readSimMode()) === 'historical');
+    const runSim = async (mode, years) => page.evaluate(([m, y]) => {
+      document.querySelector(`input[name="simMode"][value="${m}"]`).checked = true;
+      applySimMode();
+      document.getElementById('simYearsInput').value = String(y);
+      document.getElementById('simFeeInput').value = '0';
+      document.getElementById('simMonthlyInput').value = '';
+      runHistoricalSimulation();
+      return Number(document.getElementById('simFinalAmount').textContent.replace(/[^0-9]/g, ''));
+    }, [mode, years]);
+    const stock = pick.a.stock_pct;
+    const expHist = await page.evaluate(([st]) => 100000 * (1 + simAnnualYield(0, st) / 100) * (1 + simAnnualYield(1, st) / 100), [stock]);
+    const gotHist = await runSim('historical', 2);
+    check('historical mode compounds year-by-year series', Math.abs(gotHist - expHist) <= 1, `got ${gotHist}, expected ${Math.round(expHist)}`);
+    const avgRate = (stock * 9 + (100 - stock) * 5) / 100;
+    const expAvg = 100000 * Math.pow(1 + avgRate / 100, 2);
+    const gotAvg = await runSim('average', 2);
+    check('average mode: 9% stocks / 5% bonds by weight', Math.abs(gotAvg - expAvg) <= 1, `got ${gotAvg}, expected ${Math.round(expAvg)} (${avgRate.toFixed(3)}%/yr)`);
+    check('average mode labelled as an assumption', /תרחיש הנחה בלבד/.test(await page.textContent('#simModeNote')) && /תרחיש ההנחה/.test(await page.textContent('#simGainLabel')));
     const simFactor = await page.evaluate(() => {
       let x = 1; const m = Math.pow(1 + simAnnualYield(0, 100) / 100, 1 / 12) - 1;
       for (let i = 0; i < 12; i++) x *= 1 + m;

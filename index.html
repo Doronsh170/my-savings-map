@@ -213,15 +213,22 @@
 </section>
 
 
-<section class="details simulation-tab-section" id="simulationTabSection" style="display:none;">
+<section class="details simulation-tab-section" id="simulationTabSection">
   <div class="container">
     <details class="dashboard-toggle-section simulation-toggle-section" id="simulationDetails">
       <summary class="dashboard-toggle-summary">
-        <span>סימולציה על בסיס תשואות עבר</span>
+        <span>סימולציה: תשואות עבר או תרחיש ממוצע</span>
         <span class="dashboard-toggle-hint">פתח / סגור</span>
       </summary>
       <div class="dashboard-toggle-content simulation-calculator-content">
-        <p class="perf-note simulation-note">המחשה בלבד: כיצד הסכום שהוזן היה עשוי להתפתח לאורך זמן לפי תשואות עבר והחשיפה למניות של התיק. ככל שהחשיפה למניות גבוהה יותר, כך התשואה בסימולציה גבוהה יותר — וגם התנודתיות.</p>
+        <p class="perf-note simulation-note">המחשה בלבד: כיצד הסכום שהוזן עשוי להתפתח לאורך זמן, לפי שיטת החישוב שנבחרה והחשיפה למניות של התיק. ככל שהחשיפה למניות גבוהה יותר, כך התשואה בסימולציה גבוהה יותר — וגם התנודתיות.</p>
+
+        <fieldset class="sim-mode" aria-describedby="simModeNote">
+          <legend class="sim-mode-legend">שיטת החישוב</legend>
+          <label class="sim-mode-option"><input type="radio" name="simMode" value="historical" checked> סימולציה היסטורית</label>
+          <label class="sim-mode-option"><input type="radio" name="simMode" value="average"> תרחיש ממוצע (הנחה)</label>
+        </fieldset>
+        <p class="perf-note sim-mode-note" id="simModeNote"></p>
 
         <div class="sim-summary-grid" aria-label="נתוני בסיס לסימולציה">
           <div class="sim-summary-card">
@@ -254,7 +261,7 @@
           <button type="button" class="sim-run-btn" id="simRunBtn">הרץ סימולציה</button>
         </div>
 
-        <div class="sim-disclaimer">החישוב מבוסס על נתוני עבר בלבד ואינו מהווה תחזית, הבטחה לתשואה, ייעוץ השקעות, ייעוץ פנסיוני או המלצה. הנחת האינפלציה היא הנחה של המשתמש ואינה תחזית — ברירת המחדל 2% היא אמצע יעד האינפלציה של בנק ישראל (1%–3%).</div>
+        <div class="sim-disclaimer"><span id="simDisclaimerLead">החישוב מבוסס על נתוני עבר בלבד ואינו מהווה תחזית</span>, הבטחה לתשואה, ייעוץ השקעות, ייעוץ פנסיוני או המלצה. הנחת האינפלציה היא הנחה של המשתמש ואינה תחזית — ברירת המחדל 2% היא אמצע יעד האינפלציה של בנק ישראל (1%–3%).</div>
 
         <div class="sim-results-block" id="simResultsBlock" hidden>
           <div class="sim-results-title">במונחים נומינליים (שקלים עתידיים)</div>
@@ -268,7 +275,7 @@
               <div class="sim-result-value" id="simTotalContrib">-</div>
             </div>
             <div class="sim-result-card">
-              <div class="sim-result-label">רווח / הפסד לפי תשואות עבר</div>
+              <div class="sim-result-label" id="simGainLabel">רווח / הפסד לפי תשואות עבר</div>
               <div class="sim-result-value" id="simGainAmount">-</div>
             </div>
           </div>
@@ -309,6 +316,18 @@
     </div>
   </div>
 </section>
+
+<dialog class="info-dialog" id="infoDialog" aria-labelledby="infoDialogTitle">
+  <div class="info-dialog-head">
+    <div>
+      <h3 id="infoDialogTitle"></h3>
+      <div class="info-dialog-sub" id="infoDialogSub"></div>
+    </div>
+    <button type="button" class="info-dialog-x" onclick="closeInfoDialog()" aria-label="סגירה">✕</button>
+  </div>
+  <div class="info-dialog-body" id="infoDialogBody"></div>
+  <button type="button" class="action-btn info-dialog-close" onclick="closeInfoDialog()">סגור</button>
+</dialog>
 
 <dialog class="share-dialog" id="shareDialog" aria-labelledby="shareDialogTitle">
   <h3 id="shareDialogTitle">שליחה לווטסאפ</h3>
