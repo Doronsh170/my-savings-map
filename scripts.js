@@ -609,6 +609,8 @@ function fmtUserFee(value) {
   return Number.isFinite(value) ? value.toFixed(2) + '%' : 'לא הוזן';
 }
 function saveState() {
+  // בתצוגת תיק ששותף שינויים נשארים בזיכרון בלבד, עד "שמירה בדפדפן".
+  if (SHARED_VIEW) return;
   const minimal = userFunds.map(item => ({
     uid: item.fund.uid,
     fund_name: item.fund.fund_name || '',
@@ -705,9 +707,15 @@ function fundMetricValue(fund, key) {
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 }
-/* תשואה של מסלול שהפסיק לדווח נספרת עד חודש הדיווח שלו, לא עד החודש של
-   שאר התיק. חיבור שתי תקופות שונות לממוצע אחד מטעה, ולכן במדדי התשואה
-   מסלול כזה נספר כחסר. חשיפות משתנות לאט ונשארות בחישוב. */
+/* תשואה חודשית, מתחילת השנה ול־3 שנים נמדדת עד חודש הדיווח של המסלול.
+   ממוצע של תשואות מתקופות שונות אינו תשואה של תקופה כלשהי, ולכן במדדי
+   התשואה נספרים רק מסלולים שדיווחו על החודש העדכני במאגר; כל השאר נספרים
+   כחסרים ומופיעים בשיעור הכיסוי. זה מחמיר מ־is_stale (פיגור של יותר
+   משלושה חודשים): גם פיגור של חודש אחד מוציא מהתשואה. חשיפות משתנות לאט
+   ונשארות בחישוב. */
+function isCurrentPeriod(fund) {
+  return Number(fund.report_period) === Number(DATASET_MAX_PERIOD);
+}
 const PERIOD_BOUND_METRICS = { monthly_yield: 1, ytd_yield: 1, yield_trailing_3yrs: 1 };
 function weightedMetricInfo(key) {
   let total = 0;
@@ -717,7 +725,7 @@ function weightedMetricInfo(key) {
     const balance = Number(item.balance) || 0;
     if (balance <= 0) continue;
     total += balance;
-    if (PERIOD_BOUND_METRICS[key] && item.fund.is_stale) continue;
+    if (PERIOD_BOUND_METRICS[key] && !isCurrentPeriod(item.fund)) continue;
     const value = fundMetricValue(item.fund, key);
     if (value === null) continue;
     covered += balance;
@@ -742,10 +750,10 @@ function renderCoverageNote(activeItems, totalBalance) {
   const el = document.getElementById('coverageNote');
   if (!el) return;
   const lines = [`נתוני המסלולים נכונים לדיווח של ${fmtPeriodHebrew(DATASET_MAX_PERIOD)}.`];
-  const staleBalance = activeItems.filter(item => item.fund.is_stale)
+  const laggingBalance = activeItems.filter(item => !isCurrentPeriod(item.fund))
     .reduce((sum, item) => sum + (Number(item.balance) || 0), 0);
-  if (staleBalance > 0) {
-    lines.push(`${(staleBalance / totalBalance * 100).toFixed(0)}% מהתיק במסלולים שלא דיווחו ביותר משלושה חודשים. הם נכללים בחשיפות, אך לא בתשואות.`);
+  if (laggingBalance > 0) {
+    lines.push(`${(laggingBalance / totalBalance * 100).toFixed(0)}% מהתיק במסלולים שעוד לא דיווחו על ${fmtPeriodHebrew(DATASET_MAX_PERIOD)}. הם נכללים בחשיפות, אך לא בתשואות, כדי לא לערבב תקופות.`);
   }
   const partial = COVERAGE_LABELS
     .map(([key, label]) => [label, weightedMetricInfo(key).coveredPct])
@@ -907,6 +915,11 @@ function renderDashboard() {
   refreshSimulationDefaults();
 }
 
+/* סדרות התשואה של הסימולציה: 30 תשואות שנתיות באחוזים, ברוטו, לכל אחת
+   משלוש רמות סיכון. שנה 1 בסימולציה מקבלת את הערך הראשון, שנה 2 את השני
+   וכן הלאה; הסימולציה מוגבלת ל־30 שנה, ולכן אין מחזור.
+   ⚠ חסר תיעוד: מקור הסדרות ואילו שנים קלנדריות הן מייצגות. הן הגיעו לריפו
+   בלי הערה (קומיט a24a5e9). עד שיתועד — ראה README, "הנחות הסימולציה". */
 const SIM_RAW_YIELDS = {
   low:    [22.66, 6.42, 13.62, 15.60, 0.18, 9.39, 1.67, 5.01, 6.11, 5.12, 3.33, 5.27, 8.12, -0.30, -0.37, 7.07, 10.05, 5.98, 0.61, 9.16, 1.05, 2.83, 6.99, -0.06, 13.25, 10.47, 3.05, -13.89, 8.60, 5.03],
   medium: [30.82, 14.37, 23.60, 22.47, 9.89, 0.71, -4.99, -7.81, 17.20, 8.09, 4.06, 10.29, 6.78, -14.72, 11.58, 11.81, 6.85, 10.61, 15.11, 11.89, 1.21, 7.30, 14.10, -2.55, 22.29, 14.80, 15.54, -16.96, 17.26, 14.61],
@@ -1026,10 +1039,15 @@ function runHistoricalSimulation() {
   let growthIndex = 1;
   // מקדם השחיקה המצטבר של האינפלציה.
   let priceIndex = 1;
-  // המרה גאומטרית: 12 חודשים של התשואה החודשית מחזירים בדיוק את התשואה השנתית.
-  // חלוקה פשוטה ב-12 הייתה מנפחת אותה (35.83% בשנה הפכו ל-42.3%).
-  // דמי ניהול מהצבירה מנוכים באותו אופן, כך שבשנה נגבה בדיוק האחוז שהוזן.
-  const monthlyFee = 1 - Math.pow(1 - feePct / 100, 1 / 12);
+  // תשואה ודמי ניהול מומרים לחודש בשיטות שונות, כי הם מוגדרים אחרת:
+  // - התשואה בסדרות היא תשואה שנתית מצטברת (ריבית דריבית), ולכן המרה
+  //   גאומטרית: 12 חודשים מחזירים בדיוק את התשואה השנתית. חלוקה ב־12
+  //   ניפחה אותה (35.83% בשנה הפכו ל־42.3%).
+  // - דמי ניהול מהצבירה הם שיעור שנתי שהגופים המוסדיים גובים מהיתרה
+  //   מדי חודש בשיעור של 1/12 ממנו. לכן חלוקה ב־12 היא ההגדרה עצמה, ולא
+  //   קירוב. (העלות האפקטיבית לשנה נמוכה במעט מהשיעור הנקוב, כי כל ניכוי
+  //   מקטין את הבסיס של הבא.)
+  const monthlyFee = (feePct / 100) / 12;
 
   for (let y = 0; y < years; y++) {
     const annualYield = simAnnualYield(y, stockPct) / 100;
@@ -1492,8 +1510,39 @@ function buildShareUrl() {
     return base;
   }
 }
-/* קישור ששותף טוען את התיק אצל הנמען. תיק שמור קיים מוחלף רק באישור. */
+/* קישור ששותף נפתח כתצוגה נפרדת: התיק שבקישור מוצג, אבל אינו נכתב
+   לדפדפן ואינו נוגע בתיק השמור. שמירה קורית רק בלחיצה מפורשת. */
 let OPEN_DASHBOARD_AFTER_INIT = false;
+let SHARED_VIEW = false;
+function renderSharedViewBanner() {
+  const banner = document.getElementById('sharedViewBanner');
+  if (banner) banner.hidden = !SHARED_VIEW;
+}
+function saveSharedPortfolio() {
+  if (!SHARED_VIEW) return;
+  let hasSaved = false;
+  try { hasSaved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').length > 0; } catch (e) { hasSaved = false; }
+  if (hasSaved && !window.confirm('בדפדפן הזה כבר שמור תיק. לשמור את התיק ששותף במקומו? התיק הקודם יימחק.')) return;
+  SHARED_VIEW = false;
+  missingSavedFunds = [];
+  saveState();
+  renderSharedViewBanner();
+}
+function closeSharedPortfolio() {
+  if (!SHARED_VIEW) return;
+  SHARED_VIEW = false;
+  loadState();
+  renderSharedViewBanner();
+  renderMissingFunds();
+  renderFunds();
+  if (getTotalBalance() <= 0) {
+    document.body.classList.remove('dashboard-reached');
+    wizReset();
+    wizScrollIntoView();
+  }
+}
+window.saveSharedPortfolio = saveSharedPortfolio;
+window.closeSharedPortfolio = closeSharedPortfolio;
 function applySharedPortfolioFromUrl() {
   const hash = String(window.location.hash || '').replace(/^#/, '');
   const match = hash.match(new RegExp('(?:^|&)' + SHARE_HASH_KEY + '=([A-Za-z0-9_-]+)'));
@@ -1530,15 +1579,14 @@ function applySharedPortfolioFromUrl() {
     alert('לא נמצאו בקישור מוצרים שקיימים במאגר הנוכחי.');
     return;
   }
-  const hasSaved = userFunds.some(item => (Number(item.balance) || 0) > 0) || missingSavedFunds.length > 0;
-  if (hasSaved && !window.confirm(`נפתח קישור עם תיק של ${incoming.length} מוצרים. לטעון אותו במקום התיק השמור בדפדפן הזה?`)) return;
+  SHARED_VIEW = true;
   userFunds = incoming;
   missingSavedFunds = [];
-  saveState();
+  renderSharedViewBanner();
   OPEN_DASHBOARD_AFTER_INIT = true;
   if (missing > 0) alert(`${missing} מהמוצרים בקישור כבר אינם במאגר המעודכן ולא נטענו.`);
 }
-function buildShareText() {
+function buildShareText(includeLink) {
   const totalBalance = getTotalBalance();
   const aggStock = weightedMetric('stock_pct', totalBalance);
   const aggForeign = weightedMetric('foreign_pct', totalBalance);
@@ -1560,8 +1608,8 @@ function buildShareText() {
   ];
   // הקישור לפני פירוט המוצרים: כשהטקסט ארוך מדי לווטסאפ מקצרים את הפירוט,
   // והקישור, שמשחזר את התיק המלא, חייב לשרוד.
-  const shareUrl = buildShareUrl();
-  if (shareUrl) lines.push('', `לפתיחת התיק המלא בדשבורד: ${shareUrl}`);
+  const shareUrl = includeLink ? buildShareUrl() : '';
+  if (shareUrl) lines.push('', `לפתיחת התיק המלא בדשבורד (הקישור כולל את היתרות ודמי הניהול): ${shareUrl}`);
   lines.push('', 'פירוט מוצרים:');
   const sorted = userFunds.slice().sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0));
   for (const item of sorted) {
@@ -1675,12 +1723,30 @@ function openShareUrl(url) {
   try { win.opener = null; } catch (error) { /* חלון חוצה-מקור — אין מה לנקות */ }
   return true;
 }
+/* לפני שיתוף: הקישור לתיק מכיל את היתרות ודמי הניהול, וכל מי שמחזיק בו
+   יכול לקרוא אותם. המשתמש בוחר במפורש אם לצרף אותו. הבחירה נעשית
+   בלחיצה בתוך הדף, כך שפתיחת ווטסאפ נשארת מחוות משתמש ואינה נחסמת. */
 function shareWhatsApp() {
   if (!hasReportData()) {
     alert('כדי לשלוח לווטסאפ צריך להוסיף לפחות מוצר אחד ולהזין יתרה.');
     return;
   }
-  const text = buildShareText();
+  const dialog = document.getElementById('shareDialog');
+  if (dialog && typeof dialog.showModal === 'function') {
+    dialog.showModal();
+    return;
+  }
+  sendWhatsApp(false);
+}
+function chooseShare(includeLink) {
+  const dialog = document.getElementById('shareDialog');
+  if (dialog && dialog.open) dialog.close();
+  if (includeLink === null) return;
+  sendWhatsApp(includeLink);
+}
+window.chooseShare = chooseShare;
+function sendWhatsApp(includeLink) {
+  const text = buildShareText(includeLink);
   const url = buildWhatsAppUrl(text);
   // שיתוף מקורי רק במכשירי מגע. במחשב navigator.share קיים בחלק
   // מהדפדפנים אך נכשל, והנפילה חזרה לפתיחת חלון קורית כבר אחרי ה-await —
@@ -1709,6 +1775,7 @@ function goToDashboard() {
   if (dashboard) dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function resetAllData() {
+  if (SHARED_VIEW) { closeSharedPortfolio(); return; }
   const hasData = userFunds.length > 0 || localStorage.getItem(STORAGE_KEY);
   if (!hasData) {
     prepareAnotherFund();
@@ -2483,6 +2550,15 @@ function wizScrollIntoView() {
     wizRender();
     renderFunds();
     if (OPEN_DASHBOARD_AFTER_INIT) goToDashboard();
+    // קישור ששותף שנפתח בלשונית שהאתר כבר פתוח בה משנה רק את ה-#, בלי טעינה.
+    window.addEventListener('hashchange', () => {
+      OPEN_DASHBOARD_AFTER_INIT = false;
+      applySharedPortfolioFromUrl();
+      if (!OPEN_DASHBOARD_AFTER_INIT) return;
+      renderMissingFunds();
+      renderFunds();
+      goToDashboard();
+    });
   } catch (error) {
     document.getElementById('loadingState').textContent = 'שגיאה בטעינת הנתונים: ' + error.message;
     console.error(error);

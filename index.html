@@ -107,6 +107,13 @@
       <div class="pdf-report-title">דוח חשיפות חיסכון פנסיוני</div>
       <div class="pdf-report-date">נכון לתאריך <span id="pdfGenDate"></span></div>
     </div>
+    <div class="shared-view-banner" id="sharedViewBanner" hidden>
+      <p><strong>זה תיק ששותף איתך בקישור.</strong> הוא מוצג בלבד ואינו נשמר בדפדפן הזה. התיק השמור שלך, אם יש כזה, לא השתנה.</p>
+      <div class="shared-view-actions">
+        <button type="button" class="action-btn" onclick="saveSharedPortfolio()">שמירת התיק בדפדפן הזה</button>
+        <button type="button" class="action-btn" onclick="closeSharedPortfolio()">סגירה וחזרה לתיק שלי</button>
+      </div>
+    </div>
     <h2>דשבורד מצרפי</h2>
     <div class="subtitle">החישוב משוקלל לפי היתרות שהוזנו לכל מוצר</div>
     <div class="perf-note coverage-note" id="coverageNote"></div>
@@ -302,6 +309,17 @@
     </div>
   </div>
 </section>
+
+<dialog class="share-dialog" id="shareDialog" aria-labelledby="shareDialogTitle">
+  <h3 id="shareDialogTitle">שליחה לווטסאפ</h3>
+  <p>אפשר לצרף להודעה קישור שפותח את התיק המלא בדשבורד.</p>
+  <p><strong>הקישור כולל את היתרות ודמי הניהול שהזנת. כל מי שמחזיק בקישור יוכל לצפות בהם.</strong> הוא עשוי להישמר גם בהיסטוריית הדפדפן ובשיחה.</p>
+  <div class="share-dialog-actions">
+    <button type="button" class="action-btn" onclick="chooseShare(false)">שליחת סיכום בלי קישור לתיק</button>
+    <button type="button" class="action-btn" onclick="chooseShare(true)">שליחה עם קישור לתיק</button>
+    <button type="button" class="action-btn share-dialog-cancel" onclick="chooseShare(null)">ביטול</button>
+  </div>
+</dialog>
 
 <div class="pdf-disclaimer" aria-hidden="true">הבהרה: הנתונים בדוח זה מבוססים על נתונים ציבוריים מהמאגר ועל יתרות שהוזנו ידנית. תשואות המסלולים הן ציבוריות ואינן משקפות את התשואה האישית בפועל. הדוח נועד למידע כללי בלבד ואינו מהווה ייעוץ פנסיוני, ייעוץ השקעות, שיווק פנסיוני, תחזית או המלצה.</div>
 

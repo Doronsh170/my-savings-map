@@ -7990,3 +7990,34 @@ body.pdf-mode .site-disclosure { display: block !important; }
   /* שורת העדכניות והכיסוי היא חלק מהדוח עצמו, בניגוד לשאר ההערות. */
   .perf-note.coverage-note { display: block !important; color: #3a4350 !important; font-size: 8.5px !important; margin: 2px 0 8px !important; }
 }
+
+/* === תצוגת תיק ששותף, ודיאלוג השיתוף =========================== */
+.shared-view-banner {
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md, 12px);
+  background: var(--card, #fff);
+  padding: 14px 16px;
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.shared-view-banner p { margin: 0 0 10px; }
+.shared-view-actions, .share-dialog-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.shared-view-actions .action-btn, .share-dialog-actions .action-btn { flex: 1 1 180px; }
+.share-dialog {
+  max-width: min(460px, calc(100vw - 32px));
+  border: 1px solid var(--line);
+  border-radius: var(--r-md, 12px);
+  padding: 20px;
+  color: var(--ink);
+  background: #fff;
+  line-height: 1.55;
+  font-size: 14px;
+}
+.share-dialog::backdrop { background: rgba(11, 28, 44, 0.45); }
+.share-dialog h3 { margin: 0 0 8px; font-size: 17px; }
+.share-dialog p { margin: 0 0 10px; }
+@media print {
+  .shared-view-banner, .share-dialog { display: none !important; }
+}
