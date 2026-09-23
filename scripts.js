@@ -915,16 +915,54 @@ function renderDashboard() {
   refreshSimulationDefaults();
 }
 
-/* הסימולציה כבויה בגרסה הציבורית עד שמקור סדרות התשואה ושנותיהן יתועדו
-   (ראה README, "הנחות הסימולציה"). תיקון הנוסחה אינו מבסס תוצאה על סדרות
-   שאי אפשר לאמת. הקוד נשאר; להחזרה משנים ל-true אחרי החלפת הסדרות. */
-const SIMULATION_ENABLED = false;
+/* מתג להסתרת המחשבון כולו מהגרסה הציבורית, אם יידרש שוב. */
+const SIMULATION_ENABLED = true;
+
+/* שני מצבי חישוב. ברירת המחדל: היסטורי.
+   - historical: סדרות התשואה השנתיות, שנה אחרי שנה — כולל תנודתיות ושנים שליליות.
+   - average: תרחיש הנחה קבוע — מניות 9% לשנה, אג"ח 5% לשנה, משוקלל לפי
+     החשיפה למניות של התיק (כל מה שאינו מניות נחשב אג"ח). זו הנחה, לא
+     תשואה צפויה או מובטחת. */
+const SIM_AVERAGE_STOCK_YIELD = 9;
+const SIM_AVERAGE_BOND_YIELD = 5;
+function readSimMode() {
+  const checked = document.querySelector('input[name="simMode"]:checked');
+  return checked && checked.value === 'average' ? 'average' : 'historical';
+}
+function simAverageYield(stockPct) {
+  const pct = Math.max(0, Math.min(100, Number(stockPct) || 0));
+  return (pct * SIM_AVERAGE_STOCK_YIELD + (100 - pct) * SIM_AVERAGE_BOND_YIELD) / 100;
+}
+const SIM_MODE_TEXT = {
+  historical: {
+    note: 'סימולציה היסטורית: כל שנה מקבלת את התשואה של שנה אחרת בסדרת עבר, לפי הסדר — כולל שנים שליליות. כך רואים גם את התנודתיות, לא רק את הממוצע.',
+    disclaimer: 'החישוב מבוסס על נתוני עבר בלבד ואינו מהווה תחזית',
+    gain: 'רווח / הפסד לפי תשואות עבר'
+  },
+  average: {
+    note: `תרחיש ממוצע: הנחה של ${SIM_AVERAGE_STOCK_YIELD}% לשנה על החלק במניות ו־${SIM_AVERAGE_BOND_YIELD}% לשנה על החלק באג״ח, בכל שנה. זה תרחיש הנחה בלבד — לא תשואה צפויה או מובטחת, ובלי התנודתיות והשנים השליליות שקורות בפועל.`,
+    disclaimer: `החישוב מבוסס על הנחת תשואה קבועה של ${SIM_AVERAGE_STOCK_YIELD}% למניות ו־${SIM_AVERAGE_BOND_YIELD}% לאג״ח, ואינו מהווה תחזית`,
+    gain: 'רווח / הפסד לפי תרחיש ההנחה'
+  }
+};
+function applySimMode() {
+  const text = SIM_MODE_TEXT[readSimMode()];
+  const note = document.getElementById('simModeNote');
+  const disclaimer = document.getElementById('simDisclaimerLead');
+  const gainLabel = document.getElementById('simGainLabel');
+  if (note) note.textContent = text.note;
+  if (disclaimer) disclaimer.textContent = text.disclaimer;
+  if (gainLabel) gainLabel.textContent = text.gain;
+  // תוצאה שחושבה במצב אחר אינה תקפה למצב שנבחר.
+  const resultsEl = document.getElementById('simResultsBlock');
+  if (resultsEl) resultsEl.hidden = true;
+}
 
 /* סדרות התשואה של הסימולציה: 30 תשואות שנתיות באחוזים, ברוטו, לכל אחת
    משלוש רמות סיכון. שנה 1 בסימולציה מקבלת את הערך הראשון, שנה 2 את השני
    וכן הלאה; הסימולציה מוגבלת ל־30 שנה, ולכן אין מחזור.
-   ⚠ חסר תיעוד: מקור הסדרות ואילו שנים קלנדריות הן מייצגות. הן הגיעו לריפו
-   בלי הערה (קומיט a24a5e9). עד שיתועד — ראה README, "הנחות הסימולציה". */
+   המקור אינו ידוע, והטווח ככל הנראה 1995–2024 (לא מאומת). הפירוט, כולל מה
+   נבדק: README, "סדרות התשואה ההיסטוריות: מה ידוע ומה לא". */
 const SIM_RAW_YIELDS = {
   low:    [22.66, 6.42, 13.62, 15.60, 0.18, 9.39, 1.67, 5.01, 6.11, 5.12, 3.33, 5.27, 8.12, -0.30, -0.37, 7.07, 10.05, 5.98, 0.61, 9.16, 1.05, 2.83, 6.99, -0.06, 13.25, 10.47, 3.05, -13.89, 8.60, 5.03],
   medium: [30.82, 14.37, 23.60, 22.47, 9.89, 0.71, -4.99, -7.81, 17.20, 8.09, 4.06, 10.29, 6.78, -14.72, 11.58, 11.81, 6.85, 10.61, 15.11, 11.89, 1.21, 7.30, 14.10, -2.55, 22.29, 14.80, 15.54, -16.96, 17.26, 14.61],
@@ -1030,6 +1068,7 @@ function runHistoricalSimulation() {
   const monthly = Math.max(0, Number(document.getElementById('simMonthlyInput')?.value) || 0);
   const years = readSimYears();
   const feePct = readSimFeePct(weightedUserManagementFee(totalBalance));
+  const mode = readSimMode();
 
   const inflationPct = readSimInflationPct();
   const monthlyInflation = Math.pow(1 + inflationPct / 100, 1 / 12) - 1;
@@ -1055,7 +1094,7 @@ function runHistoricalSimulation() {
   const monthlyFee = (feePct / 100) / 12;
 
   for (let y = 0; y < years; y++) {
-    const annualYield = simAnnualYield(y, stockPct) / 100;
+    const annualYield = (mode === 'average' ? simAverageYield(stockPct) : simAnnualYield(y, stockPct)) / 100;
     const monthlyYield = Math.pow(1 + annualYield, 1 / 12) - 1;
     for (let m = 0; m < 12; m++) {
       amount += amount * monthlyYield;
@@ -1110,6 +1149,12 @@ function initSimulationCalculator() {
     runBtn.addEventListener('click', runHistoricalSimulation);
     runBtn.dataset.bound = '1';
   }
+  document.querySelectorAll('input[name="simMode"]').forEach(input => {
+    if (input.dataset.bound) return;
+    input.addEventListener('change', applySimMode);
+    input.dataset.bound = '1';
+  });
+  applySimMode();
   const details = document.getElementById('simulationDetails');
   if (details && !details.dataset.bound) {
     details.addEventListener('toggle', () => { if (details.open) refreshSimulationDefaults(); });

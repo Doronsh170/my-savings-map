@@ -85,10 +85,29 @@ function check(name, ok, detail) {
     check('edit button opens the balance form', await page.isVisible('#quickBalanceInput'));
     check('add-product button exists on dashboard', (await page.locator('.dashboard-edit-actions >> text=הוספת מוצר').count()) === 1);
 
-    // 5. הסימולציה מוסתרת, והמרת התשואה גאומטרית.
+    // 5. המחשבון: גלוי, שני מצבים, ברירת מחדל היסטורית, המרה גאומטרית.
     await seed(page, [{ uid: pick.a.uid, balance: 100000 }]);
     await page.reload(); await ready(page);
-    check('simulation hidden in public build', !(await page.isVisible('#simulationTabSection')));
+    check('calculator visible', await page.isVisible('#simulationTabSection'));
+    check('default mode is historical', await page.evaluate(() => readSimMode()) === 'historical');
+    const runSim = async (mode, years) => page.evaluate(([m, y]) => {
+      document.querySelector(`input[name="simMode"][value="${m}"]`).checked = true;
+      applySimMode();
+      document.getElementById('simYearsInput').value = String(y);
+      document.getElementById('simFeeInput').value = '0';
+      document.getElementById('simMonthlyInput').value = '';
+      runHistoricalSimulation();
+      return Number(document.getElementById('simFinalAmount').textContent.replace(/[^0-9]/g, ''));
+    }, [mode, years]);
+    const stock = pick.a.stock_pct;
+    const expHist = await page.evaluate(([st]) => 100000 * (1 + simAnnualYield(0, st) / 100) * (1 + simAnnualYield(1, st) / 100), [stock]);
+    const gotHist = await runSim('historical', 2);
+    check('historical mode compounds year-by-year series', Math.abs(gotHist - expHist) <= 1, `got ${gotHist}, expected ${Math.round(expHist)}`);
+    const avgRate = (stock * 9 + (100 - stock) * 5) / 100;
+    const expAvg = 100000 * Math.pow(1 + avgRate / 100, 2);
+    const gotAvg = await runSim('average', 2);
+    check('average mode: 9% stocks / 5% bonds by weight', Math.abs(gotAvg - expAvg) <= 1, `got ${gotAvg}, expected ${Math.round(expAvg)} (${avgRate.toFixed(3)}%/yr)`);
+    check('average mode labelled as an assumption', /תרחיש הנחה בלבד/.test(await page.textContent('#simModeNote')) && /תרחיש ההנחה/.test(await page.textContent('#simGainLabel')));
     const simFactor = await page.evaluate(() => {
       let x = 1; const m = Math.pow(1 + simAnnualYield(0, 100) / 100, 1 / 12) - 1;
       for (let i = 0; i < 12; i++) x *= 1 + m;

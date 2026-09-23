@@ -8040,3 +8040,13 @@ body.pdf-mode .site-disclosure { display: block !important; }
   position: absolute !important; width: 1px; height: 1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap;
 }
+
+/* === מצב החישוב במחשבון: היסטורי / תרחיש ממוצע ===================== */
+.sim-mode { border: 0; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.sim-mode-legend { width: 100%; font-size: 12.5px; font-weight: 700; margin-bottom: 6px; padding: 0; }
+.sim-mode-option {
+  display: inline-flex; align-items: center; gap: 8px; flex: 1 1 160px;
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px;
+  font-size: 13.5px; font-weight: 700; cursor: pointer; background: #fff; color: var(--ink);
+}
+.sim-mode-option:has(input:checked) { border-color: var(--accent); background: var(--line-soft, #f4f2ee); }
