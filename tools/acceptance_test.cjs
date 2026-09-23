@@ -83,6 +83,28 @@ function check(name, ok, detail) {
     await page.click('text=עריכת יתרות ודמי ניהול');
     await page.locator('.row-edit-btn').first().click();
     check('edit button opens the balance form', await page.isVisible('#quickBalanceInput'));
+    // 4א. הסבר ההשוואה ופרטי המסלול בחלונות נפרדים, בלי אקורדיון.
+    await page.evaluate(() => closeInfoDialog());
+    await page.evaluate(() => goToDashboard());
+    await page.evaluate(() => { document.querySelector('.details-toggle-section').open = true; });
+    check('no accordion inside product cards', (await page.locator('.detail-card details').count()) === 0);
+    const card = page.locator('.detail-card', { has: page.locator('.cmp-section') }).first();
+    await card.locator('text=איך מחושבת ההשוואה?').click();
+    const methodBody = await page.textContent('#infoDialogBody');
+    check('method dialog opens with methodology only',
+      await page.isVisible('#infoDialog') && /ההשוואה נעשית מול מסלולים/.test(methodBody) && (await page.locator('#infoDialogBody .detail-card-grid').count()) === 0);
+    await page.click('.info-dialog-x');
+    check('X closes the dialog', !(await page.isVisible('#infoDialog')));
+    await card.locator('text=פרטים נוספים על המסלול').click();
+    const fundBody = await page.textContent('#infoDialogBody');
+    check('details dialog opens with track data only',
+      await page.isVisible('#infoDialog') && /חו״ל/.test(fundBody) && !/ההשוואה נעשית/.test(fundBody));
+    await page.click('.info-dialog-close');
+    check('"סגור" closes the dialog', !(await page.isVisible('#infoDialog')));
+    await card.locator('text=פרטים נוספים על המסלול').click();
+    await page.keyboard.press('Escape');
+    check('Escape closes the dialog', !(await page.isVisible('#infoDialog')));
+
     check('add-product button exists on dashboard', (await page.locator('.dashboard-edit-actions >> text=הוספת מוצר').count()) === 1);
 
     // 5. המחשבון: גלוי, שני מצבים, ברירת מחדל היסטורית, המרה גאומטרית.

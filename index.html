@@ -317,6 +317,18 @@
   </div>
 </section>
 
+<dialog class="info-dialog" id="infoDialog" aria-labelledby="infoDialogTitle">
+  <div class="info-dialog-head">
+    <div>
+      <h3 id="infoDialogTitle"></h3>
+      <div class="info-dialog-sub" id="infoDialogSub"></div>
+    </div>
+    <button type="button" class="info-dialog-x" onclick="closeInfoDialog()" aria-label="סגירה">✕</button>
+  </div>
+  <div class="info-dialog-body" id="infoDialogBody"></div>
+  <button type="button" class="action-btn info-dialog-close" onclick="closeInfoDialog()">סגור</button>
+</dialog>
+
 <dialog class="share-dialog" id="shareDialog" aria-labelledby="shareDialogTitle">
   <h3 id="shareDialogTitle">שליחה לווטסאפ</h3>
   <p>בחרו מה לשתף. ההודעה נשלחת בווטסאפ ונשמרת בשיחה אצל כל מי שמקבל אותה.</p>

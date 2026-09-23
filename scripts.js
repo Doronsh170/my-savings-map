@@ -555,10 +555,11 @@ function renderComparison(item) {
     <section class="cmp-section">
       <h5 class="cmp-heading">איך המסלול שלי ביחס למסלולים דומים?</h5>
       <div class="cmp-boxes">${boxes}</div>
+      <button type="button" class="info-link" data-info="method" data-info-uid="${escapeHtml(item.fund.uid)}">איך מחושבת ההשוואה?</button>
     </section>`;
 }
 
-/* המתודולוגיה יושבת בתוך "עוד נתונים על המסלול": מי שרוצה לדעת איך חושבה
+/* המתודולוגיה נפתחת בחלון "איך מחושבת ההשוואה?": מי שרוצה לדעת איך חושבה
    ההשוואה ימצא, ומי שרק רוצה את המספר לא נתקל בה. */
 function renderComparisonMethod(item) {
   const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
@@ -569,7 +570,6 @@ function renderComparisonMethod(item) {
     .map(row => `<li>${escapeHtml(row.label)} — הממוצע בפועל במסלול שלך: ${row.fund.toFixed(2)}%</li>`).join('');
   return `
     <div class="cmp-method">
-      <h6 class="cmp-method-title">איך חושבה ההשוואה?</h6>
       <p>ההשוואה נעשית מול מסלולים מאותו סוג מוצר ומאותה קטגוריית השקעה בלבד.</p>
       <ul>
         <li>תשואה וחשיפה: ${escapeHtml(cmp.yieldGroup)} — ${cmp.yieldCount} מסלולים.</li>
@@ -795,6 +795,54 @@ function setMetric(id, value, digits = 1) {
   el.className = metricClass(value);
 }
 
+/* נתוני המסלול שאינם בתקציר ההשוואה. בכרטיס עם השוואה הם נפתחים בחלון
+   "פרטים נוספים על המסלול"; בכרטיס בלי השוואה הם מוצגים בכרטיס עצמו. */
+function fundExtrasHtml(item, hasComparison) {
+  const f = item.fund;
+  const cell = (label, value, cls) =>
+    `<div class="detail-cell"><dt>${label}</dt><dd class="${cls || ''}">${value}</dd></div>`;
+  return `
+        <dl class="detail-card-grid">
+          ${hasComparison ? '' : cell('מניות', fmtPct(f.stock_pct, 1))}
+          ${cell('חו״ל', fmtPct(f.foreign_pct, 1))}
+          ${cell('מט״ח', fmtPct(f.fx_pct, 1))}
+          ${cell('נכסים סחירים', fmtPct(f.liquid_pct, 1))}
+          ${cell('תשואה חודשית', fmtPct(f.monthly_yield, 2), metricClass(f.monthly_yield))}
+          ${cell('מתחילת השנה', fmtPct(f.ytd_yield, 2), metricClass(f.ytd_yield))}
+          ${hasComparison ? '' : cell('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2), metricClass(f.yield_trailing_3yrs))}
+          ${hasComparison ? '' : cell('דמי ניהול שהזנת', fmtUserFee(item.managementFee))}
+        </dl>`;
+}
+
+/* חלון מידע אחד לשני הקישורים בכרטיס: "פרטים נוספים על המסלול" ו"איך מחושבת
+   ההשוואה?". בא במקום אקורדיון שלא תמיד הציג חץ לסגירה. */
+function openInfoDialog(kind, uid) {
+  const dialog = document.getElementById('infoDialog');
+  const idx = findUserFundIndex(uid);
+  if (!dialog || idx < 0) return;
+  const item = userFunds[idx];
+  const title = kind === 'method' ? 'איך מחושבת ההשוואה?' : 'פרטים נוספים על המסלול';
+  const body = kind === 'method' ? renderComparisonMethod(item) : fundExtrasHtml(item, true);
+  document.getElementById('infoDialogTitle').textContent = title;
+  document.getElementById('infoDialogSub').textContent = item.fund.fund_name || '';
+  document.getElementById('infoDialogBody').innerHTML = body;
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+function closeInfoDialog() {
+  const dialog = document.getElementById('infoDialog');
+  if (!dialog) return;
+  if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+  else dialog.removeAttribute('open');
+}
+window.closeInfoDialog = closeInfoDialog;
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('[data-info]');
+  if (trigger) { openInfoDialog(trigger.getAttribute('data-info'), trigger.getAttribute('data-info-uid')); return; }
+  // לחיצה על הרקע מחוץ לחלון סוגרת אותו.
+  if (event.target.id === 'infoDialog') closeInfoDialog();
+});
+
 function renderDashboard() {
   const activeItems = userFunds.filter(item => (Number(item.balance) || 0) > 0);
   const totalBalance = activeItems.reduce((sum, item) => sum + (Number(item.balance) || 0), 0);
@@ -859,22 +907,9 @@ function renderDashboard() {
       const weight = balance / totalBalance * 100;
       // כרטיס למוצר במקום שורת טבלה: עמודת התוכן של האתר רחבה כ-600px,
       // ועשר עמודות מספרים חייבו גלילה אופקית בכל מסך.
-      const cell = (label, value, cls) =>
-        `<div class="detail-cell"><dt>${label}</dt><dd class="${cls || ''}">${value}</dd></div>`;
       // הכרטיס מציג שלושה־ארבעה מספרים: מה יש לי מול ממוצע מסלולים דומים.
-      // שאר הנתונים נשארים זמינים, מקופלים, כדי שהמסך יישאר קריא.
+      // שאר הנתונים וההסבר על ההשוואה נפתחים בחלונות מידע נפרדים.
       const comparison = renderComparison(item);
-      const extras = `
-        <dl class="detail-card-grid">
-          ${comparison ? '' : cell('מניות', fmtPct(f.stock_pct, 1))}
-          ${cell('חו״ל', fmtPct(f.foreign_pct, 1))}
-          ${cell('מט״ח', fmtPct(f.fx_pct, 1))}
-          ${cell('נכסים סחירים', fmtPct(f.liquid_pct, 1))}
-          ${cell('תשואה חודשית', fmtPct(f.monthly_yield, 2), metricClass(f.monthly_yield))}
-          ${cell('מתחילת השנה', fmtPct(f.ytd_yield, 2), metricClass(f.ytd_yield))}
-          ${comparison ? '' : cell('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2), metricClass(f.yield_trailing_3yrs))}
-          ${comparison ? '' : cell('דמי ניהול שהזנת', fmtUserFee(item.managementFee))}
-        </dl>`;
       return `
         <article class="detail-card">
           <div class="detail-card-head">
@@ -890,8 +925,8 @@ function renderDashboard() {
           ${f.is_stale ? `<p class="detail-stale">הנתונים למסלול זה עודכנו לאחרונה ב-${fmtPeriod(f.report_period)}. הוא אינו נכלל בהשוואה למסלולים דומים.</p>` : ''}
           ${comparison}
           ${comparison
-            ? `<details class="detail-extra"><summary>עוד נתונים על המסלול</summary><div class="detail-extra-body">${extras}${renderComparisonMethod(item)}</div></details>`
-            : extras}
+            ? `<button type="button" class="info-link" data-info="fund" data-info-uid="${escapeHtml(f.uid)}">פרטים נוספים על המסלול</button>`
+            : fundExtrasHtml(item, false)}
         </article>
       `;
     }).join('');
@@ -962,7 +997,7 @@ function applySimMode() {
    משלוש רמות סיכון. שנה 1 בסימולציה מקבלת את הערך הראשון, שנה 2 את השני
    וכן הלאה; הסימולציה מוגבלת ל־30 שנה, ולכן אין מחזור.
    השנים: 1995–2024, ערך אחד לכל שנה. המקור המקורי עדיין לא מתועד.
-   פירוט: README, "סדרות התשואה ההיסטוריות: מה ידוע ומה לא". */
+   פירוט: README, "סדרות התשואה ההיסטוריות". */
 const SIM_RAW_YIELDS = {
   low:    [22.66, 6.42, 13.62, 15.60, 0.18, 9.39, 1.67, 5.01, 6.11, 5.12, 3.33, 5.27, 8.12, -0.30, -0.37, 7.07, 10.05, 5.98, 0.61, 9.16, 1.05, 2.83, 6.99, -0.06, 13.25, 10.47, 3.05, -13.89, 8.60, 5.03],
   medium: [30.82, 14.37, 23.60, 22.47, 9.89, 0.71, -4.99, -7.81, 17.20, 8.09, 4.06, 10.29, 6.78, -14.72, 11.58, 11.81, 6.85, 10.61, 15.11, 11.89, 1.21, 7.30, 14.10, -2.55, 22.29, 14.80, 15.54, -16.96, 17.26, 14.61],

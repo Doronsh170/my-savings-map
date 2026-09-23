@@ -7911,19 +7911,7 @@ body.pdf-mode .site-disclosure { display: block !important; }
 }
 .cmp-box-peer strong { display: block; font-size: 12.5px; font-weight: 800; color: var(--ink-mid); }
 
-/* עוד נתונים על המסלול */
-.detail-extra { margin-top: var(--sp-4); }
-.detail-extra > summary {
-  cursor: pointer; list-style: none; padding: 2px 0;
-  font-size: 12px; font-weight: 700; color: var(--ink-mid);
-}
-.detail-extra > summary::-webkit-details-marker { display: none; }
-.detail-extra > summary::after { content: ' ›'; }
-.detail-extra[open] > summary::after { content: ' ⌄'; }
-.detail-extra-body { margin-top: 10px; }
-
 .cmp-method { margin-top: var(--sp-3); font-size: 11.5px; line-height: 1.6; color: var(--ink-faint); }
-.cmp-method-title { margin: 0 0 6px; font-size: 11.5px; font-weight: 800; color: var(--ink-muted); }
 .cmp-method p { margin: 0 0 7px; }
 .cmp-method ul { margin: 0 0 7px; padding-inline-start: 16px; }
 .cmp-method li { margin-bottom: 3px; }
@@ -7935,7 +7923,6 @@ body.pdf-mode .site-disclosure { display: block !important; }
   .cmp-box-value { font-size: 19px; }
 }
 @media print {
-  .detail-extra { display: none !important; }
   .cmp-section { margin-top: 8px !important; }
   .cmp-heading { font-size: 9px !important; margin-bottom: 5px !important; }
   .cmp-boxes { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 5px !important; }
@@ -8050,3 +8037,41 @@ body.pdf-mode .site-disclosure { display: block !important; }
   font-size: 13.5px; font-weight: 700; cursor: pointer; background: #fff; color: var(--ink);
 }
 .sim-mode-option:has(input:checked) { border-color: var(--accent); background: var(--line-soft, #f4f2ee); }
+
+/* === חלונות מידע בכרטיס המוצר ==================================== */
+.info-link {
+  display: inline-block; margin-top: 10px; padding: 0;
+  border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 700;
+  color: var(--accent); text-decoration: underline; text-underline-offset: 3px;
+}
+.info-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cmp-section .info-link { margin-top: 8px; }
+.info-dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md, 12px);
+  padding: 18px 20px 20px;
+  color: var(--ink);
+  background: #fff;
+  line-height: 1.55;
+  font-size: 14px;
+}
+.info-dialog::backdrop { background: rgba(11, 28, 44, 0.45); }
+.info-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.info-dialog-head h3 { margin: 0; font-size: 17px; }
+.info-dialog-sub { font-size: 12.5px; color: var(--ink-muted); margin-top: 2px; }
+.info-dialog-x {
+  flex: 0 0 auto; width: 32px; height: 32px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%; background: #fff;
+  font: inherit; font-size: 15px; font-weight: 700; line-height: 1;
+  color: var(--ink); cursor: pointer;
+}
+.info-dialog-x:hover { border-color: var(--accent); }
+.info-dialog-body .cmp-method { margin-top: 0; font-size: 13px; color: var(--ink); }
+.info-dialog-body .detail-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.info-dialog-close { display: block; width: 100%; margin-top: 16px; }
+@media print {
+  .info-link, .info-dialog { display: none !important; }
+}
