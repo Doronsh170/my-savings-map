@@ -213,7 +213,7 @@
 </section>
 
 
-<section class="details simulation-tab-section" id="simulationTabSection">
+<section class="details simulation-tab-section" id="simulationTabSection" style="display:none;">
   <div class="container">
     <details class="dashboard-toggle-section simulation-toggle-section" id="simulationDetails">
       <summary class="dashboard-toggle-summary">
@@ -312,12 +312,21 @@
 
 <dialog class="share-dialog" id="shareDialog" aria-labelledby="shareDialogTitle">
   <h3 id="shareDialogTitle">שליחה לווטסאפ</h3>
-  <p>אפשר לצרף להודעה קישור שפותח את התיק המלא בדשבורד.</p>
-  <p><strong>הקישור כולל את היתרות ודמי הניהול שהזנת. כל מי שמחזיק בקישור יוכל לצפות בהם.</strong> הוא עשוי להישמר גם בהיסטוריית הדפדפן ובשיחה.</p>
+  <p>בחרו מה לשתף. ההודעה נשלחת בווטסאפ ונשמרת בשיחה אצל כל מי שמקבל אותה.</p>
+  <fieldset class="share-modes" onchange="updateSharePreview()">
+    <legend class="visually-hidden">מה לשתף</legend>
+    <label class="share-mode"><input type="radio" name="shareMode" value="exposure" checked>
+      <span><strong>חשיפות בלבד</strong> — חשיפות, תשואות מסלולים ומשקל כל מוצר. <strong>בלי יתרות ובלי דמי ניהול.</strong></span></label>
+    <label class="share-mode"><input type="radio" name="shareMode" value="full">
+      <span><strong>סיכום מלא</strong> — כולל <strong>היתרות ודמי הניהול שהזנת</strong>, בתוך טקסט ההודעה.</span></label>
+    <label class="share-mode"><input type="radio" name="shareMode" value="link">
+      <span><strong>סיכום מלא וקישור לתיק</strong> — הקישור פותח את התיק בדשבורד. <strong>הקישור כולל את היתרות ודמי הניהול שהזנת. כל מי שמחזיק בקישור יוכל לצפות בהם.</strong> הוא עשוי להישמר גם בהיסטוריית הדפדפן.</span></label>
+  </fieldset>
+  <label class="share-preview-label" for="sharePreview">תצוגה מקדימה — זה הטקסט שיישלח:</label>
+  <textarea id="sharePreview" class="share-preview" rows="9" readonly dir="rtl"></textarea>
   <div class="share-dialog-actions">
-    <button type="button" class="action-btn" onclick="chooseShare(false)">שליחת סיכום בלי קישור לתיק</button>
-    <button type="button" class="action-btn" onclick="chooseShare(true)">שליחה עם קישור לתיק</button>
-    <button type="button" class="action-btn share-dialog-cancel" onclick="chooseShare(null)">ביטול</button>
+    <button type="button" class="action-btn" onclick="sendSelectedShare()">שליחה</button>
+    <button type="button" class="action-btn share-dialog-cancel" onclick="cancelShare()">ביטול</button>
   </div>
 </dialog>
 

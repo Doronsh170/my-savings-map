@@ -909,11 +909,16 @@ function renderDashboard() {
   const simulationResults = document.getElementById('simResultsBlock');
   if (simulationResults) simulationResults.hidden = true;
   const simulationTabSection = document.getElementById('simulationTabSection');
-  if (simulationTabSection) simulationTabSection.style.display = 'block';
+  if (simulationTabSection) simulationTabSection.style.display = SIMULATION_ENABLED ? 'block' : 'none';
   const bottomActions = document.getElementById('bottomActions');
   if (bottomActions) bottomActions.style.display = 'block';
   refreshSimulationDefaults();
 }
+
+/* הסימולציה כבויה בגרסה הציבורית עד שמקור סדרות התשואה ושנותיהן יתועדו
+   (ראה README, "הנחות הסימולציה"). תיקון הנוסחה אינו מבסס תוצאה על סדרות
+   שאי אפשר לאמת. הקוד נשאר; להחזרה משנים ל-true אחרי החלפת הסדרות. */
+const SIMULATION_ENABLED = false;
 
 /* סדרות התשואה של הסימולציה: 30 תשואות שנתיות באחוזים, ברוטו, לכל אחת
    משלוש רמות סיכון. שנה 1 בסימולציה מקבלת את הערך הראשון, שנה 2 את השני
@@ -1043,10 +1048,10 @@ function runHistoricalSimulation() {
   // - התשואה בסדרות היא תשואה שנתית מצטברת (ריבית דריבית), ולכן המרה
   //   גאומטרית: 12 חודשים מחזירים בדיוק את התשואה השנתית. חלוקה ב־12
   //   ניפחה אותה (35.83% בשנה הפכו ל־42.3%).
-  // - דמי ניהול מהצבירה הם שיעור שנתי שהגופים המוסדיים גובים מהיתרה
-  //   מדי חודש בשיעור של 1/12 ממנו. לכן חלוקה ב־12 היא ההגדרה עצמה, ולא
-  //   קירוב. (העלות האפקטיבית לשנה נמוכה במעט מהשיעור הנקוב, כי כל ניכוי
-  //   מקטין את הבסיס של הבא.)
+  // - דמי ניהול מהצבירה: הנחת המודל היא ששיעור שנתי נגבה מהיתרה מדי חודש
+  //   בשיעור של 1/12 ממנו. זו הנחת חישוב, לא טענה על שיטת הגבייה המדויקת
+  //   בכל מוצר; שיטות הגבייה בפועל לא אומתו. (בהנחה הזו העלות האפקטיבית
+  //   לשנה נמוכה במעט מהשיעור הנקוב, כי כל ניכוי מקטין את הבסיס של הבא.)
   const monthlyFee = (feePct / 100) / 12;
 
   for (let y = 0; y < years; y++) {
@@ -1586,7 +1591,14 @@ function applySharedPortfolioFromUrl() {
   OPEN_DASHBOARD_AFTER_INIT = true;
   if (missing > 0) alert(`${missing} מהמוצרים בקישור כבר אינם במאגר המעודכן ולא נטענו.`);
 }
-function buildShareText(includeLink) {
+/* שלוש רמות שיתוף, מהמצומצמת לרחבה. גם "סיכום מלא" בלי קישור שולח יתרות
+   ודמי ניהול בתוך ההודעה עצמה, ולכן ברירת המחדל היא חשיפות בלבד.
+   - exposure: חשיפות, תשואות מסלולים ומשקל כל מוצר. בלי סכומים ובלי דמי ניהול.
+   - full: כמו exposure, ובנוסף יתרות ודמי הניהול שהוזנו.
+   - link: כמו full, ובנוסף קישור שפותח את התיק בדשבורד. */
+const SHARE_MODES = ['exposure', 'full', 'link'];
+function buildShareText(mode) {
+  const withAmounts = mode === 'full' || mode === 'link';
   const totalBalance = getTotalBalance();
   const aggStock = weightedMetric('stock_pct', totalBalance);
   const aggForeign = weightedMetric('foreign_pct', totalBalance);
@@ -1596,19 +1608,19 @@ function buildShareText(includeLink) {
   const feeSavings = weightedUserManagementFee(totalBalance);
   const lines = [
     'דשבורד חשיפות חיסכון',
-    `יתרה כוללת שהוזנה: ${fmtCurrency(totalBalance)}`,
+    ...(withAmounts ? [`יתרה כוללת שהוזנה: ${fmtCurrency(totalBalance)}`] : []),
     `חשיפה למניות: ${fmtPct(aggStock, 1)}`,
     `חשיפה לחו״ל: ${fmtPct(aggForeign, 1)}`,
     `חשיפה למט״ח: ${fmtPct(aggFx, 1)}`,
     `נכסים סחירים: ${fmtPct(aggLiquid, 1)}`,
     `תשואה מתחילת שנה לפי מסלולים, משוקללת: ${fmtPct(perfYtd, 2)}`,
     `תשואה 3 שנים מצטברת לפי מסלולים, משוקללת: ${fmtPct(weightedMetric('yield_trailing_3yrs', totalBalance), 2)}`,
-    `דמי ניהול אישיים משוקללים: ${Number.isFinite(feeSavings) ? fmtPct(feeSavings, 2) : 'לא הוזן'}`,
+    ...(withAmounts ? [`דמי ניהול אישיים משוקללים: ${Number.isFinite(feeSavings) ? fmtPct(feeSavings, 2) : 'לא הוזן'}`] : []),
     `נתוני המסלולים נכונים לדיווח של ${fmtPeriodHebrew(DATASET_MAX_PERIOD)}`
   ];
   // הקישור לפני פירוט המוצרים: כשהטקסט ארוך מדי לווטסאפ מקצרים את הפירוט,
   // והקישור, שמשחזר את התיק המלא, חייב לשרוד.
-  const shareUrl = includeLink ? buildShareUrl() : '';
+  const shareUrl = mode === 'link' ? buildShareUrl() : '';
   if (shareUrl) lines.push('', `לפתיחת התיק המלא בדשבורד (הקישור כולל את היתרות ודמי הניהול): ${shareUrl}`);
   lines.push('', 'פירוט מוצרים:');
   const sorted = userFunds.slice().sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0));
@@ -1617,10 +1629,16 @@ function buildShareText(includeLink) {
     if (balance <= 0) continue;
     const f = item.fund;
     const weight = totalBalance > 0 ? balance / totalBalance * 100 : 0;
-    lines.push(`- ${SOURCE_LABEL[f.source]} | ${f.fund_name} | ${fmtCurrency(balance)} | משקל ${weight.toFixed(1)}% | מניות ${fmtPct(f.stock_pct, 1)} | חו״ל ${fmtPct(f.foreign_pct, 1)} | מט״ח ${fmtPct(f.fx_pct, 1)} | דמי ניהול ${fmtUserFee(item.managementFee)}`);
+    const parts = [SOURCE_LABEL[f.source], f.fund_name];
+    if (withAmounts) parts.push(fmtCurrency(balance));
+    parts.push(`משקל ${weight.toFixed(1)}%`, `מניות ${fmtPct(f.stock_pct, 1)}`, `חו״ל ${fmtPct(f.foreign_pct, 1)}`, `מט״ח ${fmtPct(f.fx_pct, 1)}`);
+    if (withAmounts) parts.push(`דמי ניהול ${fmtUserFee(item.managementFee)}`);
+    lines.push('- ' + parts.join(' | '));
   }
   lines.push('');
-  lines.push('הבהרה: הנתונים מבוססים על נתונים ציבוריים ויתרות שהוזנו ידנית. זה אינו ייעוץ או המלצה.');
+  lines.push(withAmounts
+    ? 'הבהרה: הנתונים מבוססים על נתונים ציבוריים ויתרות שהוזנו ידנית. זה אינו ייעוץ או המלצה.'
+    : 'הבהרה: הנתונים מבוססים על נתונים ציבוריים, משוקללים לפי יתרות שאינן מוצגות כאן. זה אינו ייעוץ או המלצה.');
   return lines.join('\n');
 }
 // Remembers which collapsible sections were open before printing, so the
@@ -1733,26 +1751,52 @@ function shareWhatsApp() {
   }
   const dialog = document.getElementById('shareDialog');
   if (dialog && typeof dialog.showModal === 'function') {
+    const def = dialog.querySelector('input[name="shareMode"][value="exposure"]');
+    if (def) def.checked = true;
+    updateSharePreview();
     dialog.showModal();
     return;
   }
-  sendWhatsApp(false);
+  sendWhatsApp('exposure');
 }
-function chooseShare(includeLink) {
+function selectedShareMode() {
+  const checked = document.querySelector('#shareDialog input[name="shareMode"]:checked');
+  return checked && SHARE_MODES.indexOf(checked.value) > -1 ? checked.value : 'exposure';
+}
+// שיתוף מקורי רק במכשירי מגע. במחשב navigator.share קיים בחלק
+// מהדפדפנים אך נכשל, והנפילה חזרה לפתיחת חלון קורית כבר אחרי ה-await —
+// כלומר בלי מחוות משתמש, ולכן נחסמת. במחשב ניגשים ישירות לווטסאפ.
+function useNativeShare() {
+  const touchDevice = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  return touchDevice && typeof navigator.share === 'function';
+}
+/* הטקסט שיישלח בפועל: בקישור לווטסאפ הוא עשוי להתקצר, והתצוגה המקדימה
+   מראה את הגרסה המקוצרת. */
+function shareTextToSend(mode) {
+  const text = buildShareText(mode);
+  return useNativeShare() ? text : fitShareTextForUrl(text);
+}
+function updateSharePreview() {
+  const preview = document.getElementById('sharePreview');
+  if (preview) preview.value = shareTextToSend(selectedShareMode());
+}
+function sendSelectedShare() {
+  const dialog = document.getElementById('shareDialog');
+  const mode = selectedShareMode();
+  if (dialog && dialog.open) dialog.close();
+  sendWhatsApp(mode);
+}
+function cancelShare() {
   const dialog = document.getElementById('shareDialog');
   if (dialog && dialog.open) dialog.close();
-  if (includeLink === null) return;
-  sendWhatsApp(includeLink);
 }
-window.chooseShare = chooseShare;
-function sendWhatsApp(includeLink) {
-  const text = buildShareText(includeLink);
+window.updateSharePreview = updateSharePreview;
+window.sendSelectedShare = sendSelectedShare;
+window.cancelShare = cancelShare;
+function sendWhatsApp(mode) {
+  const text = shareTextToSend(mode);
   const url = buildWhatsAppUrl(text);
-  // שיתוף מקורי רק במכשירי מגע. במחשב navigator.share קיים בחלק
-  // מהדפדפנים אך נכשל, והנפילה חזרה לפתיחת חלון קורית כבר אחרי ה-await —
-  // כלומר בלי מחוות משתמש, ולכן נחסמת. במחשב ניגשים ישירות לווטסאפ.
-  const touchDevice = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
-  if (touchDevice && typeof navigator.share === 'function') {
+  if (useNativeShare()) {
     navigator.share({ title: 'דשבורד חשיפות חיסכון', text }).catch(error => {
       if (error && error.name === 'AbortError') return;
       // ניווט בטאב הנוכחי אינו נחסם גם ללא מחוות משתמש.
