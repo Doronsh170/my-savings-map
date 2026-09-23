@@ -609,6 +609,8 @@ function fmtUserFee(value) {
   return Number.isFinite(value) ? value.toFixed(2) + '%' : 'לא הוזן';
 }
 function saveState() {
+  // בתצוגת תיק ששותף שינויים נשארים בזיכרון בלבד, עד "שמירה בדפדפן".
+  if (SHARED_VIEW) return;
   const minimal = userFunds.map(item => ({
     uid: item.fund.uid,
     fund_name: item.fund.fund_name || '',
@@ -696,18 +698,72 @@ function renderFunds() {
   renderDashboard();
 }
 
-function weightedMetric(key, totalBalance) {
+/* נתון חסר במאגר (null) אינו אפס: Number(null) הוא 0, ולכן קופה בלי נתון
+   הייתה נספרת כקופה עם 0% מניות ומושכת את הממוצע כלפי מטה. הממוצע נשקל
+   רק על החלק בתיק שיש לו נתון, והחלק הזה מוצג למשתמש כשיעור כיסוי. */
+function fundMetricValue(fund, key) {
+  const raw = fund[key];
+  if (raw === null || raw === undefined || raw === '') return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+/* תשואה חודשית, מתחילת השנה ול־3 שנים נמדדת עד חודש הדיווח של המסלול.
+   ממוצע של תשואות מתקופות שונות אינו תשואה של תקופה כלשהי, ולכן במדדי
+   התשואה נספרים רק מסלולים שדיווחו על החודש העדכני במאגר; כל השאר נספרים
+   כחסרים ומופיעים בשיעור הכיסוי. זה מחמיר מ־is_stale (פיגור של יותר
+   משלושה חודשים): גם פיגור של חודש אחד מוציא מהתשואה. חשיפות משתנות לאט
+   ונשארות בחישוב. */
+function isCurrentPeriod(fund) {
+  return Number(fund.report_period) === Number(DATASET_MAX_PERIOD);
+}
+const PERIOD_BOUND_METRICS = { monthly_yield: 1, ytd_yield: 1, yield_trailing_3yrs: 1 };
+function weightedMetricInfo(key) {
+  let total = 0;
   let covered = 0;
   let sum = 0;
   for (const item of userFunds) {
     const balance = Number(item.balance) || 0;
-    const value = Number(item.fund[key]);
-    if (balance > 0 && Number.isFinite(value)) {
-      covered += balance;
-      sum += balance * value;
-    }
+    if (balance <= 0) continue;
+    total += balance;
+    if (PERIOD_BOUND_METRICS[key] && !isCurrentPeriod(item.fund)) continue;
+    const value = fundMetricValue(item.fund, key);
+    if (value === null) continue;
+    covered += balance;
+    sum += balance * value;
   }
-  return covered > 0 ? sum / covered : null;
+  return {
+    value: covered > 0 ? sum / covered : null,
+    coveredPct: total > 0 ? covered / total * 100 : 0
+  };
+}
+function weightedMetric(key, totalBalance) {
+  return weightedMetricInfo(key).value;
+}
+const COVERAGE_LABELS = [
+  ['stock_pct', 'חשיפה למניות'], ['foreign_pct', 'חשיפה לחו״ל'], ['fx_pct', 'חשיפה למט״ח'],
+  ['liquid_pct', 'נכסים סחירים'], ['monthly_yield', 'תשואה חודשית'], ['ytd_yield', 'תשואה מתחילת השנה'],
+  ['yield_trailing_3yrs', 'תשואה ל־3 שנים']
+];
+/* שורת עדכניות וכיסוי בראש הדוח: מתי עודכן המאגר, איזה חלק מהתיק במסלולים
+   שהפסיקו לדווח, ולאיזה חלק מהתיק חסר כל נתון. */
+function renderCoverageNote(activeItems, totalBalance) {
+  const el = document.getElementById('coverageNote');
+  if (!el) return;
+  const lines = [`נתוני המסלולים נכונים לדיווח של ${fmtPeriodHebrew(DATASET_MAX_PERIOD)}.`];
+  const laggingBalance = activeItems.filter(item => !isCurrentPeriod(item.fund))
+    .reduce((sum, item) => sum + (Number(item.balance) || 0), 0);
+  if (laggingBalance > 0) {
+    lines.push(`${(laggingBalance / totalBalance * 100).toFixed(0)}% מהתיק במסלולים שעוד לא דיווחו על ${fmtPeriodHebrew(DATASET_MAX_PERIOD)}. הם נכללים בחשיפות, אך לא בתשואות, כדי לא לערבב תקופות.`);
+  }
+  const partial = COVERAGE_LABELS
+    .map(([key, label]) => [label, weightedMetricInfo(key).coveredPct])
+    .filter(([, pct]) => pct < 99.95);
+  if (partial.length) {
+    lines.push('חישוב על חלק מהתיק בלבד, כי למסלולים האחרים אין נתון תקף: '
+      + partial.map(([label, pct]) => `${label} — ${pct.toFixed(0)}% מהתיק`).join(' · ') + '.');
+  }
+  el.innerHTML = lines.map(line => `<span>${escapeHtml(line)}</span>`).join(' ');
+  el.classList.toggle('coverage-warn', lines.length > 1);
 }
 function weightedUserManagementFee(totalBalance) {
   let sum = 0;
@@ -764,6 +820,7 @@ function renderDashboard() {
   const feeSavings = weightedUserManagementFee(totalBalance);
 
   document.getElementById('totalBalance').textContent = fmtCurrency(totalBalance);
+  renderCoverageNote(activeItems, totalBalance);
   setMetric('aggStock', aggStock, 1);
   setMetric('aggForeign', aggForeign, 1);
   setMetric('aggFx', aggFx, 1);
@@ -823,6 +880,7 @@ function renderDashboard() {
           <div class="detail-card-head">
             <h4 class="detail-card-name"><span class="source-tag ${escapeHtml(f.source)}">${SOURCE_LABEL[f.source]}</span> ${escapeHtml(f.fund_name)}</h4>
             <span class="detail-card-balance">${fmtCurrency(balance)}</span>
+            <button type="button" class="row-edit-btn" data-edit-uid="${escapeHtml(f.uid)}" aria-label="עריכת היתרה ודמי הניהול של ${escapeHtml(f.fund_name)}">עריכה</button>
             <button type="button" class="row-remove-btn" data-remove-uid="${escapeHtml(f.uid)}" title="הסרת המוצר מהדוח" aria-label="הסרת ${escapeHtml(f.fund_name)} מהדוח">✕</button>
           </div>
           <div class="detail-weight">
@@ -851,12 +909,22 @@ function renderDashboard() {
   const simulationResults = document.getElementById('simResultsBlock');
   if (simulationResults) simulationResults.hidden = true;
   const simulationTabSection = document.getElementById('simulationTabSection');
-  if (simulationTabSection) simulationTabSection.style.display = 'block';
+  if (simulationTabSection) simulationTabSection.style.display = SIMULATION_ENABLED ? 'block' : 'none';
   const bottomActions = document.getElementById('bottomActions');
   if (bottomActions) bottomActions.style.display = 'block';
   refreshSimulationDefaults();
 }
 
+/* הסימולציה כבויה בגרסה הציבורית עד שמקור סדרות התשואה ושנותיהן יתועדו
+   (ראה README, "הנחות הסימולציה"). תיקון הנוסחה אינו מבסס תוצאה על סדרות
+   שאי אפשר לאמת. הקוד נשאר; להחזרה משנים ל-true אחרי החלפת הסדרות. */
+const SIMULATION_ENABLED = false;
+
+/* סדרות התשואה של הסימולציה: 30 תשואות שנתיות באחוזים, ברוטו, לכל אחת
+   משלוש רמות סיכון. שנה 1 בסימולציה מקבלת את הערך הראשון, שנה 2 את השני
+   וכן הלאה; הסימולציה מוגבלת ל־30 שנה, ולכן אין מחזור.
+   ⚠ חסר תיעוד: מקור הסדרות ואילו שנים קלנדריות הן מייצגות. הן הגיעו לריפו
+   בלי הערה (קומיט a24a5e9). עד שיתועד — ראה README, "הנחות הסימולציה". */
 const SIM_RAW_YIELDS = {
   low:    [22.66, 6.42, 13.62, 15.60, 0.18, 9.39, 1.67, 5.01, 6.11, 5.12, 3.33, 5.27, 8.12, -0.30, -0.37, 7.07, 10.05, 5.98, 0.61, 9.16, 1.05, 2.83, 6.99, -0.06, 13.25, 10.47, 3.05, -13.89, 8.60, 5.03],
   medium: [30.82, 14.37, 23.60, 22.47, 9.89, 0.71, -4.99, -7.81, 17.20, 8.09, 4.06, 10.29, 6.78, -14.72, 11.58, 11.81, 6.85, 10.61, 15.11, 11.89, 1.21, 7.30, 14.10, -2.55, 22.29, 14.80, 15.54, -16.96, 17.26, 14.61],
@@ -976,11 +1044,19 @@ function runHistoricalSimulation() {
   let growthIndex = 1;
   // מקדם השחיקה המצטבר של האינפלציה.
   let priceIndex = 1;
+  // תשואה ודמי ניהול מומרים לחודש בשיטות שונות, כי הם מוגדרים אחרת:
+  // - התשואה בסדרות היא תשואה שנתית מצטברת (ריבית דריבית), ולכן המרה
+  //   גאומטרית: 12 חודשים מחזירים בדיוק את התשואה השנתית. חלוקה ב־12
+  //   ניפחה אותה (35.83% בשנה הפכו ל־42.3%).
+  // - דמי ניהול מהצבירה: הנחת המודל היא ששיעור שנתי נגבה מהיתרה מדי חודש
+  //   בשיעור של 1/12 ממנו. זו הנחת חישוב, לא טענה על שיטת הגבייה המדויקת
+  //   בכל מוצר; שיטות הגבייה בפועל לא אומתו. (בהנחה הזו העלות האפקטיבית
+  //   לשנה נמוכה במעט מהשיעור הנקוב, כי כל ניכוי מקטין את הבסיס של הבא.)
   const monthlyFee = (feePct / 100) / 12;
 
   for (let y = 0; y < years; y++) {
     const annualYield = simAnnualYield(y, stockPct) / 100;
-    const monthlyYield = annualYield / 12;
+    const monthlyYield = Math.pow(1 + annualYield, 1 / 12) - 1;
     for (let m = 0; m < 12; m++) {
       amount += amount * monthlyYield;
       amount -= amount * monthlyFee;
@@ -1401,7 +1477,128 @@ function getTotalBalance() {
 function hasReportData() {
   return userFunds.length > 0 && getTotalBalance() > 0;
 }
-function buildShareText() {
+/* === שיתוף תיק בקישור ===
+   התיק מקודד בחלק ה-# של הכתובת: הדפדפן אינו שולח אותו לשרת, והאתר נשאר
+   בלי שרת ובלי אחסון. הקישור מכיל את אותן יתרות שמופיעות ממילא בטקסט
+   המשותף. פורמט: [[uid, יתרה, דמי ניהול, דמי ניהול מהפקדה], ...]. */
+const SHARE_HASH_KEY = 'p';
+function encodeSharedPortfolio() {
+  const rows = userFunds
+    .filter(item => (Number(item.balance) || 0) > 0)
+    .map(item => {
+      const row = [item.fund.uid, Math.round(Number(item.balance) || 0)];
+      const fee = Number.isFinite(item.managementFee) ? item.managementFee : null;
+      const depositFee = Number.isFinite(item.depositFee) ? item.depositFee : null;
+      if (fee !== null || depositFee !== null) row.push(fee);
+      if (depositFee !== null) row.push(depositFee);
+      return row;
+    });
+  const bytes = new TextEncoder().encode(JSON.stringify(rows));
+  let binary = '';
+  bytes.forEach(b => { binary += String.fromCharCode(b); });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decodeSharedPortfolio(code) {
+  const base64 = code.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(base64 + '==='.slice((base64.length + 3) % 4));
+  const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+  const rows = JSON.parse(new TextDecoder().decode(bytes));
+  if (!Array.isArray(rows)) throw new Error('bad share payload');
+  return rows;
+}
+function buildShareUrl() {
+  if (!window.location || !window.location.href) return '';
+  const base = window.location.href.split('#')[0];
+  try {
+    return base + '#' + SHARE_HASH_KEY + '=' + encodeSharedPortfolio();
+  } catch (error) {
+    return base;
+  }
+}
+/* קישור ששותף נפתח כתצוגה נפרדת: התיק שבקישור מוצג, אבל אינו נכתב
+   לדפדפן ואינו נוגע בתיק השמור. שמירה קורית רק בלחיצה מפורשת. */
+let OPEN_DASHBOARD_AFTER_INIT = false;
+let SHARED_VIEW = false;
+function renderSharedViewBanner() {
+  const banner = document.getElementById('sharedViewBanner');
+  if (banner) banner.hidden = !SHARED_VIEW;
+}
+function saveSharedPortfolio() {
+  if (!SHARED_VIEW) return;
+  let hasSaved = false;
+  try { hasSaved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').length > 0; } catch (e) { hasSaved = false; }
+  if (hasSaved && !window.confirm('בדפדפן הזה כבר שמור תיק. לשמור את התיק ששותף במקומו? התיק הקודם יימחק.')) return;
+  SHARED_VIEW = false;
+  missingSavedFunds = [];
+  saveState();
+  renderSharedViewBanner();
+}
+function closeSharedPortfolio() {
+  if (!SHARED_VIEW) return;
+  SHARED_VIEW = false;
+  loadState();
+  renderSharedViewBanner();
+  renderMissingFunds();
+  renderFunds();
+  if (getTotalBalance() <= 0) {
+    document.body.classList.remove('dashboard-reached');
+    wizReset();
+    wizScrollIntoView();
+  }
+}
+window.saveSharedPortfolio = saveSharedPortfolio;
+window.closeSharedPortfolio = closeSharedPortfolio;
+function applySharedPortfolioFromUrl() {
+  const hash = String(window.location.hash || '').replace(/^#/, '');
+  const match = hash.match(new RegExp('(?:^|&)' + SHARE_HASH_KEY + '=([A-Za-z0-9_-]+)'));
+  if (!match) return;
+  const clearHash = () => {
+    try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { /* ignore */ }
+  };
+  let rows;
+  try {
+    rows = decodeSharedPortfolio(match[1]);
+  } catch (error) {
+    clearHash();
+    alert('הקישור ששותף אינו תקין, ולכן התיק לא נטען.');
+    return;
+  }
+  const incoming = [];
+  let missing = 0;
+  for (const row of rows) {
+    if (!Array.isArray(row)) continue;
+    const rec = DATA.find(r => r.uid === row[0]);
+    const balance = Math.max(0, Number(row[1]) || 0);
+    if (!rec) { missing++; continue; }
+    if (balance <= 0) continue;
+    incoming.push({
+      fund: withRuntimeFlags(rec),
+      balance,
+      managementFee: normalizeUserFee(row[2]),
+      depositFee: normalizeUserFee(row[3]),
+      updated_at: new Date().toISOString()
+    });
+  }
+  clearHash();
+  if (!incoming.length) {
+    alert('לא נמצאו בקישור מוצרים שקיימים במאגר הנוכחי.');
+    return;
+  }
+  SHARED_VIEW = true;
+  userFunds = incoming;
+  missingSavedFunds = [];
+  renderSharedViewBanner();
+  OPEN_DASHBOARD_AFTER_INIT = true;
+  if (missing > 0) alert(`${missing} מהמוצרים בקישור כבר אינם במאגר המעודכן ולא נטענו.`);
+}
+/* שלוש רמות שיתוף, מהמצומצמת לרחבה. גם "סיכום מלא" בלי קישור שולח יתרות
+   ודמי ניהול בתוך ההודעה עצמה, ולכן ברירת המחדל היא חשיפות בלבד.
+   - exposure: חשיפות, תשואות מסלולים ומשקל כל מוצר. בלי סכומים ובלי דמי ניהול.
+   - full: כמו exposure, ובנוסף יתרות ודמי הניהול שהוזנו.
+   - link: כמו full, ובנוסף קישור שפותח את התיק בדשבורד. */
+const SHARE_MODES = ['exposure', 'full', 'link'];
+function buildShareText(mode) {
+  const withAmounts = mode === 'full' || mode === 'link';
   const totalBalance = getTotalBalance();
   const aggStock = weightedMetric('stock_pct', totalBalance);
   const aggForeign = weightedMetric('foreign_pct', totalBalance);
@@ -1411,28 +1608,37 @@ function buildShareText() {
   const feeSavings = weightedUserManagementFee(totalBalance);
   const lines = [
     'דשבורד חשיפות חיסכון',
-    `יתרה כוללת שהוזנה: ${fmtCurrency(totalBalance)}`,
+    ...(withAmounts ? [`יתרה כוללת שהוזנה: ${fmtCurrency(totalBalance)}`] : []),
     `חשיפה למניות: ${fmtPct(aggStock, 1)}`,
     `חשיפה לחו״ל: ${fmtPct(aggForeign, 1)}`,
     `חשיפה למט״ח: ${fmtPct(aggFx, 1)}`,
     `נכסים סחירים: ${fmtPct(aggLiquid, 1)}`,
     `תשואה מתחילת שנה לפי מסלולים, משוקללת: ${fmtPct(perfYtd, 2)}`,
     `תשואה 3 שנים מצטברת לפי מסלולים, משוקללת: ${fmtPct(weightedMetric('yield_trailing_3yrs', totalBalance), 2)}`,
-    `דמי ניהול אישיים משוקללים: ${Number.isFinite(feeSavings) ? fmtPct(feeSavings, 2) : 'לא הוזן'}`,
-    '',
-    'פירוט מוצרים:'
+    ...(withAmounts ? [`דמי ניהול אישיים משוקללים: ${Number.isFinite(feeSavings) ? fmtPct(feeSavings, 2) : 'לא הוזן'}`] : []),
+    `נתוני המסלולים נכונים לדיווח של ${fmtPeriodHebrew(DATASET_MAX_PERIOD)}`
   ];
+  // הקישור לפני פירוט המוצרים: כשהטקסט ארוך מדי לווטסאפ מקצרים את הפירוט,
+  // והקישור, שמשחזר את התיק המלא, חייב לשרוד.
+  const shareUrl = mode === 'link' ? buildShareUrl() : '';
+  if (shareUrl) lines.push('', `לפתיחת התיק המלא בדשבורד (הקישור כולל את היתרות ודמי הניהול): ${shareUrl}`);
+  lines.push('', 'פירוט מוצרים:');
   const sorted = userFunds.slice().sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0));
   for (const item of sorted) {
     const balance = Number(item.balance) || 0;
     if (balance <= 0) continue;
     const f = item.fund;
     const weight = totalBalance > 0 ? balance / totalBalance * 100 : 0;
-    lines.push(`- ${SOURCE_LABEL[f.source]} | ${f.fund_name} | ${fmtCurrency(balance)} | משקל ${weight.toFixed(1)}% | מניות ${fmtPct(f.stock_pct, 1)} | חו״ל ${fmtPct(f.foreign_pct, 1)} | מט״ח ${fmtPct(f.fx_pct, 1)} | דמי ניהול ${fmtUserFee(item.managementFee)}`);
+    const parts = [SOURCE_LABEL[f.source], f.fund_name];
+    if (withAmounts) parts.push(fmtCurrency(balance));
+    parts.push(`משקל ${weight.toFixed(1)}%`, `מניות ${fmtPct(f.stock_pct, 1)}`, `חו״ל ${fmtPct(f.foreign_pct, 1)}`, `מט״ח ${fmtPct(f.fx_pct, 1)}`);
+    if (withAmounts) parts.push(`דמי ניהול ${fmtUserFee(item.managementFee)}`);
+    lines.push('- ' + parts.join(' | '));
   }
   lines.push('');
-  lines.push('הבהרה: הנתונים מבוססים על נתונים ציבוריים ויתרות שהוזנו ידנית. זה אינו ייעוץ או המלצה.');
-  if (window.location && window.location.href) lines.push(`קישור לדשבורד: ${window.location.href}`);
+  lines.push(withAmounts
+    ? 'הבהרה: הנתונים מבוססים על נתונים ציבוריים ויתרות שהוזנו ידנית. זה אינו ייעוץ או המלצה.'
+    : 'הבהרה: הנתונים מבוססים על נתונים ציבוריים, משוקללים לפי יתרות שאינן מוצגות כאן. זה אינו ייעוץ או המלצה.');
   return lines.join('\n');
 }
 // Remembers which collapsible sections were open before printing, so the
@@ -1535,18 +1741,62 @@ function openShareUrl(url) {
   try { win.opener = null; } catch (error) { /* חלון חוצה-מקור — אין מה לנקות */ }
   return true;
 }
+/* לפני שיתוף: הקישור לתיק מכיל את היתרות ודמי הניהול, וכל מי שמחזיק בו
+   יכול לקרוא אותם. המשתמש בוחר במפורש אם לצרף אותו. הבחירה נעשית
+   בלחיצה בתוך הדף, כך שפתיחת ווטסאפ נשארת מחוות משתמש ואינה נחסמת. */
 function shareWhatsApp() {
   if (!hasReportData()) {
     alert('כדי לשלוח לווטסאפ צריך להוסיף לפחות מוצר אחד ולהזין יתרה.');
     return;
   }
-  const text = buildShareText();
-  const url = buildWhatsAppUrl(text);
-  // שיתוף מקורי רק במכשירי מגע. במחשב navigator.share קיים בחלק
-  // מהדפדפנים אך נכשל, והנפילה חזרה לפתיחת חלון קורית כבר אחרי ה-await —
-  // כלומר בלי מחוות משתמש, ולכן נחסמת. במחשב ניגשים ישירות לווטסאפ.
+  const dialog = document.getElementById('shareDialog');
+  if (dialog && typeof dialog.showModal === 'function') {
+    const def = dialog.querySelector('input[name="shareMode"][value="exposure"]');
+    if (def) def.checked = true;
+    updateSharePreview();
+    dialog.showModal();
+    return;
+  }
+  sendWhatsApp('exposure');
+}
+function selectedShareMode() {
+  const checked = document.querySelector('#shareDialog input[name="shareMode"]:checked');
+  return checked && SHARE_MODES.indexOf(checked.value) > -1 ? checked.value : 'exposure';
+}
+// שיתוף מקורי רק במכשירי מגע. במחשב navigator.share קיים בחלק
+// מהדפדפנים אך נכשל, והנפילה חזרה לפתיחת חלון קורית כבר אחרי ה-await —
+// כלומר בלי מחוות משתמש, ולכן נחסמת. במחשב ניגשים ישירות לווטסאפ.
+function useNativeShare() {
   const touchDevice = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
-  if (touchDevice && typeof navigator.share === 'function') {
+  return touchDevice && typeof navigator.share === 'function';
+}
+/* הטקסט שיישלח בפועל: בקישור לווטסאפ הוא עשוי להתקצר, והתצוגה המקדימה
+   מראה את הגרסה המקוצרת. */
+function shareTextToSend(mode) {
+  const text = buildShareText(mode);
+  return useNativeShare() ? text : fitShareTextForUrl(text);
+}
+function updateSharePreview() {
+  const preview = document.getElementById('sharePreview');
+  if (preview) preview.value = shareTextToSend(selectedShareMode());
+}
+function sendSelectedShare() {
+  const dialog = document.getElementById('shareDialog');
+  const mode = selectedShareMode();
+  if (dialog && dialog.open) dialog.close();
+  sendWhatsApp(mode);
+}
+function cancelShare() {
+  const dialog = document.getElementById('shareDialog');
+  if (dialog && dialog.open) dialog.close();
+}
+window.updateSharePreview = updateSharePreview;
+window.sendSelectedShare = sendSelectedShare;
+window.cancelShare = cancelShare;
+function sendWhatsApp(mode) {
+  const text = shareTextToSend(mode);
+  const url = buildWhatsAppUrl(text);
+  if (useNativeShare()) {
     navigator.share({ title: 'דשבורד חשיפות חיסכון', text }).catch(error => {
       if (error && error.name === 'AbortError') return;
       // ניווט בטאב הנוכחי אינו נחסם גם ללא מחוות משתמש.
@@ -1569,6 +1819,7 @@ function goToDashboard() {
   if (dashboard) dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function resetAllData() {
+  if (SHARED_VIEW) { closeSharedPortfolio(); return; }
   const hasData = userFunds.length > 0 || localStorage.getItem(STORAGE_KEY);
   if (!hasData) {
     prepareAnotherFund();
@@ -1600,6 +1851,8 @@ function findUserFundIndex(uid) {
    הפונקציות כאן נשארו כנקודות כניסה חיצוניות ומנתבות לאשף. */
 function openQuickEditor(fund) {
   if (!fund) return;
+  // בתצוגת הדשבורד האשף מוסתר; עריכה מתוך הדוח חייבת להחזיר אותו.
+  document.body.classList.remove('dashboard-reached');
   WIZ_FOCUS_FIELD = '';
   const brand = fund._brand || brandOf(fund);
   wizSet({ step: 'balance', pickUid: fund.uid, company: brand || wizard.company, product: fund._product || productOf(fund) });
@@ -1613,6 +1866,14 @@ function prepareAnotherFund() {
   wizScrollIntoView();
 }
 window.prepareAnotherFund = prepareAnotherFund;
+/* "עריכת יתרות" בראש הדשבורד פותחת את פירוט המוצרים, שבו לכל מוצר כפתור עריכה. */
+function openProductDetails() {
+  const section = document.querySelector('.details-toggle-section');
+  if (!section) return;
+  section.open = true;
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.openProductDetails = openProductDetails;
 window.openQuickEditor = openQuickEditor;
 window.commitQuickUpdate = commitQuickUpdate;
 window.removeCurrentQuickFund = removeCurrentQuickFund;
@@ -1673,6 +1934,12 @@ function removeFundByUid(uid) {
     wizScrollIntoView();
   }
 }
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('[data-edit-uid]');
+  if (!trigger) return;
+  const idx = findUserFundIndex(trigger.getAttribute('data-edit-uid'));
+  if (idx >= 0) openQuickEditor(userFunds[idx].fund);
+});
 document.addEventListener('click', event => {
   const trigger = event.target.closest('[data-remove-uid]');
   if (!trigger) return;
@@ -2075,7 +2342,7 @@ function wizScreenBalance() {
       </span>
     </label>` : ''}
     <div class="wiz-cta-bar">
-      <button type="button" class="wiz-cta" data-wiz="commit">הוסף לתיק</button>
+      <button type="button" class="wiz-cta" data-wiz="commit">${existing ? 'עדכן בתיק' : 'הוסף לתיק'}</button>
       ${existing ? '<button type="button" class="wiz-cta-ghost" data-wiz="removePicked">הסר מהתיק</button>' : ''}
     </div>`;
 }
@@ -2316,12 +2583,26 @@ function wizScrollIntoView() {
     DATASET_MAX_PERIOD = META.dataset_max_period || Math.max(...DATA.map(x => Number(x.report_period) || 0));
     document.getElementById('loadingState').style.display = 'none';
     renderDatasetMeta();
-    loadState();
-    renderMissingFunds();
+    // האינדקסים קודם: loadState מעתיק כל רשומה (withRuntimeFlags), ועותק שנוצר
+    // לפני שהשדות הנגזרים (_product, _cmpCategory...) נכתבו לרשומה נשאר בלעדיהם —
+    // וכך ההשוואה למסלולים דומים נעלמה אחרי כל רענון.
     buildWizardIndexes();
     buildComparisonIndexes();
+    loadState();
+    applySharedPortfolioFromUrl();
+    renderMissingFunds();
     wizRender();
     renderFunds();
+    if (OPEN_DASHBOARD_AFTER_INIT) goToDashboard();
+    // קישור ששותף שנפתח בלשונית שהאתר כבר פתוח בה משנה רק את ה-#, בלי טעינה.
+    window.addEventListener('hashchange', () => {
+      OPEN_DASHBOARD_AFTER_INIT = false;
+      applySharedPortfolioFromUrl();
+      if (!OPEN_DASHBOARD_AFTER_INIT) return;
+      renderMissingFunds();
+      renderFunds();
+      goToDashboard();
+    });
   } catch (error) {
     document.getElementById('loadingState').textContent = 'שגיאה בטעינת הנתונים: ' + error.message;
     console.error(error);

@@ -107,8 +107,20 @@
       <div class="pdf-report-title">דוח חשיפות חיסכון פנסיוני</div>
       <div class="pdf-report-date">נכון לתאריך <span id="pdfGenDate"></span></div>
     </div>
+    <div class="shared-view-banner" id="sharedViewBanner" hidden>
+      <p><strong>זה תיק ששותף איתך בקישור.</strong> הוא מוצג בלבד ואינו נשמר בדפדפן הזה. התיק השמור שלך, אם יש כזה, לא השתנה.</p>
+      <div class="shared-view-actions">
+        <button type="button" class="action-btn" onclick="saveSharedPortfolio()">שמירת התיק בדפדפן הזה</button>
+        <button type="button" class="action-btn" onclick="closeSharedPortfolio()">סגירה וחזרה לתיק שלי</button>
+      </div>
+    </div>
     <h2>דשבורד מצרפי</h2>
     <div class="subtitle">החישוב משוקלל לפי היתרות שהוזנו לכל מוצר</div>
+    <div class="perf-note coverage-note" id="coverageNote"></div>
+    <div class="dashboard-edit-actions">
+      <button type="button" class="action-btn" onclick="prepareAnotherFund()">+ הוספת מוצר</button>
+      <button type="button" class="action-btn" onclick="openProductDetails()">עריכת יתרות ודמי ניהול</button>
+    </div>
 
     <div class="total-row">
       <div>
@@ -201,7 +213,7 @@
 </section>
 
 
-<section class="details simulation-tab-section" id="simulationTabSection">
+<section class="details simulation-tab-section" id="simulationTabSection" style="display:none;">
   <div class="container">
     <details class="dashboard-toggle-section simulation-toggle-section" id="simulationDetails">
       <summary class="dashboard-toggle-summary">
@@ -297,6 +309,26 @@
     </div>
   </div>
 </section>
+
+<dialog class="share-dialog" id="shareDialog" aria-labelledby="shareDialogTitle">
+  <h3 id="shareDialogTitle">שליחה לווטסאפ</h3>
+  <p>בחרו מה לשתף. ההודעה נשלחת בווטסאפ ונשמרת בשיחה אצל כל מי שמקבל אותה.</p>
+  <fieldset class="share-modes" onchange="updateSharePreview()">
+    <legend class="visually-hidden">מה לשתף</legend>
+    <label class="share-mode"><input type="radio" name="shareMode" value="exposure" checked>
+      <span><strong>חשיפות בלבד</strong> — חשיפות, תשואות מסלולים ומשקל כל מוצר. <strong>בלי יתרות ובלי דמי ניהול.</strong></span></label>
+    <label class="share-mode"><input type="radio" name="shareMode" value="full">
+      <span><strong>סיכום מלא</strong> — כולל <strong>היתרות ודמי הניהול שהזנת</strong>, בתוך טקסט ההודעה.</span></label>
+    <label class="share-mode"><input type="radio" name="shareMode" value="link">
+      <span><strong>סיכום מלא וקישור לתיק</strong> — הקישור פותח את התיק בדשבורד. <strong>הקישור כולל את היתרות ודמי הניהול שהזנת. כל מי שמחזיק בקישור יוכל לצפות בהם.</strong> הוא עשוי להישמר גם בהיסטוריית הדפדפן.</span></label>
+  </fieldset>
+  <label class="share-preview-label" for="sharePreview">תצוגה מקדימה — זה הטקסט שיישלח:</label>
+  <textarea id="sharePreview" class="share-preview" rows="9" readonly dir="rtl"></textarea>
+  <div class="share-dialog-actions">
+    <button type="button" class="action-btn" onclick="sendSelectedShare()">שליחה</button>
+    <button type="button" class="action-btn share-dialog-cancel" onclick="cancelShare()">ביטול</button>
+  </div>
+</dialog>
 
 <div class="pdf-disclaimer" aria-hidden="true">הבהרה: הנתונים בדוח זה מבוססים על נתונים ציבוריים מהמאגר ועל יתרות שהוזנו ידנית. תשואות המסלולים הן ציבוריות ואינן משקפות את התשואה האישית בפועל. הדוח נועד למידע כללי בלבד ואינו מהווה ייעוץ פנסיוני, ייעוץ השקעות, שיווק פנסיוני, תחזית או המלצה.</div>
 
