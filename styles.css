@@ -8374,3 +8374,21 @@ body.pdf-mode .site-disclosure { display: block !important; }
   .product-detail > .product-note { display: none !important; }
   .print-only .product-note { font-size: 8.5px !important; margin: 2px 0 !important; }
 }
+
+/* חץ פתיחה/סגירה בכל שורת מוצר: למטה כשסגור, למעלה כשפתוח. */
+.product-chev {
+  flex: 0 0 auto; align-self: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg-soft, #f5f7fa); position: relative;
+}
+.product-chev::before {
+  content: ''; position: absolute; top: 50%; left: 50%; width: 7px; height: 7px;
+  border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+  transform: translate(-50%, -70%) rotate(45deg); transition: transform .15s ease;
+}
+.product.is-open .product-chev::before { transform: translate(-50%, -30%) rotate(-135deg); }
+.product-yield-value { min-width: 76px; padding: 0 2px; font-size: 15px; font-weight: 700; text-align: left; direction: ltr; }
+@media print { .product-chev { display: none !important; } }
+/* החץ צר, בלי עיגול רקע — כדי שלא ידחוק את שם המוצר לשתי שורות במובייל. */
+.product-chev { width: 16px; height: 24px; background: none; border-radius: 0; margin-inline-start: -4px; }
+.product-row { gap: 8px; }
+.product-title { font-size: 14px; }

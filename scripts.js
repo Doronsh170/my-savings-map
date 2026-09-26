@@ -839,11 +839,20 @@ function productDetailHtml(item, cmp) {
         ${feeInputHtml(item, row.field, row.label)}
         ${row.peer ? `<span class="product-fee-avg">ממוצע ${fmtCmp(row.peer.peers, 2)}</span>` : ''}
       </div>`).join('');
+  // תשואה 3 שנים מול הממוצע — יחד עם דמי הניהול, שני המספרים שהמשתמש בא לראות.
+  const yieldRow = cmp && cmp.rows.find(row => row.key === 'yield');
+  const yieldValue = yieldRow ? yieldRow.mine : f.yield_trailing_3yrs;
+  const yieldHtml = typeof yieldValue === 'number' ? `
+      <div class="product-fee-row product-yield-row">
+        <span class="product-fee-label">תשואה 3 שנים</span>
+        <span class="product-yield-value">${fmtCmp(yieldValue, 1)}</span>
+        ${yieldRow ? `<span class="product-fee-avg">ממוצע ${fmtCmp(yieldRow.peers, 1)}</span>` : ''}
+      </div>` : '';
   const note = f.is_stale
     ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה לקופות באותו סוג מסלול.</p>`
     : (cmp ? '' : `<p class="product-note">${CMP_NONE_TEXT} למסלול הזה.</p>`);
   return `
-      <div class="product-fees">${fees}</div>
+      <div class="product-fees">${yieldHtml}${fees}</div>
       ${note}
       <p class="product-expo">מניות <b>${fmtRound(f.stock_pct)}</b> · חו״ל <b>${fmtRound(f.foreign_pct)}</b> · מט״ח <b>${fmtRound(f.fx_pct)}</b></p>
       <div class="product-actions">
@@ -915,6 +924,7 @@ function productItemHtml(item, activeItems, totalBalance) {
           <b>${fmtCurrency(balance)}</b>
           <span>${fmtWeight(balance / totalBalance * 100)} מהתיק</span>
         </span>
+        <span class="product-chev" aria-hidden="true"></span>
       </button>
       <div class="product-detail" id="${panelId}"${open ? '' : ' hidden'}>${productDetailHtml(item, cmp)}</div>
     </article>`;

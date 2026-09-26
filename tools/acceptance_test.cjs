@@ -97,6 +97,9 @@ function check(name, ok, detail) {
       && /^מניות \d+% · חו״ל \d+% · מט״ח \d+%$/.test((await card.locator('.product-expo').textContent()).trim())
       && (await card.locator('.product-actions button').count()) === 2
       && (await card.locator('.product-detail:visible >> text=איך מחושבת ההשוואה?').count()) === 0);
+    const yieldLine = (await card.locator('.product-yield-row').textContent()).replace(/\s+/g, ' ').trim();
+    check('open product shows 3-year return vs. the average', /^תשואה 3 שנים -?\d+\.\d% ממוצע -?\d+\.\d%$/.test(yieldLine), yieldLine);
+    check('every row has an open/close arrow', (await page.locator('#detailsRows .product-row .product-chev').count()) === (await page.locator('#detailsRows .product').count()));
     // שכבה 3: "השוואה מלאה" — טבלה, נתוני מסלול, ו"איך מחושבת ההשוואה?" בפנים.
     await card.locator('.product-actions >> text=השוואה מלאה').click();
     const fullBody = await page.textContent('#infoDialogBody');
@@ -290,7 +293,7 @@ function check(name, ok, detail) {
       div.innerHTML = productIndicatorHtml(item, compareToPeers(item.fund, 0.15, 1.5)) + productDetailHtml(item, compareToPeers(item.fund, 0.15, 1.5));
       return { ind: div.querySelector('.product-ind').textContent, rows: Array.from(div.querySelectorAll('tbody th')).map(th => th.textContent),
         head: Array.from(div.querySelectorAll('thead th')).map(th => th.textContent),
-        layer2: Array.from(div.querySelectorAll('.product-fee-label')).map(el => el.textContent) };
+        layer2: Array.from(div.querySelectorAll('.product-fee-row:not(.product-yield-row) .product-fee-label')).map(el => el.textContent) };
     });
     check('pension row names the accumulation fee', /^דמי ניהול מצבירה 0\.15% · ממוצע \d\.\d\d%$/.test(pensionRow.ind), pensionRow.ind);
     check('pension open product lists both fees separately', JSON.stringify(pensionRow.layer2) === JSON.stringify(['דמי ניהול מצבירה', 'דמי ניהול מהפקדות']), JSON.stringify(pensionRow.layer2));
