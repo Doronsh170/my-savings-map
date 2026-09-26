@@ -523,37 +523,6 @@ function compareToPeers(rec, userFee, userDepositFee) {
   return out.rows.length ? out : null;
 }
 
-/* תקציר ההשוואה בתוך כרטיס המוצר: הנתון שלך, ממוצע המסלולים הדומים, והפער.
-   בלי חציון, אחוזון או דירוג — הפירוט המתודולוגי נפתח בלחיצה. */
-function cmpFormat(value, digits) {
-  return typeof value === 'number' && isFinite(value) ? value.toFixed(digits) + '%' : 'לא הוזן';
-}
-function cmpGapText(row) {
-  if (typeof row.mine !== 'number' || typeof row.peers !== 'number') return '';
-  const gap = row.mine - row.peers;
-  const unit = row.key === 'yield' ? ' נק׳' : '%';
-  const shown = Math.abs(gap).toFixed(row.digits);
-  // פער שמתעגל לאפס בדיוק שמוצג הוא פער שהמשתמש אינו רואה, ולכן "זהה".
-  if (Number(shown) === 0) return 'זהה לממוצע';
-  return shown + unit + (gap > 0 ? ' מעל הממוצע' : ' מתחת לממוצע');
-}
-function renderComparison(item) {
-  const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
-  if (!cmp) return '';
-  const boxes = cmp.rows.map(row => `
-    <div class="cmp-box">
-      <div class="cmp-box-label">${escapeHtml(row.label.replace('תשואה מצטברת ל־3 שנים', 'תשואה 3 שנים'))}</div>
-      <div class="cmp-box-value">${cmpFormat(row.mine, row.digits)}</div>
-      <div class="cmp-box-peer">ממוצע מסלולים דומים<strong>${cmpFormat(row.peers, row.digits)}</strong></div>
-    </div>`).join('');
-  return `
-    <section class="cmp-section">
-      <h5 class="cmp-heading">איך המסלול שלי ביחס למסלולים דומים?</h5>
-      <div class="cmp-boxes">${boxes}</div>
-      <button type="button" class="info-link" data-info="method" data-info-uid="${escapeHtml(item.fund.uid)}">איך מחושבת ההשוואה?</button>
-    </section>`;
-}
-
 /* המתודולוגיה נפתחת בחלון "איך מחושבת ההשוואה?": מי שרוצה לדעת איך חושבה
    ההשוואה ימצא, ומי שרק רוצה את המספר לא נתקל בה. */
 function renderComparisonMethod(item) {
@@ -790,6 +759,147 @@ function setMetric(id, value, digits = 1) {
   el.className = metricClass(value);
 }
 
+/* === רשימת המוצרים ===
+   שורה אחת לכל מוצר: לוגו, שם קצר, יתרה, משקל בתיק ואינדיקציית השוואה אחת.
+   לחיצה פותחת את הפירוט המלא, ורק מוצר אחד פתוח בכל פעם. האינדיקציה היא
+   דמי הניהול: הנתון היחיד שהמשתמש יכול לשנות בעצמו, ולכן גם הנתון שכדאי
+   לבקש ממנו דווקא כאן, ליד ממוצע המסלולים הדומים. בלי צבע ובלי "מעל" או
+   "מתחת": שני מספרים, בלי שיפוט. */
+let OPEN_PRODUCT_UID = null;
+function fmtCmp(value, digits) {
+  return typeof value === 'number' && isFinite(value) ? value.toFixed(digits) + '%' : '—';
+}
+function fmtWeight(weight) {
+  const rounded = Math.round(weight * 10) / 10;
+  return (rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)) + '%';
+}
+function productIndicatorHtml(item, cmp) {
+  const f = item.fund;
+  if (f.is_stale) return `<span class="product-ind">נתוני המסלול לא עודכנו מאז ${escapeHtml(fmtPeriod(f.report_period))}</span>`;
+  const feeRow = cmp && cmp.rows.find(row => row.key === 'fee');
+  if (!feeRow) return '<span class="product-ind">אין מספיק מסלולים להשוואה</span>';
+  const peers = `<span class="product-ind">מסלולים דומים ${fmtCmp(feeRow.peers, 2)}</span>`;
+  if (Number.isFinite(item.managementFee)) {
+    return `<span class="product-ind">דמי ניהול <b>${fmtCmp(item.managementFee, 2)}</b></span>${peers}`;
+  }
+  return `${peers}<span class="product-ind"><span class="product-ask" data-ask-fee>כמה אתה משלם?</span></span>`;
+}
+/* שדה דמי ניהול בתוך טבלת ההשוואה. לצדו טקסט להדפסה: שדה ריק מודפס כמסגרת ריקה. */
+function feeInputHtml(item, field, label) {
+  const value = item[field];
+  const shown = Number.isFinite(value) ? value.toFixed(2) : '';
+  return `<span class="fee-cell">
+      <input type="number" class="product-fee-input" data-fee-uid="${escapeHtml(item.fund.uid)}" data-fee-field="${field}"
+        value="${shown}" placeholder="0.00" min="0" max="10" step="0.01" inputmode="decimal" enterkeyhint="done"
+        aria-label="${escapeHtml(label)} שלך, באחוזים" /><span class="fee-cell-sign" aria-hidden="true">%</span>
+      <span class="fee-print">${shown ? shown + '%' : 'לא הוזן'}</span>
+    </span>`;
+}
+function productDetailHtml(item, cmp) {
+  const f = item.fund;
+  const uid = escapeHtml(f.uid);
+  const isPension = (f._product || productOf(f)) === 'pensia';
+  const byKey = key => cmp && cmp.rows.find(row => row.key === key);
+  const feeLabel = isPension ? 'דמי ניהול מהצבירה' : 'דמי ניהול';
+  const rows = [];
+  const yieldRow = byKey('yield');
+  if (yieldRow) rows.push(['תשואה 3 שנים', fmtCmp(yieldRow.mine, 1), fmtCmp(yieldRow.peers, 1)]);
+  rows.push([feeLabel, feeInputHtml(item, 'managementFee', feeLabel), fmtCmp(byKey('fee') && byKey('fee').peers, 2)]);
+  if (isPension) rows.push(['דמי ניהול מההפקדות', feeInputHtml(item, 'depositFee', 'דמי ניהול מההפקדות'), fmtCmp(byKey('deposit_fee') && byKey('deposit_fee').peers, 2)]);
+  const stockRow = byKey('stock');
+  if (stockRow) rows.push(['חשיפה למניות', fmtCmp(stockRow.mine, 0), fmtCmp(stockRow.peers, 0)]);
+  const peerCount = cmp ? Math.max(cmp.yieldCount || 0, cmp.feeCount || 0) : 0;
+  const note = f.is_stale
+    ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה למסלולים דומים.</p>`
+    : (cmp ? '' : '<p class="product-note">אין מספיק מסלולים דומים להשוואה. <span class="screen-only">אפשר עדיין להזין את דמי הניהול שלך — הם נכללים בדמי הניהול המשוקללים של התיק.</span></p>');
+  return `
+      <div class="product-track">${escapeHtml(f.fund_name || '')} · קופה ${escapeHtml(f.fund_id || '')}</div>
+      <h5 class="product-cmp-head">${cmp ? 'מול מסלולים דומים' : 'דמי הניהול שלך'}</h5>
+      ${note}
+      <table class="product-cmp">
+        <thead><tr><th scope="col"><span class="visually-hidden">נתון</span></th><th scope="col">שלך</th>${cmp ? '<th scope="col">ממוצע</th>' : ''}</tr></thead>
+        <tbody>${rows.filter(row => cmp || row[1].indexOf('fee-cell') > -1).map(([label, mine, peers]) =>
+          `<tr><th scope="row">${label}</th><td class="product-cmp-mine">${mine}</td>${cmp ? `<td class="product-cmp-peer">${peers}</td>` : ''}</tr>`).join('')}</tbody>
+      </table>
+      ${cmp ? `<button type="button" class="info-link" data-info="method" data-info-uid="${uid}">איך מחושבת ההשוואה? (${peerCount} מסלולים)</button>` : ''}
+      <p class="product-expo">חשיפות המסלול: מניות <b>${fmtPct(f.stock_pct, 1)}</b> · חו״ל <b>${fmtPct(f.foreign_pct, 1)}</b> · מט״ח <b>${fmtPct(f.fx_pct, 1)}</b></p>
+      <div class="product-actions">
+        <button type="button" class="info-link" data-edit-uid="${uid}">עדכון יתרה</button>
+        <button type="button" class="info-link" data-info="fund" data-info-uid="${uid}">פרטים נוספים</button>
+        <button type="button" class="info-link product-remove" data-remove-uid="${uid}" aria-label="הסרת ${escapeHtml(f.fund_name || 'המוצר')} מהתיק">הסרה</button>
+      </div>`;
+}
+function productItemHtml(item, activeItems, totalBalance) {
+  const f = item.fund;
+  const uid = escapeHtml(f.uid);
+  const balance = Number(item.balance) || 0;
+  const cmp = compareToPeers(f, item.managementFee, item.depositFee);
+  const brand = BRAND_BY_NAME[f._brand || brandOf(f)];
+  const open = OPEN_PRODUCT_UID === f.uid;
+  const panelId = 'product-' + String(f.uid).replace(/[^A-Za-z0-9_-]/g, '-');
+  return `
+    <article class="product${open ? ' is-open' : ''}" data-product-uid="${uid}">
+      <button type="button" class="product-row" data-toggle-uid="${uid}" aria-expanded="${open}" aria-controls="${panelId}">
+        ${brand ? wizLogo(brand) : '<span class="wiz-logo" aria-hidden="true"></span>'}
+        <span class="product-mid">
+          <span class="product-title">${escapeHtml(portfolioItemLabel(item, activeItems))}</span>
+          <span class="product-inds" data-ind-uid="${uid}">${productIndicatorHtml(item, cmp)}</span>
+        </span>
+        <span class="product-amt">
+          <b>${fmtCurrency(balance)}</b>
+          <span>${fmtWeight(balance / totalBalance * 100)} מהתיק</span>
+        </span>
+      </button>
+      <div class="product-detail" id="${panelId}"${open ? '' : ' hidden'}>${productDetailHtml(item, cmp)}</div>
+    </article>`;
+}
+function setProductOpen(uid, focusFee) {
+  OPEN_PRODUCT_UID = OPEN_PRODUCT_UID === uid && !focusFee ? null : uid;
+  document.querySelectorAll('#detailsRows .product').forEach(el => {
+    const isOpen = el.getAttribute('data-product-uid') === OPEN_PRODUCT_UID;
+    el.classList.toggle('is-open', isOpen);
+    el.querySelector('.product-row').setAttribute('aria-expanded', String(isOpen));
+    el.querySelector('.product-detail').hidden = !isOpen;
+  });
+  if (focusFee && OPEN_PRODUCT_UID) {
+    const input = document.querySelector(`#detailsRows .product-fee-input[data-fee-uid="${CSS.escape(uid)}"]`);
+    if (input) { input.focus(); input.select(); }
+  }
+}
+document.addEventListener('click', event => {
+  const row = event.target.closest('[data-toggle-uid]');
+  if (!row) return;
+  setProductOpen(row.getAttribute('data-toggle-uid'), !!event.target.closest('[data-ask-fee]'));
+});
+/* שמירת דמי ניהול מתוך הטבלה: מעדכנים את הנתון, את שורת המוצר ואת דמי הניהול
+   המשוקללים — בלי לצייר מחדש את הפירוט, כדי שהמיקוד יישאר בשדה הבא. דמי ניהול
+   אינם משנים את "היתרות עודכנו לפני...". */
+function commitProductFee(input) {
+  const idx = findUserFundIndex(input.getAttribute('data-fee-uid'));
+  if (idx < 0) return;
+  const item = userFunds[idx];
+  const field = input.getAttribute('data-fee-field') === 'depositFee' ? 'depositFee' : 'managementFee';
+  const value = normalizeUserFee(input.value);
+  if (value === item[field] || (value === null && !Number.isFinite(item[field]))) return;
+  item[field] = value;
+  saveState();
+  const ind = document.querySelector(`#detailsRows [data-ind-uid="${CSS.escape(item.fund.uid)}"]`);
+  if (ind) ind.innerHTML = productIndicatorHtml(item, compareToPeers(item.fund, item.managementFee, item.depositFee));
+  const print = input.parentElement.querySelector('.fee-print');
+  if (print) print.textContent = value === null ? 'לא הוזן' : value.toFixed(2) + '%';
+  setFeeMetric(weightedUserManagementFee(getTotalBalance()));
+  refreshSimulationDefaults();
+}
+document.addEventListener('change', event => {
+  if (event.target.classList && event.target.classList.contains('product-fee-input')) commitProductFee(event.target);
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Enter' || !event.target.classList || !event.target.classList.contains('product-fee-input')) return;
+  event.preventDefault();
+  commitProductFee(event.target);
+  event.target.blur();
+});
+
 /* נתוני המסלול שאינם בתקציר ההשוואה. בכרטיס עם השוואה הם נפתחים בחלון
    "פרטים נוספים על המסלול"; בכרטיס בלי השוואה הם מוצגים בכרטיס עצמו. */
 function fundExtrasHtml(item, hasComparison) {
@@ -811,8 +921,26 @@ function fundExtrasHtml(item, hasComparison) {
 
 /* חלון מידע אחד לשני הקישורים בכרטיס: "פרטים נוספים על המסלול" ו"איך מחושבת
    ההשוואה?". בא במקום אקורדיון שלא תמיד הציג חץ לסגירה. */
+/* הסבר אחד לשלושת כרטיסי החשיפה. בא במקום כפתור "?" בכל כרטיס, שבמובייל שבר
+   את התוויות לשתי שורות. */
+const EXPOSURE_TERMS = [
+  ['מניות', 'החלק מהכסף שמושקע במניות, בישראל ובחו״ל, כולל דרך קרנות ונגזרים.'],
+  ['חו״ל', 'החלק מהכסף שמושקע בנכסים מחוץ לישראל — מניות, אג״ח וקרנות.'],
+  ['מט״ח', 'החלק מהכסף שערכו תלוי בשער של מטבע זר, בעיקר הדולר. בדרך כלל הוא נמוך מהחשיפה לחו״ל, כי חלק מההשקעה בחו״ל מגודר לשקל.']
+];
 function openInfoDialog(kind, uid) {
   const dialog = document.getElementById('infoDialog');
+  if (kind === 'term') {
+    if (!dialog) return;
+    document.getElementById('infoDialogTitle').textContent = 'מה ההבדל בין מניות, חו״ל ומט״ח?';
+    document.getElementById('infoDialogSub').textContent = '';
+    document.getElementById('infoDialogBody').innerHTML = EXPOSURE_TERMS
+      .map(([label, text]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(text)}</p>`).join('')
+      + '<p>כל נתון בדשבורד הוא ממוצע משוקלל לפי היתרות שהזנת, מתוך הדיווח הציבורי של כל מסלול.</p>';
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+    return;
+  }
   const idx = findUserFundIndex(uid);
   if (!dialog || idx < 0) return;
   const item = userFunds[idx];
@@ -844,6 +972,7 @@ function renderDashboard() {
   if (totalBalance <= 0) {
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('detailsSection').style.display = 'none';
+    document.getElementById('perfSection').style.display = 'none';
     const historySection = document.getElementById('historySection');
     if (historySection) historySection.style.display = 'none';
     const bottomActions = document.getElementById('bottomActions');
@@ -885,44 +1014,18 @@ function renderDashboard() {
   const rows = activeItems
     .slice()
     .sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0))
-    .map(item => {
-      const f = item.fund;
-      const balance = Number(item.balance) || 0;
-      const weight = balance / totalBalance * 100;
-      // כרטיס למוצר במקום שורת טבלה: עמודת התוכן של האתר רחבה כ-600px,
-      // ועשר עמודות מספרים חייבו גלילה אופקית בכל מסך.
-      // הכרטיס מציג שלושה־ארבעה מספרים: מה יש לי מול ממוצע מסלולים דומים.
-      // שאר הנתונים וההסבר על ההשוואה נפתחים בחלונות מידע נפרדים.
-      const comparison = renderComparison(item);
-      return `
-        <article class="detail-card">
-          <div class="detail-card-head">
-            <h4 class="detail-card-name"><span class="source-tag ${escapeHtml(f.source)}">${SOURCE_LABEL[f.source]}</span> ${escapeHtml(f.fund_name)}</h4>
-            <span class="detail-card-balance">${fmtCurrency(balance)}</span>
-            <button type="button" class="row-edit-btn" data-edit-uid="${escapeHtml(f.uid)}" aria-label="עריכת היתרה ודמי הניהול של ${escapeHtml(f.fund_name)}">עריכה</button>
-            <button type="button" class="row-remove-btn" data-remove-uid="${escapeHtml(f.uid)}" title="הסרת המוצר מהדוח" aria-label="הסרת ${escapeHtml(f.fund_name)} מהדוח">✕</button>
-          </div>
-          <div class="detail-weight">
-            <span class="detail-weight-text">משקל בתיק <strong>${weight.toFixed(1)}%</strong></span>
-            <span class="detail-weight-track" aria-hidden="true"><span class="detail-weight-fill" style="width:${Math.min(100, weight).toFixed(1)}%"></span></span>
-          </div>
-          ${f.is_stale ? `<p class="detail-stale">הנתונים למסלול זה עודכנו לאחרונה ב-${fmtPeriod(f.report_period)}. הוא אינו נכלל בהשוואה למסלולים דומים.</p>` : ''}
-          ${comparison}
-          ${comparison
-            ? `<button type="button" class="info-link" data-info="fund" data-info-uid="${escapeHtml(f.uid)}">פרטים נוספים על המסלול</button>`
-            : fundExtrasHtml(item, false)}
-        </article>
-      `;
-    }).join('');
+    .map(item => productItemHtml(item, activeItems, totalBalance))
+    .join('');
   document.getElementById('detailsRows').innerHTML = rows;
+  if (OPEN_PRODUCT_UID && !activeItems.some(item => item.fund.uid === OPEN_PRODUCT_UID)) OPEN_PRODUCT_UID = null;
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('detailsSection').style.display = 'block';
+  document.getElementById('perfSection').style.display = 'block';
   renderHistorySection(activeItems);
   // v3.87: when the dashboard is shown, all dashboard accordion tabs start closed by default
   const perfToggle = document.querySelector('.perf-toggle-section');
-  const detailsToggle = document.querySelector('.details-toggle-section');
   const simulationToggle = document.getElementById('simulationDetails');
-  [perfToggle, detailsToggle, simulationToggle].forEach(section => {
+  [perfToggle, simulationToggle].forEach(section => {
     if (section) section.open = false;
   });
   const simulationResults = document.getElementById('simResultsBlock');
@@ -2505,6 +2608,10 @@ function wizScreenBalance() {
   const isPension = rec.source === 'pensia';
   const depositFeeValue = existing && Number.isFinite(existing.depositFee) ? existing.depositFee : '';
   const brand = BRAND_BY_NAME[rec._brand];
+  // דמי הניהול מקופלים: ברגע ההוספה רוב האנשים עוד לא יודעים אותם, והם
+  // מתבקשים שוב ברשימת המוצרים, ליד ממוצע המסלולים הדומים. מי שכבר הזין
+  // אותם רואה אותם פתוחים.
+  const feesOpen = feeValue !== '' || depositFeeValue !== '';
   return `
     <div class="wiz-picked">
       ${brand ? wizLogo(brand, 'lg') : ''}
@@ -2520,6 +2627,8 @@ function wizScreenBalance() {
       <span class="wiz-money-sign" aria-hidden="true">₪</span>
       <input type="number" class="wiz-money-input" id="quickBalanceInput" value="${escapeHtml(balanceValue)}" placeholder="0" min="0" inputmode="numeric" enterkeyhint="done" />
     </div>
+    ${feesOpen ? '' : `<button type="button" class="wiz-fees-toggle" data-wiz="showFees" aria-expanded="false" aria-controls="wizFees">יש לך גם את דמי הניהול? <span class="wiz-optional">לא חובה</span></button>`}
+    <div class="wiz-fees" id="wizFees"${feesOpen ? '' : ' hidden'}>
     <label class="wiz-fee-field">
       <span class="wiz-fee-label">דמי ניהול מצבירה <span class="wiz-optional">לא חובה</span></span>
       <span class="wiz-fee-input">
@@ -2534,6 +2643,7 @@ function wizScreenBalance() {
         <span class="wiz-fee-sign">%</span>
       </span>
     </label>` : ''}
+    </div>
     <div class="wiz-cta-bar">
       <button type="button" class="wiz-cta" data-wiz="commit">${existing ? 'עדכן בתיק' : 'הוסף לתיק'}</button>
       ${existing ? '<button type="button" class="wiz-cta-ghost" data-wiz="removePicked">הסר מהתיק</button>' : ''}
@@ -2736,6 +2846,15 @@ function wizHandle(action, value) {
   if (action === 'reset') { WIZ_FOCUS_FIELD = ''; wizReset(); wizScrollIntoView(); return; }
   if (action === 'pick') { WIZ_FOCUS_FIELD = ''; wizSet({ step: 'balance', pickUid: value }); wizScrollIntoView(); return; }
   if (action === 'commit') { wizCommitBalance(); return; }
+  if (action === 'showFees') {
+    const fees = document.getElementById('wizFees');
+    if (fees) fees.hidden = false;
+    const toggle = document.querySelector('.wiz-fees-toggle');
+    if (toggle) toggle.remove();
+    const input = document.getElementById('quickFeeInput');
+    if (input) input.focus();
+    return;
+  }
   if (action === 'removePicked') { wizRemovePicked(); return; }
   if (action === 'dashboard') { goToDashboard(); return; }
   if (action === 'anotherSameCompany') {

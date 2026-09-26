@@ -66,7 +66,7 @@ function check(name, ok, detail) {
     check('coverage note names partial coverage', /חשיפה למניות — 50% מהתיק/.test(await page.textContent('#coverageNote')));
 
     // 2. ההשוואה למסלולים דומים שורדת רענון.
-    check('peer comparison present after reload', (await page.locator('.cmp-section').count()) > 0);
+    check('peer comparison present after reload', (await page.locator('.product-cmp-peer').count()) > 0);
 
     // 3. תשואות רק מחודש הדיווח העדכני.
     if (pick.l) {
@@ -80,28 +80,31 @@ function check(name, ok, detail) {
 
     // 4. עריכה מתוך הדשבורד פותחת את טופס היתרה.
     await page.evaluate(() => goToDashboard());
-    await page.evaluate(() => { document.querySelector('.details-toggle-section').open = true; });
-    await page.locator('.row-edit-btn').first().click();
+    const openProduct = async (pg, uid) => {
+      if ((await pg.getAttribute(`[data-toggle-uid="${uid}"]`, 'aria-expanded')) !== 'true') await pg.click(`[data-toggle-uid="${uid}"]`);
+    };
+    await openProduct(page, pick.a.uid);
+    await page.click(`.product-detail [data-edit-uid="${pick.a.uid}"]`);
     check('edit button opens the balance form', await page.isVisible('#quickBalanceInput'));
-    // 4א. הסבר ההשוואה ופרטי המסלול בחלונות נפרדים, בלי אקורדיון.
+    // 4א. הסבר ההשוואה ופרטי המסלול בחלונות נפרדים.
     await page.evaluate(() => closeInfoDialog());
     await page.evaluate(() => goToDashboard());
-    await page.evaluate(() => { document.querySelector('.details-toggle-section').open = true; });
-    check('no accordion inside product cards', (await page.locator('.detail-card details').count()) === 0);
-    const card = page.locator('.detail-card', { has: page.locator('.cmp-section') }).first();
+    check('product list is not a collapsible section', (await page.locator('#detailsSection details').count()) === 0 && await page.isVisible('#detailsRows'));
+    await openProduct(page, pick.a.uid);
+    const card = page.locator(`.product[data-product-uid="${pick.a.uid}"]`);
     await card.locator('text=איך מחושבת ההשוואה?').click();
     const methodBody = await page.textContent('#infoDialogBody');
     check('method dialog opens with methodology only',
       await page.isVisible('#infoDialog') && /ההשוואה נעשית מול מסלולים/.test(methodBody) && (await page.locator('#infoDialogBody .detail-card-grid').count()) === 0);
     await page.click('.info-dialog-x');
     check('X closes the dialog', !(await page.isVisible('#infoDialog')));
-    await card.locator('text=פרטים נוספים על המסלול').click();
+    await card.locator('.product-actions >> text=פרטים נוספים').click();
     const fundBody = await page.textContent('#infoDialogBody');
     check('details dialog opens with track data only',
       await page.isVisible('#infoDialog') && /חו״ל/.test(fundBody) && !/ההשוואה נעשית/.test(fundBody));
     await page.click('.info-dialog-close');
     check('"סגור" closes the dialog', !(await page.isVisible('#infoDialog')));
-    await card.locator('text=פרטים נוספים על המסלול').click();
+    await card.locator('.product-actions >> text=פרטים נוספים').click();
     await page.keyboard.press('Escape');
     check('Escape closes the dialog', !(await page.isVisible('#infoDialog')));
 
@@ -189,14 +192,16 @@ function check(name, ok, detail) {
     // 10. הסרת מוצר ניתנת לביטול, בלי חלון אישור.
     let confirmAsked = false;
     fresh.on('dialog', () => { confirmAsked = true; });
-    await fresh.evaluate(() => { document.querySelector('.details-toggle-section').open = true; });
+    await openProduct(fresh, pick.n.uid);
     await fresh.click(`[data-remove-uid="${pick.n.uid}"]`);
     const afterRemove = await fresh.evaluate(() => JSON.parse(localStorage.getItem(STORAGE_KEY)).length);
     check('remove is immediate, with an undo toast', !confirmAsked && afterRemove === 1 && await fresh.isVisible('#undoToast'));
     await fresh.click('#undoToastBtn');
     const afterUndo = await fresh.evaluate(() => JSON.parse(localStorage.getItem(STORAGE_KEY)).map(r => r.uid));
     check('undo restores the removed product', afterUndo.length === 2 && afterUndo.includes(pick.n.uid) && !(await fresh.isVisible('#undoToast')));
+    await openProduct(fresh, pick.n.uid);
     await fresh.click(`[data-remove-uid="${pick.n.uid}"]`);
+    await openProduct(fresh, pick.a.uid);
     await fresh.click(`[data-remove-uid="${pick.a.uid}"]`);
     check('removing the last product returns to the wizard', await fresh.isVisible('#wizScreen'));
     await fresh.click('#undoToastBtn');
@@ -209,9 +214,9 @@ function check(name, ok, detail) {
     check('"back to portfolio" shows the dashboard', await fresh.isVisible('#dashboard') && !(await fresh.isVisible('#wizScreen')));
 
     // 12א. ראש הדשבורד: יתרה, משפט מבנה, ואז כרטיסי החשיפה; המידע הכללי למטה.
-    const order = await fresh.evaluate(() => ['totalBalance', 'portfolioSummary', 'aggStock', 'siteInfoSection']
+    const order = await fresh.evaluate(() => ['totalBalance', 'portfolioSummary', 'aggStock', 'detailsRows', 'perfSection', 'siteInfoSection']
       .map(id => document.getElementById(id).getBoundingClientRect().top));
-    check('dashboard top reads total → summary → exposure, info rows below', order[0] < order[1] && order[1] < order[2] && order[2] < order[3]);
+    check('dashboard reads total → summary → exposure → products → performance, info rows below', order.every((top, i) => i === 0 || order[i - 1] < top), JSON.stringify(order.map(Math.round)));
     check('summary sentence shown on the dashboard', /^כל החיסכון במוצר אחד: .+\.$/.test(await fresh.textContent('#portfolioSummary')));
     const summaries = await fresh.evaluate(([a, n]) => {
       const item = (uid, balance) => ({ fund: withRuntimeFlags(DATA.find(r => r.uid === uid)), balance });
@@ -224,7 +229,7 @@ function check(name, ok, detail) {
     check('summary handles a tie for largest', /^2 מוצרים\. הגדולים שבהם, .+, הם 50% מהתיק כל אחד\.$/.test(summaries.tie), summaries.tie);
     check('tab title has no version', (await fresh.title()) === 'מפת החיסכון');
     const gaps = await fresh.evaluate(() => {
-      const tops = ['historySection', 'detailsSection', 'simulationTabSection']
+      const tops = ['perfSection', 'historySection', 'simulationTabSection']
         .map(id => document.getElementById(id)).filter(el => el.offsetParent)
         .map(el => el.querySelector('summary').getBoundingClientRect());
       return tops.slice(1).map((r, i) => r.top - tops[i].bottom);
@@ -239,6 +244,89 @@ function check(name, ok, detail) {
     check('screen still shows the relative age', /^היתרה עודכנה היום\.$/.test(await fresh.evaluate(() => document.getElementById('balanceAge').innerText.trim())));
     check('no product-type chip in the balance card', (await fresh.locator('#sourceMix, .source-mix-item').count()) === 0);
     check('no back-to-top button', (await fresh.locator('text=חזרה לראש העמוד').count()) === 0);
+
+    // 13. רשימת המוצרים: שורה לכל מוצר, שלושה מצבי השוואה, מוצר פתוח אחד.
+    const noPeers = await fresh.evaluate(() => {
+      const r = DATA.find(x => isSelectableFund(x) && !withRuntimeFlags(x).is_stale && !compareToPeers(withRuntimeFlags(x), null, null));
+      return r && r.uid;
+    });
+    const withFeePeers = await fresh.evaluate(skip => {
+      const r = DATA.find(x => isSelectableFund(x) && x.uid !== skip && !withRuntimeFlags(x).is_stale && x._product !== 'pensia'
+        && (compareToPeers(withRuntimeFlags(x), null, null) || { rows: [] }).rows.some(row => row.key === 'fee'));
+      return r && r.uid;
+    }, pick.a.uid);
+    await seed(fresh, [
+      { uid: pick.a.uid, balance: 300000, management_fee: 0.5, updated_at: new Date().toISOString() },
+      { uid: withFeePeers, balance: 200000, updated_at: new Date().toISOString() },
+      { uid: noPeers, balance: 100000, updated_at: new Date().toISOString() }
+    ]);
+    await fresh.reload(); await ready(fresh);
+    await fresh.waitForFunction(() => document.body.classList.contains('dashboard-reached'));
+    const rowUids = await fresh.evaluate(() => Array.from(document.querySelectorAll('#detailsRows .product')).map(el => el.dataset.productUid));
+    check('one row per product, largest first', JSON.stringify(rowUids) === JSON.stringify([pick.a.uid, withFeePeers, noPeers]));
+    const ind = uid => fresh.textContent(`[data-ind-uid="${uid}"]`);
+    check('row with fee: yours and similar tracks', /^דמי ניהול 0\.50%מסלולים דומים \d\.\d\d%$/.test(await ind(pick.a.uid)), await ind(pick.a.uid));
+    check('row without fee: similar tracks and a question', /^מסלולים דומים \d\.\d\d%כמה אתה משלם\?$/.test(await ind(withFeePeers)), await ind(withFeePeers));
+    check('row without peers says so', (await ind(noPeers)) === 'אין מספיק מסלולים להשוואה', await ind(noPeers) + ' / ' + noPeers);
+    check('rows start closed', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 0);
+    await fresh.click(`[data-toggle-uid="${pick.a.uid}"]`);
+    await fresh.click(`[data-toggle-uid="${noPeers}"]`);
+    check('only one product open at a time', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 1
+      && (await fresh.getAttribute(`[data-toggle-uid="${noPeers}"]`, 'aria-expanded')) === 'true');
+    check('no-peers detail explains and still takes a fee', /אין מספיק מסלולים דומים להשוואה/.test(await fresh.textContent(`.product[data-product-uid="${noPeers}"] .product-detail`))
+      && (await fresh.locator(`.product[data-product-uid="${noPeers}"] .product-fee-input`).count()) >= 1);
+    await fresh.click(`[data-toggle-uid="${noPeers}"]`);
+    check('clicking an open row closes it', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 0);
+    await fresh.click(`[data-toggle-uid="${withFeePeers}"] [data-ask-fee]`);
+    const focused = await fresh.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-fee-uid'));
+    check('"כמה אתה משלם?" opens the product at the fee field', focused === withFeePeers);
+    await fresh.keyboard.type('0.35');
+    await fresh.keyboard.press('Enter');
+    const savedFee = await fresh.evaluate(u => JSON.parse(localStorage.getItem(STORAGE_KEY)).find(r => r.uid === u).management_fee, withFeePeers);
+    check('fee typed in the table is saved', savedFee === 0.35, String(savedFee));
+    check('row switches to the with-fee state', /^דמי ניהול 0\.35%/.test(await ind(withFeePeers)));
+    // דמי הניהול המשוקללים מוצגים רק כשהוזנו לכל המוצרים; המוצר השלישי משלים אותם.
+    await fresh.click(`[data-toggle-uid="${noPeers}"]`);
+    await fresh.fill(`.product[data-product-uid="${noPeers}"] .product-fee-input[data-fee-field="managementFee"]`, '0.2');
+    await fresh.keyboard.press('Enter');
+    const expectedFee = ((300000 * 0.5 + 200000 * 0.35 + 100000 * 0.2) / 600000).toFixed(2);
+    check('portfolio fee metric updates once every product has a fee', (await fresh.textContent('#feeSavings')) === expectedFee, await fresh.textContent('#feeSavings'));
+    await fresh.click(`[data-toggle-uid="${noPeers}"]`);
+    check('fee edit keeps the balance age', /עודכנה? היום|עודכנו היום/.test(await fresh.textContent('#balanceAge')));
+
+    // 14. PDF: כל המוצרים פתוחים, בלי שדות ובלי פעולות.
+    await fresh.evaluate(() => preparePrintLayout());
+    await fresh.emulateMedia({ media: 'print' });
+    const printView = await fresh.evaluate(() => ({
+      details: Array.from(document.querySelectorAll('#detailsRows .product-detail')).filter(el => getComputedStyle(el).display !== 'none').length,
+      inputs: Array.from(document.querySelectorAll('#detailsRows .product-fee-input')).filter(el => getComputedStyle(el).display !== 'none').length,
+      actions: Array.from(document.querySelectorAll('#detailsRows .product-actions')).filter(el => getComputedStyle(el).display !== 'none').length
+    }));
+    await fresh.emulateMedia({ media: 'screen' });
+    await fresh.evaluate(() => restorePrintLayout());
+    check('PDF shows every product in full, without inputs or actions', printView.details === 3 && printView.inputs === 0 && printView.actions === 0, JSON.stringify(printView));
+
+    // 15. הסבר למונחים בכרטיסי החשיפה.
+    await fresh.click('.exposure-help');
+    check('one link explains the three exposures', await fresh.isVisible('#infoDialog') && /מטבע זר/.test(await fresh.textContent('#infoDialogBody')));
+    await fresh.keyboard.press('Escape');
+    // 15א. פירוט פתוח נשאר ברוחב המסך במובייל.
+    await fresh.setViewportSize({ width: 390, height: 844 });
+    await fresh.click(`[data-toggle-uid="${pick.a.uid}"]`);
+    const widths = await fresh.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+    check('open product fits the mobile screen', widths[0] <= widths[1], JSON.stringify(widths));
+    await fresh.click(`[data-toggle-uid="${pick.a.uid}"]`);
+    await fresh.keyboard.press('Escape');
+
+    // 16. באשף: דמי הניהול מקופלים, אלא אם כבר הוזנו.
+    await fresh.click('.total-actions >> text=הוספת מוצר');
+    await fresh.evaluate(u => wizSet({ step: 'balance', pickUid: u }), pick.n.uid);
+    check('wizard fee fields start collapsed', !(await fresh.isVisible('#quickFeeInput')) && await fresh.isVisible('.wiz-fees-toggle'));
+    await fresh.click('.wiz-fees-toggle');
+    check('toggle reveals the fee fields', await fresh.isVisible('#quickFeeInput'));
+    await fresh.evaluate(u => wizSet({ step: 'balance', pickUid: u }), pick.a.uid);
+    check('fee fields open when a fee is already saved', await fresh.isVisible('#quickFeeInput') && (await fresh.locator('.wiz-fees-toggle').count()) === 0);
+    await fresh.click('#wizBar >> text=חזרה לתיק');
 
     // 12. מחיקת הכל היא קישור משני מחוץ לסרגל הפעולות.
     check('delete-all is outside the action toolbar', (await fresh.locator('.action-toolbar >> text=איפוס הכל').count()) === 0 && (await fresh.locator('.reset-link').count()) === 1);

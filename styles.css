@@ -7570,6 +7570,7 @@ body.pre-result #portfolioSection,
 body.pre-result #dashboard,
 body.pre-result #historySection,
 body.pre-result #detailsSection,
+body.pre-result #perfSection,
 body.pre-result #simulationTabSection,
 body.pre-result #bottomActions { display: none !important; }
 
@@ -8139,7 +8140,7 @@ body.pdf-mode .site-disclosure { display: block !important; }
    ‎30px‎ ריפוד מעל ומתחת, כך שבין שני אזורים סגורים נפתח רווח של ‎60px‎. */
 #dashboard { padding-bottom: 6px !important; border-bottom: 0 !important; }
 #dashboard .perf-toggle-section { margin-top: 24px !important; }
-#historySection, #detailsSection, #simulationTabSection { padding: 6px 0 !important; }
+#historySection, #perfSection, #simulationTabSection { padding: 6px 0 !important; }
 #simulationTabSection { padding-bottom: 24px !important; }
 @media print {
   .portfolio-summary { font-size: 11px !important; margin: 6px 0 4px !important; color: #0b1c2c !important; }
@@ -8163,3 +8164,108 @@ body.pdf-mode .site-disclosure { display: block !important; }
   /* בלי תווית סוג המוצר אין עמודה שנייה בכרטיס היתרה. */
   #dashboard .total-row { grid-template-columns: 1fr !important; }
 }
+
+
+/* === רשימת המוצרים ====================================================== */
+#detailsSection { padding: 20px 0 6px !important; }
+.products-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 2px 8px; }
+.products-head h3 { margin: 0; font-size: 17px; font-weight: 800; color: var(--ink); }
+.products-head span { font-size: 12px; color: var(--ink-muted); }
+.product-list {
+  background: var(--card, #fff); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(16, 39, 67, 0.05);
+}
+.product + .product { border-top: 1px solid var(--line); }
+.product.is-open { background: #f7f9fc; box-shadow: inset -3px 0 0 var(--ink); }
+.product-row {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%;
+  padding: 12px 14px; border: 0; background: none; cursor: pointer;
+  font: inherit; color: inherit; text-align: right;
+}
+.product-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.product-row .wiz-logo { width: 36px; height: 36px; border-radius: 10px; margin-top: 1px; }
+.product-row .wiz-logo img { padding: 3px; }
+.product-mid { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.product-title { font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--ink); }
+.product-inds { display: flex; flex-direction: column; margin-top: 2px; }
+.product-ind { font-size: 12.5px; line-height: 1.45; color: var(--ink-muted); }
+.product-ind b { color: var(--ink); font-weight: 700; }
+.product-ask { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.product-amt { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; text-align: left; }
+.product-amt b { font-size: 14.5px; font-weight: 700; color: var(--ink); direction: ltr; }
+.product-amt span { font-size: 12px; color: var(--ink-muted); }
+
+.product-detail { padding: 0 14px 14px; }
+.product-track { font-size: 12px; color: var(--ink-muted); margin-bottom: 10px; line-height: 1.45; }
+.product-cmp-head { margin: 0 0 4px; font-size: 12.5px; font-weight: 800; color: var(--ink); }
+.product-note { margin: 0 0 6px; font-size: 12.5px; line-height: 1.5; color: var(--ink-muted); }
+.product-cmp { width: 100%; border-collapse: collapse; font-size: 13px; }
+.product-cmp thead th { font-size: 11px; font-weight: 600; color: var(--ink-muted); text-align: left; padding: 2px 0 4px; }
+.product-cmp tbody th { text-align: right; font-weight: 500; color: var(--ink); padding: 6px 0; border-top: 1px solid var(--line); }
+.product-cmp td { text-align: left; font-weight: 700; padding: 6px 0; border-top: 1px solid var(--line); direction: ltr; color: var(--ink); }
+.product-cmp-mine { width: 92px; }
+.product-cmp-peer { width: 64px; color: var(--ink-muted) !important; font-weight: 600 !important; }
+.fee-cell { display: inline-flex; align-items: center; gap: 3px; border: 1.5px solid var(--line); border-radius: 8px; padding: 0 6px; background: #fff; }
+.fee-cell:focus-within { border-color: var(--accent); }
+.product-fee-input {
+  width: 46px; border: 0; outline: 0; background: none; padding: 4px 0;
+  font: inherit; font-size: 13px; font-weight: 700; color: var(--ink); text-align: left; -moz-appearance: textfield;
+}
+.product-fee-input::-webkit-outer-spin-button, .product-fee-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.product-fee-input:placeholder-shown { font-weight: 500; }
+.fee-cell-sign { font-size: 12px; color: var(--ink-muted); }
+.fee-print { display: none; }
+.product-detail .info-link { margin-top: 6px; }
+.product-expo { margin: 12px 0 0; font-size: 12.5px; color: var(--ink); line-height: 1.5; }
+.product-actions { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 10px; }
+.product-actions .info-link { margin-top: 0; font-size: 13px; color: var(--ink); }
+.product-actions .product-remove { color: var(--danger); margin-inline-start: auto; }
+
+/* הסבר קצר למונחים בכרטיסי החשיפה */
+.term-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; padding: 0; margin-inline-start: 3px; vertical-align: 1px;
+  border: 1px solid var(--line); border-radius: 50%; background: #fff; cursor: pointer;
+  font: inherit; font-size: 10.5px; font-weight: 800; line-height: 1; letter-spacing: 0; color: var(--ink-muted);
+}
+.term-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* דמי ניהול מקופלים במסך היתרה */
+.wiz-fees-toggle {
+  display: inline-flex; align-items: center; gap: 8px; margin: 14px 0 4px; padding: 4px 0;
+  border: 0; background: none; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700;
+  color: var(--accent); text-decoration: underline; text-underline-offset: 3px;
+}
+.wiz-fees[hidden] { display: none; }
+
+@media print {
+  .product-detail[hidden] { display: block !important; }
+  .product { break-inside: avoid; background: none !important; box-shadow: none !important; }
+  .product-row { padding: 6px 8px !important; }
+  .product-detail { padding: 0 8px 8px !important; }
+  .product-ask, .product-actions, .product-detail .info-link, .term-btn, .fee-cell-sign, .product-fee-input { display: none !important; }
+  .fee-cell { border: 0 !important; padding: 0 !important; }
+  .fee-print { display: inline !important; }
+}
+
+/* אזור מקופל סגור: בלי המרווח שנועד להפריד בין הכותרת לתוכן. */
+.dashboard-toggle-section:not([open]) > .dashboard-toggle-summary { margin-bottom: 0 !important; }
+.exposure-help { margin-top: 10px; font-size: 12.5px; }
+@media print { .exposure-help { display: none !important; } }
+
+/* טבלת ההשוואה של מוצר: מבודדת מכללי הטבלה הישנים (רוחב מינימלי 900px,
+   כותרות באותיות רישיות ורקע), גם בהדפסה. */
+#detailsRows table.product-cmp { min-width: 0 !important; width: 100% !important; table-layout: auto !important; font-size: 13px !important; line-height: 1.4 !important; }
+#detailsRows .product-cmp th, #detailsRows .product-cmp td {
+  padding: 6px 0 !important; background: none !important; letter-spacing: 0 !important;
+  text-transform: none !important; white-space: normal !important; border-bottom: 0 !important; vertical-align: middle !important;
+}
+#detailsRows .product-cmp th:first-child, #detailsRows .product-cmp td:first-child { width: auto !important; }
+#detailsRows .product-cmp thead th { font-size: 11px !important; font-weight: 600 !important; color: var(--ink-muted) !important; padding: 2px 0 4px !important; }
+#detailsRows .product-cmp tbody th { font-size: 13px !important; font-weight: 500 !important; color: var(--ink) !important; }
+@media print {
+  #detailsRows table.product-cmp { font-size: 9px !important; }
+  #detailsRows .product-cmp th, #detailsRows .product-cmp td { padding: 2px 0 !important; }
+  #detailsRows .product-cmp tbody th { font-size: 9px !important; }
+}
+@media print { .screen-only { display: none !important; } }
