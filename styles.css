@@ -8154,3 +8154,12 @@ body.pdf-mode .site-disclosure { display: block !important; }
   #dashboard .exposure-grid .metric-label { font-size: 11.5px !important; letter-spacing: 0 !important; }
   #dashboard .exposure-grid .metric-value { font-size: 26px !important; }
 }
+
+/* גיל היתרות: יחסי במסך, תאריך מלא ב-PDF. */
+.balance-age .age-print { display: none; }
+@media print {
+  .balance-age .age-screen { display: none !important; }
+  .balance-age .age-print { display: inline !important; }
+  /* בלי תווית סוג המוצר אין עמודה שנייה בכרטיס היתרה. */
+  #dashboard .total-row { grid-template-columns: 1fr !important; }
+}

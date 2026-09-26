@@ -17,11 +17,6 @@ const SOURCE_LABEL = {
   pensia: 'פנסיה',
   bituach: 'פוליסת חיסכון',
 };
-const SOURCE_DOT_COLOR = {
-  gemelnet: '#102743',
-  pensia: '#7488a1',
-  bituach: '#dcaf61',
-};
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -887,16 +882,6 @@ function renderDashboard() {
     document.getElementById(id).style.width = Math.max(0, Math.min(100, Number(value) || 0)) + '%';
   }
 
-  const sourceTotals = {};
-  for (const item of activeItems) {
-    const src = item.fund.source;
-    sourceTotals[src] = (sourceTotals[src] || 0) + (Number(item.balance) || 0);
-  }
-  document.getElementById('sourceMix').innerHTML = Object.entries(sourceTotals)
-    .sort((a, b) => b[1] - a[1])
-    .map(([src, val]) => `<div class="source-mix-item"><span class="dot" style="background:${SOURCE_DOT_COLOR[src]}"></span>${SOURCE_LABEL[src]}: ${(val / totalBalance * 100).toFixed(0)}%</div>`)
-    .join('');
-
   const rows = activeItems
     .slice()
     .sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0))
@@ -975,8 +960,18 @@ function renderBalanceAge(activeItems) {
   const newest = fmtAgeSince(stamps[stamps.length - 1]);
   if (!oldest) { wrap.hidden = true; return; }
   const subject = activeItems.length === 1 ? 'היתרה עודכנה' : (oldest === newest ? 'היתרות עודכנו' : 'חלק מהיתרות עודכנו');
-  wrap.textContent = `${subject} ${oldest}.`;
+  // ב-PDF תאריך מלא: "לפני 4 חודשים" נכון רק ביום שבו הדוח הופק.
+  const first = fmtDate(stamps[0]);
+  const last = fmtDate(stamps[stamps.length - 1]);
+  const printed = activeItems.length === 1 ? `היתרה עודכנה ב-${first}.`
+    : (first === last ? `היתרות עודכנו ב-${first}.` : `היתרות עודכנו בין ${first} ל-${last}.`);
+  wrap.innerHTML = `<span class="age-screen">${escapeHtml(subject + ' ' + oldest + '.')}</span><span class="age-print">${escapeHtml(printed)}</span>`;
   wrap.hidden = false;
+}
+function fmtDate(iso) {
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
 
 /* משפט המבנה מעל כרטיסי החשיפה: כמה מוצרים, ואיזה מהם מחזיק את רוב הכסף.
@@ -2886,9 +2881,6 @@ if (document.readyState === 'loading') {
   });
 })();
 
-
-/* === חזרה לראש העמוד === */
-window.backToTop = function() { const hero = document.querySelector('.premium-hero') || document.body; hero.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
 
 /* === פאנלים נפתחים בעמוד הנחיתה === */

@@ -231,6 +231,15 @@ function check(name, ok, detail) {
     });
     check('collapsed sections sit close together', gaps.length > 0 && gaps.every(g => g < 30), JSON.stringify(gaps.map(Math.round)));
 
+    // 12ב. ב-PDF תאריך מלא; בלי תווית סוג המוצר ובלי "חזרה לראש העמוד".
+    await fresh.emulateMedia({ media: 'print' });
+    const printedAge = await fresh.evaluate(() => document.getElementById('balanceAge').innerText.trim());
+    await fresh.emulateMedia({ media: 'screen' });
+    check('PDF shows the full update date', /^היתרה עודכנה ב-\d{2}\.\d{2}\.\d{4}\.$/.test(printedAge), printedAge);
+    check('screen still shows the relative age', /^היתרה עודכנה היום\.$/.test(await fresh.evaluate(() => document.getElementById('balanceAge').innerText.trim())));
+    check('no product-type chip in the balance card', (await fresh.locator('#sourceMix, .source-mix-item').count()) === 0);
+    check('no back-to-top button', (await fresh.locator('text=חזרה לראש העמוד').count()) === 0);
+
     // 12. מחיקת הכל היא קישור משני מחוץ לסרגל הפעולות.
     check('delete-all is outside the action toolbar', (await fresh.locator('.action-toolbar >> text=איפוס הכל').count()) === 0 && (await fresh.locator('.reset-link').count()) === 1);
   } catch (error) {
