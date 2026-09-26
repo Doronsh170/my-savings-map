@@ -7135,7 +7135,7 @@ body.pdf-mode .pdf-disclaimer { display: block !important; }
   --ink: #0c1a2b;
   --ink-soft: #24374d;
   --ink-mid: #4a5b70;
-  --ink-muted: #667a91;
+  --ink-muted: #526277; /* היה #667a91 — ניגודיות 3.9:1 על הרקע, מתחת לסף 4.5:1 */
   --ink-faint: #93a1b3;
 
   --line: #e2e8f0;
@@ -7570,6 +7570,7 @@ body.pre-result #portfolioSection,
 body.pre-result #dashboard,
 body.pre-result #historySection,
 body.pre-result #detailsSection,
+body.pre-result #perfSection,
 body.pre-result #simulationTabSection,
 body.pre-result #bottomActions { display: none !important; }
 
@@ -8069,11 +8070,10 @@ body.pdf-mode .site-disclosure { display: block !important; }
 
 
 /* === משתמש חוזר: גיל היתרות, עדכון מהיר, ביטול הסרה, מחיקה ================ */
-.balance-age {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
-  margin-top: 8px; font-size: 12.5px; color: var(--ink-muted);
-}
-.balance-age .info-link { margin-top: 0; }
+.balance-age { margin-top: 8px; font-size: 12.5px; color: var(--ink-muted); }
+.total-actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 6px; }
+.total-actions .info-link { margin-top: 0; font-size: 13.5px; }
+.total-actions-sep { color: var(--ink-muted); }
 
 .balances-form { margin: 0; }
 .balances-row {
@@ -8124,5 +8124,253 @@ body.pdf-mode .site-disclosure { display: block !important; }
 .reset-link:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
 
 @media print {
-  .balance-age-btn, .balances-dialog, .undo-toast, .reset-link { display: none !important; }
+  .total-actions, .balances-dialog, .undo-toast, .reset-link { display: none !important; }
+}
+
+
+/* === ראש הדשבורד: משפט המבנה, ורווחים אחידים בין האזורים המקופלים ======== */
+.portfolio-summary {
+  margin: 18px 0 6px; font-size: 16px; font-weight: 600; line-height: 1.5; color: var(--ink);
+}
+.portfolio-summary:empty { display: none; }
+.dashboard .coverage-note { margin: 0 0 14px; }
+.dashboard h2 { margin-bottom: 14px !important; }
+
+/* כל אזור מקופל ישב במרחק קבוע מהקודם. קודם כל אחד מהם היה section עם
+   ‎30px‎ ריפוד מעל ומתחת, כך שבין שני אזורים סגורים נפתח רווח של ‎60px‎. */
+#dashboard { padding-bottom: 6px !important; border-bottom: 0 !important; }
+#dashboard .perf-toggle-section { margin-top: 24px !important; }
+#historySection, #perfSection, #simulationTabSection { padding: 6px 0 !important; }
+#simulationTabSection { padding-bottom: 24px !important; }
+@media print {
+  .portfolio-summary { font-size: 11px !important; margin: 6px 0 4px !important; color: #0b1c2c !important; }
+  /* כפתורי מידע מקופלים אינם תוכן בדוח; ההבהרה והגילוי הנאות מודפסים בנפרד. */
+  .site-info-section { display: none !important; }
+}
+
+/* שלושה כרטיסי חשיפה בשורה אחת: ברשת 2×2 הכרטיס השלישי נשאר לבד. */
+#dashboard .metric-grid.exposure-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 10px !important; }
+@media (max-width: 520px) {
+  #dashboard .exposure-grid .metric-card { padding: 14px 12px !important; }
+  #dashboard .exposure-grid .metric-label { font-size: 11.5px !important; letter-spacing: 0 !important; }
+  #dashboard .exposure-grid .metric-value { font-size: 26px !important; }
+}
+
+/* גיל היתרות: יחסי במסך, תאריך מלא ב-PDF. */
+.balance-age .age-print { display: none; }
+@media print {
+  .balance-age .age-screen { display: none !important; }
+  .balance-age .age-print { display: inline !important; }
+  /* בלי תווית סוג המוצר אין עמודה שנייה בכרטיס היתרה. */
+  #dashboard .total-row { grid-template-columns: 1fr !important; }
+}
+
+
+/* === רשימת המוצרים ====================================================== */
+#detailsSection { padding: 20px 0 6px !important; }
+.products-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 2px 8px; }
+.products-head h3 { margin: 0; font-size: 17px; font-weight: 800; color: var(--ink); }
+.products-head span { font-size: 12px; color: var(--ink-muted); }
+.product-list {
+  background: var(--card, #fff); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(16, 39, 67, 0.05);
+}
+.product + .product { border-top: 1px solid var(--line); }
+.product.is-open { background: #f7f9fc; box-shadow: inset -3px 0 0 var(--ink); }
+.product-row {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%;
+  padding: 12px 14px; border: 0; background: none; cursor: pointer;
+  font: inherit; color: inherit; text-align: right;
+}
+.product-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.product-row .wiz-logo { width: 36px; height: 36px; border-radius: 10px; margin-top: 1px; }
+.product-row .wiz-logo img { padding: 3px; }
+.product-mid { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.product-title { font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--ink); }
+.product-inds { display: flex; flex-direction: column; margin-top: 2px; }
+.product-ind { font-size: 12.5px; line-height: 1.45; color: var(--ink-muted); }
+.product-ind b { color: var(--ink); font-weight: 700; }
+.product-ask { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.product-amt { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; text-align: left; }
+.product-amt b { font-size: 14.5px; font-weight: 700; color: var(--ink); direction: ltr; }
+.product-amt span { font-size: 12px; color: var(--ink-muted); }
+
+.product-detail { padding: 0 14px 14px; }
+.product-track { font-size: 12px; color: var(--ink-muted); margin-bottom: 10px; line-height: 1.45; }
+.product-cmp-head { margin: 0 0 4px; font-size: 12.5px; font-weight: 800; color: var(--ink); }
+.product-note { margin: 0 0 6px; font-size: 12.5px; line-height: 1.5; color: var(--ink-muted); }
+.product-cmp { width: 100%; border-collapse: collapse; font-size: 13px; }
+.product-cmp thead th { font-size: 11px; font-weight: 600; color: var(--ink-muted); text-align: left; padding: 2px 0 4px; }
+.product-cmp tbody th { text-align: right; font-weight: 500; color: var(--ink); padding: 6px 0; border-top: 1px solid var(--line); }
+.product-cmp td { text-align: left; font-weight: 700; padding: 6px 0; border-top: 1px solid var(--line); direction: ltr; color: var(--ink); }
+.product-cmp-mine { width: 92px; }
+.product-cmp-peer { width: 64px; color: var(--ink-muted) !important; font-weight: 600 !important; }
+.fee-cell { display: inline-flex; align-items: center; gap: 3px; border: 1.5px solid var(--line); border-radius: 8px; padding: 0 6px; background: #fff; }
+.fee-cell:focus-within { border-color: var(--accent); }
+.product-fee-input {
+  width: 46px; border: 0; outline: 0; background: none; padding: 4px 0;
+  font: inherit; font-size: 13px; font-weight: 700; color: var(--ink); text-align: left; -moz-appearance: textfield;
+}
+.product-fee-input::-webkit-outer-spin-button, .product-fee-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.product-fee-input:placeholder-shown { font-weight: 500; }
+.fee-cell-sign { font-size: 12px; color: var(--ink-muted); }
+.fee-print { display: none; }
+.product-detail .info-link { margin-top: 6px; }
+.product-expo { margin: 12px 0 0; font-size: 12.5px; color: var(--ink); line-height: 1.5; }
+.product-actions { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 10px; }
+.product-actions .info-link { margin-top: 0; font-size: 13px; color: var(--ink); }
+.product-actions .product-remove { color: var(--danger); margin-inline-start: auto; }
+
+/* הסבר קצר למונחים בכרטיסי החשיפה */
+.term-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; padding: 0; margin-inline-start: 3px; vertical-align: 1px;
+  border: 1px solid var(--line); border-radius: 50%; background: #fff; cursor: pointer;
+  font: inherit; font-size: 10.5px; font-weight: 800; line-height: 1; letter-spacing: 0; color: var(--ink-muted);
+}
+.term-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* דמי ניהול מקופלים במסך היתרה */
+.wiz-fees-toggle {
+  display: inline-flex; align-items: center; gap: 8px; margin: 14px 0 4px; padding: 4px 0;
+  border: 0; background: none; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700;
+  color: var(--accent); text-decoration: underline; text-underline-offset: 3px;
+}
+.wiz-fees[hidden] { display: none; }
+
+@media print {
+  .product-detail[hidden] { display: block !important; }
+  .product { break-inside: avoid; background: none !important; box-shadow: none !important; }
+  .product-row { padding: 6px 8px !important; }
+  .product-detail { padding: 0 8px 8px !important; }
+  .product-ask, .product-actions, .product-detail .info-link, .term-btn, .fee-cell-sign, .product-fee-input { display: none !important; }
+  .fee-cell { border: 0 !important; padding: 0 !important; }
+  .fee-print { display: inline !important; }
+}
+
+/* אזור מקופל סגור: בלי המרווח שנועד להפריד בין הכותרת לתוכן. */
+.dashboard-toggle-section:not([open]) > .dashboard-toggle-summary { margin-bottom: 0 !important; }
+.exposure-help { margin-top: 10px; font-size: 12.5px; }
+@media print { .exposure-help { display: none !important; } }
+
+/* טבלת ההשוואה של מוצר: מבודדת מכללי הטבלה הישנים (רוחב מינימלי 900px,
+   כותרות באותיות רישיות ורקע), גם בהדפסה. */
+#detailsRows table.product-cmp { min-width: 0 !important; width: 100% !important; table-layout: auto !important; font-size: 13px !important; line-height: 1.4 !important; }
+#detailsRows .product-cmp th, #detailsRows .product-cmp td {
+  padding: 6px 0 !important; background: none !important; letter-spacing: 0 !important;
+  text-transform: none !important; white-space: normal !important; border-bottom: 0 !important; vertical-align: middle !important;
+}
+#detailsRows .product-cmp th:first-child, #detailsRows .product-cmp td:first-child { width: auto !important; }
+#detailsRows .product-cmp thead th { font-size: 11px !important; font-weight: 600 !important; color: var(--ink-muted) !important; padding: 2px 0 4px !important; }
+#detailsRows .product-cmp tbody th { font-size: 13px !important; font-weight: 500 !important; color: var(--ink) !important; }
+@media print {
+  #detailsRows table.product-cmp { font-size: 9px !important; }
+  #detailsRows .product-cmp th, #detailsRows .product-cmp td { padding: 2px 0 !important; }
+  #detailsRows .product-cmp tbody th { font-size: 9px !important; }
+}
+@media print { .screen-only { display: none !important; } }
+
+/* כותרת עמודת הממוצע ארוכה ("ממוצע קופות באותו סוג מסלול") — עמודה רחבה יותר, שבירת שורה בכותרת. */
+#detailsRows .product-cmp-peer { width: 104px !important; }
+#detailsRows .product-cmp thead th:last-child { line-height: 1.3 !important; }
+#detailsRows .product-cmp thead th:first-child { text-align: right !important; }
+
+/* === רשימת המוצרים — שלוש שכבות, ותיקוני נגישות ========================
+   נגישות: טקסט משני 13px לפחות; צבע משני var(--ink-muted) ‏(#5c646f, ניגודיות
+   מעל 4.5:1 גם על רקע המוצר הפתוח); כל פעולה בגובה 44px לפחות; מיקוד גלוי. */
+.products-head { margin-bottom: 2px; }
+.products-def { margin: 0 2px 10px; font-size: 13px; color: var(--ink-muted); }
+.product-title { font-size: 15px; }
+.product-track-line { font-size: 13px; color: var(--ink-muted); line-height: 1.4; }
+.product-ind { font-size: 13px; color: var(--ink-muted); }
+.product-amt span { font-size: 13px; }
+.product-ask { color: var(--accent); }
+.nowrap { white-space: nowrap; }
+/* כשהמוצר פתוח, שורת ההשוואה מופיעה מיד מתחת, בשכבה 2 — לא פעמיים. */
+.product.is-open .product-inds { display: none; }
+.product-row { min-height: 60px; }
+
+.product-fees { display: flex; flex-direction: column; }
+.product-fee-row { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.product-fee-label { flex: 1 1 auto; font-size: 14px; color: var(--ink); }
+.product-fee-avg { flex: 0 0 auto; min-width: 92px; font-size: 13px; color: var(--ink-muted); text-align: left; }
+/* שדה בלי מסגרת — קו תחתון בלבד, כדי שלא ייראה כמו טופס חובה. */
+#detailsRows .fee-cell {
+  border: 0; border-bottom: 1.5px solid #9aa3ae; border-radius: 0; background: transparent;
+  padding: 0 2px; min-height: 40px; min-width: 76px;
+}
+#detailsRows .fee-cell:focus-within { border-bottom: 2px solid var(--accent); outline: 2px solid var(--accent); outline-offset: 3px; }
+#detailsRows .product-fee-input { width: 54px; font-size: 15px; padding: 8px 0; }
+#detailsRows .product-fee-input::placeholder { color: #6b7380; opacity: 1; }
+#detailsRows .fee-cell-sign { font-size: 13px; color: var(--ink-muted); }
+.product-note { font-size: 13px; }
+.product-expo { margin: 8px 0 0; font-size: 14px; }
+
+.product-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 6px; }
+.product-action {
+  min-height: 44px; padding: 0 2px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.product-action-main { color: var(--accent); text-decoration: none; }
+.product-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* שכבה 3 */
+.fund-facts-head { margin: 16px 0 6px; font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.fund-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin: 0; font-size: 13.5px; }
+.fund-fact { display: flex; justify-content: space-between; gap: 8px; }
+.fund-fact dt { color: var(--ink-muted); }
+.fund-fact dd { margin: 0; font-weight: 700; direction: ltr; }
+.method-details { margin-top: 14px; }
+.method-details > summary {
+  min-height: 44px; display: flex; align-items: center; cursor: pointer;
+  font-size: 14px; font-weight: 700; color: var(--accent);
+}
+.method-details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.method-details .cmp-method { font-size: 13.5px; }
+.info-dialog-body .product-cmp { width: 100%; border-collapse: collapse; font-size: 14px; }
+.info-dialog-body .product-cmp th, .info-dialog-body .product-cmp td { padding: 7px 0; border-top: 1px solid var(--line); text-align: left; }
+.info-dialog-body .product-cmp thead th { border-top: 0; font-size: 12.5px; font-weight: 600; color: var(--ink-muted); line-height: 1.3; }
+.info-dialog-body .product-cmp th:first-child { text-align: right; font-weight: 500; }
+.info-dialog-body .product-cmp td { font-weight: 700; direction: ltr; }
+.info-dialog-body .product-cmp-peer { width: 108px; color: var(--ink-muted); }
+.info-dialog-body .product-cmp-mine { width: 70px; }
+.info-dialog-sub { font-size: 13px !important; color: var(--ink-muted) !important; }
+.info-dialog-x { width: 44px !important; height: 44px !important; }
+
+/* במובייל החלון נפתח מלמטה, ברוחב מלא. */
+@media (max-width: 520px) {
+  .info-dialog {
+    width: 100vw; max-width: 100vw; margin: auto 0 0; max-height: 88vh;
+    border-radius: 20px 20px 0 0; border-bottom: 0; padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+}
+
+.print-only { display: none; }
+@media print {
+  .print-only { display: block !important; margin-top: 6px; }
+  .product-fees, .product-actions { display: none !important; }
+  .product.is-open .product-inds { display: flex !important; }
+  .fund-facts { grid-template-columns: repeat(4, 1fr) !important; font-size: 8.5px !important; gap: 2px 10px !important; }
+  .fund-facts-head { font-size: 9px !important; margin: 6px 0 2px !important; }
+}
+
+/* טבלת "השוואה מלאה" בחלון: מבודדת מכללי הטבלה הישנים (רקע לכותרות, 9.5px,
+   אותיות רישיות, רוחב מינימלי). */
+.info-dialog-body table.product-cmp { min-width: 0 !important; width: 100% !important; table-layout: auto !important; font-size: 14px !important; }
+.info-dialog-body .product-cmp th, .info-dialog-body .product-cmp td {
+  background: none !important; letter-spacing: 0 !important; text-transform: none !important;
+  white-space: normal !important; border-bottom: 0 !important; padding: 7px 0 !important; vertical-align: middle !important;
+}
+.info-dialog-body .product-cmp tbody th { font-size: 14px !important; font-weight: 500 !important; color: var(--ink) !important; }
+.info-dialog-body .product-cmp thead th { font-size: 13px !important; font-weight: 600 !important; color: var(--ink-muted) !important; }
+.info-dialog-body .product-cmp th:first-child, .info-dialog-body .product-cmp td:first-child { width: auto !important; }
+/* התוויות הזהובות מעל שורות המידע: #dcaf61 נותן ניגודיות 2:1 על לבן. גוון זהב כהה, 5.4:1. */
+.info-row-kicker { color: #86651c !important; }
+.fund-fact-wide { grid-column: 1 / -1; }
+@media print {
+  .fund-fact-wide { grid-column: span 2 !important; }
+  /* ההערה של שכבה 2 מופיעה גם בטבלת ההדפסה — פעם אחת מספיקה. */
+  .product-detail > .product-note { display: none !important; }
+  .print-only .product-note { font-size: 8.5px !important; margin: 2px 0 !important; }
 }
