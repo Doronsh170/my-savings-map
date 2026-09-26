@@ -502,13 +502,13 @@ function compareToPeers(rec, userFee, userDepositFee) {
   }
   if (feePeers.length >= CMP_MIN_PEERS) {
     out.rows.push({
-      key: 'fee', label: out.isPension ? 'דמי ניהול מהצבירה' : 'דמי ניהול', digits: 2,
+      key: 'fee', label: out.isPension ? 'דמי ניהול מצבירה' : 'דמי ניהול', digits: 2,
       mine: userFee, fund: rec.avg_annual_management_fee,
       peers: cmpMean(feePeers.map(r => r.avg_annual_management_fee))
     });
     if (out.isPension) {
       out.rows.push({
-        key: 'deposit_fee', label: 'דמי ניהול מההפקדות', digits: 2,
+        key: 'deposit_fee', label: 'דמי ניהול מהפקדות', digits: 2,
         mine: userDepositFee, fund: rec.avg_deposit_fee,
         peers: cmpMean(feePeers.map(r => r.avg_deposit_fee))
       });
@@ -525,27 +525,33 @@ function compareToPeers(rec, userFee, userDepositFee) {
 
 /* המתודולוגיה נפתחת בחלון "איך מחושבת ההשוואה?": מי שרוצה לדעת איך חושבה
    ההשוואה ימצא, ומי שרק רוצה את המספר לא נתקל בה. */
+const CMP_POPULATION_LABEL = { public: 'כלל הציבור', sector: 'עובדי סקטור מסוים', workplace: 'עובדי מקום עבודה מסוים', other: 'אוכלוסייה ייעודית' };
 function renderComparisonMethod(item) {
   const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
   if (!cmp) return '';
+  const f = item.fund;
   const yieldRow = cmp.rows.filter(row => row.key === 'yield')[0];
   const annual = yieldRow && typeof yieldRow.annual === 'number' ? yieldRow.annual : null;
   const fundFees = cmp.rows.filter(row => typeof row.fund === 'number')
-    .map(row => `<li>${escapeHtml(row.label)} — הממוצע בפועל במסלול שלך: ${row.fund.toFixed(2)}%</li>`).join('');
+    .map(row => `<li>${escapeHtml(row.label)} — הממוצע שנגבה בפועל בקופה שלך: ${row.fund.toFixed(2)}%</li>`).join('');
   return `
     <div class="cmp-method">
-      <p>ההשוואה נעשית מול מסלולים מאותו סוג מוצר ומאותה קטגוריית השקעה בלבד.</p>
+      <p>"${CMP_PEERS_TEXT}" הוא ממוצע של קופות שעומדות בכל התנאים האלה:</p>
       <ul>
-        <li>תשואה וחשיפה: ${escapeHtml(cmp.yieldGroup)} — ${cmp.yieldCount} מסלולים.</li>
-        <li>דמי ניהול: ${escapeHtml(cmp.feeGroup)} — ${cmp.feeCount} מסלולים. אוכלוסיית היעד נלקחת בחשבון כאן, כי הסכם סקטוריאלי משפיע על המחיר.</li>
-        ${fundFees}
+        <li>אותו סוג מוצר — ${escapeHtml(CMP_PRODUCT_LABEL[f._cmpProduct] || '')}.</li>
+        <li>אותה קטגוריית מסלול השקעה — ${escapeHtml(CMP_CATEGORY_LABEL[f._cmpCategory] || 'מסלול')}.</li>
+        <li>בדמי ניהול, גם אותה אוכלוסיית יעד — ${escapeHtml(CMP_POPULATION_LABEL[f._cmpPopulation] || '')}. הסכם קבוצתי משפיע על המחיר.</li>
+        <li>ממוצע פשוט: כל קופה נספרת פעם אחת, בלי שקלול לפי גודל.</li>
+        <li>לפחות ${CMP_MIN_PEERS} קופות בקבוצה. אם יש פחות, לא מוצגת השוואה.</li>
       </ul>
-      <p>מסלול שחשיפתו הממוצעת למניות בשנתיים האחרונות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה אינו נכלל בממוצעים.</p>
+      <p>בקבוצה של הקופה שלך: ${cmp.yieldCount} קופות בתשואה ובחשיפה, ${cmp.feeCount} קופות בדמי ניהול. הקופה שלך עצמה אינה נספרת.</p>
+      ${fundFees ? `<ul>${fundFees}</ul>` : ''}
+      <p>לא נכללות: קופות שלא דיווחו יותר משלושה חודשים, מסלולים בניהול אישי, וקופה שחשיפתה הממוצעת למניות בשנתיים האחרונות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה.</p>
       ${yieldRow
-        ? '<p>בממוצע התשואה נספרים רק מסלולים עם ותק של שלוש שנים לפחות, שממשיכים לדווח. התשואה היא תשואת המסלול ברוטו, לפני דמי ניהול, ואינה התשואה האישית שלך.</p>'
-          + (annual !== null ? `<p>התשואה המוצגת היא מצטברת לשלוש שנים — שווה ערך ל-${annual.toFixed(2)}% בשנה בממוצע. אתרי השוואה אחרים מציגים לעתים דווקא את הממוצע השנתי.</p>` : '')
-        : '<p>תשואה ל־3 שנים אינה מוצגת כאן: למסלול או לקבוצת ההשוואה אין ותק מלא של שלוש שנים.</p>'}
-      <p>הנתונים מדיווחי גמל־נט, פנסיה־נט וביטוח־נט. קבוצת ההשוואה כוללת מסלולים פעילים בלבד.</p>
+        ? '<p>בממוצע התשואה נכללות רק קופות בנות שלוש שנים לפחות. התשואה היא תשואת המסלול ברוטו, לפני דמי ניהול, ואינה התשואה האישית שלך.</p>'
+          + (annual !== null ? `<p>התשואה המוצגת היא מצטברת לשלוש שנים — שווה ערך ל-${annual.toFixed(2)}% בשנה בממוצע.</p>` : '')
+        : '<p>תשואה ל־3 שנים אינה מוצגת כאן: לקופה או לקבוצת ההשוואה אין ותק מלא של שלוש שנים.</p>'}
+      <p>הנתונים מדיווחי גמל־נט, פנסיה־נט וביטוח־נט.</p>
     </div>`;
 }
 
@@ -763,9 +769,13 @@ function setMetric(id, value, digits = 1) {
    שורה אחת לכל מוצר: לוגו, שם קצר, יתרה, משקל בתיק ואינדיקציית השוואה אחת.
    לחיצה פותחת את הפירוט המלא, ורק מוצר אחד פתוח בכל פעם. האינדיקציה היא
    דמי הניהול: הנתון היחיד שהמשתמש יכול לשנות בעצמו, ולכן גם הנתון שכדאי
-   לבקש ממנו דווקא כאן, ליד ממוצע המסלולים הדומים. בלי צבע ובלי "מעל" או
+   לבקש ממנו דווקא כאן, ליד ממוצע הקופות באותו סוג מסלול. בלי צבע ובלי "מעל" או
    "מתחת": שני מספרים, בלי שיפוט. */
 let OPEN_PRODUCT_UID = null;
+/* הניסוח מתאר את קבוצת ההשוואה בפועל: אותו סוג מוצר ואותה קטגוריית מסלול
+   השקעה (ראו compareToPeers) — לא "מסלולים דומים" כללי. */
+const CMP_PEERS_TEXT = 'ממוצע קופות באותו סוג מסלול';
+const CMP_NONE_TEXT = 'אין כרגע קבוצת השוואה';
 function fmtCmp(value, digits) {
   return typeof value === 'number' && isFinite(value) ? value.toFixed(digits) + '%' : '—';
 }
@@ -777,12 +787,14 @@ function productIndicatorHtml(item, cmp) {
   const f = item.fund;
   if (f.is_stale) return `<span class="product-ind">נתוני המסלול לא עודכנו מאז ${escapeHtml(fmtPeriod(f.report_period))}</span>`;
   const feeRow = cmp && cmp.rows.find(row => row.key === 'fee');
-  if (!feeRow) return '<span class="product-ind">אין מספיק מסלולים להשוואה</span>';
-  const peers = `<span class="product-ind">מסלולים דומים ${fmtCmp(feeRow.peers, 2)}</span>`;
+  if (!feeRow) return `<span class="product-ind">${CMP_NONE_TEXT}</span>`;
+  const peers = `<span class="product-ind">${CMP_PEERS_TEXT} ${fmtCmp(feeRow.peers, 2)}</span>`;
   if (Number.isFinite(item.managementFee)) {
-    return `<span class="product-ind">דמי ניהול <b>${fmtCmp(item.managementFee, 2)}</b></span>${peers}`;
+    // בקרן פנסיה נגבים שני דמי ניהול; השורה מציגה את זה שמהצבירה, ואומרת זאת.
+    const label = (f._product || productOf(f)) === 'pensia' ? 'דמי ניהול מצבירה' : 'דמי ניהול';
+    return `<span class="product-ind">${label} <b>${fmtCmp(item.managementFee, 2)}</b></span>${peers}`;
   }
-  return `${peers}<span class="product-ind"><span class="product-ask" data-ask-fee>כמה אתה משלם?</span></span>`;
+  return `${peers}<span class="product-ind"><span class="product-ask" data-ask-fee>הזן דמי ניהול</span></span>`;
 }
 /* שדה דמי ניהול בתוך טבלת ההשוואה. לצדו טקסט להדפסה: שדה ריק מודפס כמסגרת ריקה. */
 function feeInputHtml(item, field, label) {
@@ -800,28 +812,28 @@ function productDetailHtml(item, cmp) {
   const uid = escapeHtml(f.uid);
   const isPension = (f._product || productOf(f)) === 'pensia';
   const byKey = key => cmp && cmp.rows.find(row => row.key === key);
-  const feeLabel = isPension ? 'דמי ניהול מהצבירה' : 'דמי ניהול';
+  const feeLabel = isPension ? 'דמי ניהול מצבירה' : 'דמי ניהול';
   const rows = [];
   const yieldRow = byKey('yield');
   if (yieldRow) rows.push(['תשואה 3 שנים', fmtCmp(yieldRow.mine, 1), fmtCmp(yieldRow.peers, 1)]);
   rows.push([feeLabel, feeInputHtml(item, 'managementFee', feeLabel), fmtCmp(byKey('fee') && byKey('fee').peers, 2)]);
-  if (isPension) rows.push(['דמי ניהול מההפקדות', feeInputHtml(item, 'depositFee', 'דמי ניהול מההפקדות'), fmtCmp(byKey('deposit_fee') && byKey('deposit_fee').peers, 2)]);
+  if (isPension) rows.push(['דמי ניהול מהפקדות', feeInputHtml(item, 'depositFee', 'דמי ניהול מהפקדות'), fmtCmp(byKey('deposit_fee') && byKey('deposit_fee').peers, 2)]);
   const stockRow = byKey('stock');
   if (stockRow) rows.push(['חשיפה למניות', fmtCmp(stockRow.mine, 0), fmtCmp(stockRow.peers, 0)]);
   const peerCount = cmp ? Math.max(cmp.yieldCount || 0, cmp.feeCount || 0) : 0;
   const note = f.is_stale
-    ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה למסלולים דומים.</p>`
-    : (cmp ? '' : '<p class="product-note">אין מספיק מסלולים דומים להשוואה. <span class="screen-only">אפשר עדיין להזין את דמי הניהול שלך — הם נכללים בדמי הניהול המשוקללים של התיק.</span></p>');
+    ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה לקופות באותו סוג מסלול.</p>`
+    : (cmp ? '' : `<p class="product-note">${CMP_NONE_TEXT}. <span class="screen-only">אפשר עדיין להזין את דמי הניהול שלך — הם נכללים בדמי הניהול המשוקללים של התיק.</span></p>`);
   return `
       <div class="product-track">${escapeHtml(f.fund_name || '')} · קופה ${escapeHtml(f.fund_id || '')}</div>
-      <h5 class="product-cmp-head">${cmp ? 'מול מסלולים דומים' : 'דמי הניהול שלך'}</h5>
+      <h5 class="product-cmp-head">${cmp ? 'מול קופות באותו סוג מסלול' : 'דמי הניהול שלך'}</h5>
       ${note}
       <table class="product-cmp">
-        <thead><tr><th scope="col"><span class="visually-hidden">נתון</span></th><th scope="col">שלך</th>${cmp ? '<th scope="col">ממוצע</th>' : ''}</tr></thead>
+        <thead><tr><th scope="col">נתון</th><th scope="col">שלך</th>${cmp ? `<th scope="col">${CMP_PEERS_TEXT}</th>` : ''}</tr></thead>
         <tbody>${rows.filter(row => cmp || row[1].indexOf('fee-cell') > -1).map(([label, mine, peers]) =>
           `<tr><th scope="row">${label}</th><td class="product-cmp-mine">${mine}</td>${cmp ? `<td class="product-cmp-peer">${peers}</td>` : ''}</tr>`).join('')}</tbody>
       </table>
-      ${cmp ? `<button type="button" class="info-link" data-info="method" data-info-uid="${uid}">איך מחושבת ההשוואה? (${peerCount} מסלולים)</button>` : ''}
+      ${cmp ? `<button type="button" class="info-link" data-info="method" data-info-uid="${uid}">איך מחושבת ההשוואה? (${peerCount} קופות)</button>` : ''}
       <p class="product-expo">חשיפות המסלול: מניות <b>${fmtPct(f.stock_pct, 1)}</b> · חו״ל <b>${fmtPct(f.foreign_pct, 1)}</b> · מט״ח <b>${fmtPct(f.fx_pct, 1)}</b></p>
       <div class="product-actions">
         <button type="button" class="info-link" data-edit-uid="${uid}">עדכון יתרה</button>
@@ -2637,7 +2649,7 @@ function wizScreenBalance() {
       </span>
     </label>
     ${isPension ? `<label class="wiz-fee-field">
-      <span class="wiz-fee-label">דמי ניהול מההפקדות <span class="wiz-optional">לא חובה</span></span>
+      <span class="wiz-fee-label">דמי ניהול מהפקדות <span class="wiz-optional">לא חובה</span></span>
       <span class="wiz-fee-input">
         <input type="number" id="quickDepositFeeInput" value="${escapeHtml(depositFeeValue)}" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
         <span class="wiz-fee-sign">%</span>

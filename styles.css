@@ -8269,3 +8269,8 @@ body.pdf-mode .site-disclosure { display: block !important; }
   #detailsRows .product-cmp tbody th { font-size: 9px !important; }
 }
 @media print { .screen-only { display: none !important; } }
+
+/* כותרת עמודת הממוצע ארוכה ("ממוצע קופות באותו סוג מסלול") — עמודה רחבה יותר, שבירת שורה בכותרת. */
+#detailsRows .product-cmp-peer { width: 104px !important; }
+#detailsRows .product-cmp thead th:last-child { line-height: 1.3 !important; }
+#detailsRows .product-cmp thead th:first-child { text-align: right !important; }

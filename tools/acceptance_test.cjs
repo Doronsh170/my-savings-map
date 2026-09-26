@@ -65,7 +65,7 @@ function check(name, ok, detail) {
     check('missing stock_pct is not averaged as 0', stockShown === pick.a.stock_pct.toFixed(1), `shown ${stockShown}, expected ${pick.a.stock_pct.toFixed(1)}`);
     check('coverage note names partial coverage', /חשיפה למניות — 50% מהתיק/.test(await page.textContent('#coverageNote')));
 
-    // 2. ההשוואה למסלולים דומים שורדת רענון.
+    // 2. ההשוואה לקופות באותו סוג מסלול שורדת רענון.
     check('peer comparison present after reload', (await page.locator('.product-cmp-peer').count()) > 0);
 
     // 3. תשואות רק מחודש הדיווח העדכני.
@@ -95,13 +95,14 @@ function check(name, ok, detail) {
     await card.locator('text=איך מחושבת ההשוואה?').click();
     const methodBody = await page.textContent('#infoDialogBody');
     check('method dialog opens with methodology only',
-      await page.isVisible('#infoDialog') && /ההשוואה נעשית מול מסלולים/.test(methodBody) && (await page.locator('#infoDialogBody .detail-card-grid').count()) === 0);
+      await page.isVisible('#infoDialog') && /ממוצע קופות באותו סוג מסלול/.test(methodBody) && /אותו סוג מוצר/.test(methodBody) && /אותה קטגוריית מסלול השקעה/.test(methodBody)
+      && /אוכלוסיית יעד/.test(methodBody) && /ממוצע פשוט/.test(methodBody) && /לפחות 5 קופות/.test(methodBody) && (await page.locator('#infoDialogBody .detail-card-grid').count()) === 0);
     await page.click('.info-dialog-x');
     check('X closes the dialog', !(await page.isVisible('#infoDialog')));
     await card.locator('.product-actions >> text=פרטים נוספים').click();
     const fundBody = await page.textContent('#infoDialogBody');
     check('details dialog opens with track data only',
-      await page.isVisible('#infoDialog') && /חו״ל/.test(fundBody) && !/ההשוואה נעשית/.test(fundBody));
+      await page.isVisible('#infoDialog') && /חו״ל/.test(fundBody) && !/ממוצע פשוט/.test(fundBody));
     await page.click('.info-dialog-close');
     check('"סגור" closes the dialog', !(await page.isVisible('#infoDialog')));
     await card.locator('.product-actions >> text=פרטים נוספים').click();
@@ -265,21 +266,38 @@ function check(name, ok, detail) {
     const rowUids = await fresh.evaluate(() => Array.from(document.querySelectorAll('#detailsRows .product')).map(el => el.dataset.productUid));
     check('one row per product, largest first', JSON.stringify(rowUids) === JSON.stringify([pick.a.uid, withFeePeers, noPeers]));
     const ind = uid => fresh.textContent(`[data-ind-uid="${uid}"]`);
-    check('row with fee: yours and similar tracks', /^דמי ניהול 0\.50%מסלולים דומים \d\.\d\d%$/.test(await ind(pick.a.uid)), await ind(pick.a.uid));
-    check('row without fee: similar tracks and a question', /^מסלולים דומים \d\.\d\d%כמה אתה משלם\?$/.test(await ind(withFeePeers)), await ind(withFeePeers));
-    check('row without peers says so', (await ind(noPeers)) === 'אין מספיק מסלולים להשוואה', await ind(noPeers) + ' / ' + noPeers);
+    check('row with fee: yours and the same-track-type average', /^דמי ניהול 0\.50%ממוצע קופות באותו סוג מסלול \d\.\d\d%$/.test(await ind(pick.a.uid)), await ind(pick.a.uid));
+    check('row without fee: average and "הזן דמי ניהול"', /^ממוצע קופות באותו סוג מסלול \d\.\d\d%הזן דמי ניהול$/.test(await ind(withFeePeers)), await ind(withFeePeers));
+    check('row without a comparison group says so', (await ind(noPeers)) === 'אין כרגע קבוצת השוואה', await ind(noPeers) + ' / ' + noPeers);
+    const pensionRow = await fresh.evaluate(() => {
+      const r = DATA.find(x => isSelectableFund(x) && x._product === 'pensia' && !withRuntimeFlags(x).is_stale
+        && (compareToPeers(withRuntimeFlags(x), null, null) || { rows: [] }).rows.some(row => row.key === 'fee'));
+      const item = { fund: withRuntimeFlags(r), balance: 1, managementFee: 0.15, depositFee: 1.5 };
+      const div = document.createElement('div');
+      div.innerHTML = productIndicatorHtml(item, compareToPeers(item.fund, 0.15, 1.5)) + productDetailHtml(item, compareToPeers(item.fund, 0.15, 1.5));
+      return { ind: div.querySelector('.product-ind').textContent, rows: Array.from(div.querySelectorAll('tbody th')).map(th => th.textContent),
+        head: Array.from(div.querySelectorAll('thead th')).map(th => th.textContent) };
+    });
+    check('pension row names the accumulation fee', /^דמי ניהול מצבירה 0\.15%$/.test(pensionRow.ind), pensionRow.ind);
+    check('pension detail lists both fees separately', pensionRow.rows.includes('דמי ניהול מצבירה') && pensionRow.rows.includes('דמי ניהול מהפקדות'), JSON.stringify(pensionRow.rows));
+    check('table header: נתון | שלך | ממוצע קופות באותו סוג מסלול', JSON.stringify(pensionRow.head) === JSON.stringify(['נתון', 'שלך', 'ממוצע קופות באותו סוג מסלול']), JSON.stringify(pensionRow.head));
+    const staleText = await fresh.evaluate(() => {
+      const r = DATA.find(x => isSelectableFund(x) && withRuntimeFlags(x).is_stale);
+      return r ? productIndicatorHtml({ fund: withRuntimeFlags(r), managementFee: null }, null).replace(/<[^>]+>/g, '') : '';
+    });
+    check('stale track keeps "נתוני המסלול לא עודכנו מאז"', /^נתוני המסלול לא עודכנו מאז \d\d\/\d{4}$/.test(staleText), staleText);
     check('rows start closed', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 0);
     await fresh.click(`[data-toggle-uid="${pick.a.uid}"]`);
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     check('only one product open at a time', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 1
       && (await fresh.getAttribute(`[data-toggle-uid="${noPeers}"]`, 'aria-expanded')) === 'true');
-    check('no-peers detail explains and still takes a fee', /אין מספיק מסלולים דומים להשוואה/.test(await fresh.textContent(`.product[data-product-uid="${noPeers}"] .product-detail`))
+    check('no-peers detail explains and still takes a fee', /אין כרגע קבוצת השוואה/.test(await fresh.textContent(`.product[data-product-uid="${noPeers}"] .product-detail`))
       && (await fresh.locator(`.product[data-product-uid="${noPeers}"] .product-fee-input`).count()) >= 1);
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     check('clicking an open row closes it', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 0);
     await fresh.click(`[data-toggle-uid="${withFeePeers}"] [data-ask-fee]`);
     const focused = await fresh.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-fee-uid'));
-    check('"כמה אתה משלם?" opens the product at the fee field', focused === withFeePeers);
+    check('"הזן דמי ניהול" opens the product at the fee field', focused === withFeePeers);
     await fresh.keyboard.type('0.35');
     await fresh.keyboard.press('Enter');
     const savedFee = await fresh.evaluate(u => JSON.parse(localStorage.getItem(STORAGE_KEY)).find(r => r.uid === u).management_fee, withFeePeers);
