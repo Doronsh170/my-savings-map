@@ -819,40 +819,55 @@ function productIndicatorHtml(item, cmp) {
   }
   return '<span class="product-ind"><span class="product-ask" data-ask-fee>הזן דמי ניהול</span></span>';
 }
-/* שדה דמי ניהול בשכבה 2. לצדו טקסט להדפסה: שדה ריק מודפס כמסגרת ריקה. */
-function feeInputHtml(item, field, label) {
+/* דמי ניהול בשכבה 2 מוצגים כערך — לא כשדה טופס. לחיצה הופכת את הערך לשדה
+   הזנה במקום; Enter או יציאה מהשדה שומרים, Escape מבטל. */
+function feeValueHtml(item, field, label) {
   const value = item[field];
-  const shown = Number.isFinite(value) ? value.toFixed(2) : '';
-  return `<span class="fee-cell">
-      <input type="number" class="product-fee-input" data-fee-uid="${escapeHtml(item.fund.uid)}" data-fee-field="${field}"
-        value="${shown}" placeholder="0.00" min="0" max="10" step="0.01" inputmode="decimal" enterkeyhint="done"
-        aria-label="${escapeHtml(label)} שלך, באחוזים" /><span class="fee-cell-sign" aria-hidden="true">%</span>
-      <span class="fee-print">${shown ? shown + '%' : 'לא הוזן'}</span>
-    </span>`;
+  const uid = escapeHtml(item.fund.uid);
+  return Number.isFinite(value)
+    ? `<button type="button" class="stat-value stat-edit" data-fee-edit data-fee-uid="${uid}" data-fee-field="${field}" aria-label="${escapeHtml(label)} שלך: ${value.toFixed(2)}%. לחיצה לשינוי">${value.toFixed(2)}%<span class="stat-edit-icon" aria-hidden="true">✎</span></button>`
+    : `<button type="button" class="stat-value stat-add" data-fee-edit data-fee-uid="${uid}" data-fee-field="${field}" aria-label="הזנת ${escapeHtml(label)} שלך">הזן</button>`;
+}
+function openFeeEditor(button) {
+  const idx = findUserFundIndex(button.getAttribute('data-fee-uid'));
+  if (idx < 0) return;
+  const field = button.getAttribute('data-fee-field') === 'depositFee' ? 'depositFee' : 'managementFee';
+  const value = userFunds[idx][field];
+  const label = button.closest('.product-stat').querySelector('.product-stat-label').textContent;
+  const wrap = document.createElement('span');
+  wrap.className = 'stat-value stat-input';
+  wrap.innerHTML = `<input type="number" class="product-fee-input" data-fee-uid="${escapeHtml(button.getAttribute('data-fee-uid'))}" data-fee-field="${field}"
+      value="${Number.isFinite(value) ? value.toFixed(2) : ''}" placeholder="0.00" min="0" max="10" step="0.01" inputmode="decimal" enterkeyhint="done"
+      aria-label="${escapeHtml(label)} שלך, באחוזים" /><span aria-hidden="true">%</span>`;
+  button.replaceWith(wrap);
+  const input = wrap.querySelector('input');
+  input.focus();
+  input.select();
 }
 function productDetailHtml(item, cmp) {
   const f = item.fund;
   const uid = escapeHtml(f.uid);
-  const fees = feeRowsFor(item, cmp).map(row => `
-      <div class="product-fee-row">
-        <span class="product-fee-label">${row.label}</span>
-        ${feeInputHtml(item, row.field, row.label)}
-        ${row.peer ? `<span class="product-fee-avg">ממוצע ${fmtCmp(row.peer.peers, 2)}</span>` : ''}
-      </div>`).join('');
+  // אריחים כמו כרטיסי החשיפה בראש הדשבורד: תווית, ערך גדול, וממוצע מתחת.
+  const tile = (label, valueHtml, avg, cls) => `
+      <div class="product-stat${cls ? ' ' + cls : ''}">
+        <span class="product-stat-label">${label}</span>
+        ${valueHtml}
+        ${avg ? `<span class="product-stat-avg">ממוצע ${avg}</span>` : ''}
+      </div>`;
   // תשואה 3 שנים מול הממוצע — יחד עם דמי הניהול, שני המספרים שהמשתמש בא לראות.
   const yieldRow = cmp && cmp.rows.find(row => row.key === 'yield');
   const yieldValue = yieldRow ? yieldRow.mine : f.yield_trailing_3yrs;
-  const yieldHtml = typeof yieldValue === 'number' ? `
-      <div class="product-fee-row product-yield-row">
-        <span class="product-fee-label">תשואה 3 שנים</span>
-        <span class="product-yield-value">${fmtCmp(yieldValue, 1)}</span>
-        ${yieldRow ? `<span class="product-fee-avg">ממוצע ${fmtCmp(yieldRow.peers, 1)}</span>` : ''}
-      </div>` : '';
+  const yieldHtml = typeof yieldValue === 'number'
+    ? tile('תשואה 3 שנים', `<span class="stat-value">${fmtCmp(yieldValue, 1)}</span>`, yieldRow ? fmtCmp(yieldRow.peers, 1) : '', 'product-yield-row')
+    : '';
+  const fees = feeRowsFor(item, cmp)
+    .map(row => tile(row.label, feeValueHtml(item, row.field, row.label), row.peer ? fmtCmp(row.peer.peers, 2) : ''))
+    .join('');
   const note = f.is_stale
     ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה לקופות באותו סוג מסלול.</p>`
     : (cmp ? '' : `<p class="product-note">${CMP_NONE_TEXT} למסלול הזה.</p>`);
   return `
-      <div class="product-fees">${yieldHtml}${fees}</div>
+      <div class="product-fees product-stats">${yieldHtml}${fees}</div>
       ${note}
       <p class="product-expo">מניות <b>${fmtRound(f.stock_pct)}</b> · חו״ל <b>${fmtRound(f.foreign_pct)}</b> · מט״ח <b>${fmtRound(f.fx_pct)}</b></p>
       <div class="product-actions">
@@ -938,8 +953,8 @@ function setProductOpen(uid, focusFee) {
     el.querySelector('.product-detail').hidden = !isOpen;
   });
   if (focusFee && OPEN_PRODUCT_UID) {
-    const input = document.querySelector(`#detailsRows .product-fee-input[data-fee-uid="${CSS.escape(uid)}"]`);
-    if (input) { input.focus(); input.select(); }
+    const button = document.querySelector(`#detailsRows [data-fee-edit][data-fee-uid="${CSS.escape(uid)}"]`);
+    if (button) openFeeEditor(button);
   }
 }
 document.addEventListener('click', event => {
@@ -966,19 +981,47 @@ function commitProductFee(input) {
     const print = product.querySelector('.print-only');
     if (print) print.innerHTML = fullComparisonHtml(item, cmp, true);
   }
-  const printed = input.parentElement.querySelector('.fee-print');
-  if (printed) printed.textContent = value === null ? 'לא הוזן' : value.toFixed(2) + '%';
   setFeeMetric(weightedUserManagementFee(getTotalBalance()));
   refreshSimulationDefaults();
 }
-document.addEventListener('change', event => {
-  if (event.target.classList && event.target.classList.contains('product-fee-input')) commitProductFee(event.target);
+function closeFeeEditor(input, save) {
+  if (input.dataset.closing) return null;
+  input.dataset.closing = '1';
+  if (save) commitProductFee(input);
+  const idx = findUserFundIndex(input.getAttribute('data-fee-uid'));
+  const wrap = input.closest('.stat-input');
+  if (idx < 0 || !wrap) return;
+  const field = input.getAttribute('data-fee-field') === 'depositFee' ? 'depositFee' : 'managementFee';
+  const label = wrap.closest('.product-stat').querySelector('.product-stat-label').textContent;
+  const holder = document.createElement('span');
+  holder.innerHTML = feeValueHtml(userFunds[idx], field, label);
+  const button = holder.firstElementChild;
+  wrap.replaceWith(button);
+  return button;
+}
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-fee-edit]');
+  if (button) openFeeEditor(button);
 });
 document.addEventListener('keydown', event => {
-  if (event.key !== 'Enter' || !event.target.classList || !event.target.classList.contains('product-fee-input')) return;
-  event.preventDefault();
-  commitProductFee(event.target);
-  event.target.blur();
+  const input = event.target;
+  if (!input.classList || !input.classList.contains('product-fee-input')) return;
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    const button = closeFeeEditor(input, true);
+    if (button) button.focus();
+  } else if (event.key === 'Escape') {
+    event.preventDefault();
+    const button = closeFeeEditor(input, false);
+    if (button) button.focus();
+  }
+});
+// יציאה מהשדה (לחיצה במקום אחר) שומרת.
+document.addEventListener('focusout', event => {
+  const input = event.target;
+  if (input.classList && input.classList.contains('product-fee-input') && !input.dataset.closing && input.closest('.stat-input')) {
+    closeFeeEditor(input, true);
+  }
 });
 
 /* הסבר אחד לשלושת כרטיסי החשיפה. בא במקום כפתור "?" בכל כרטיס, שבמובייל שבר
