@@ -93,10 +93,13 @@ function check(name, ok, detail) {
     await openProduct(page, pick.a.uid);
     const card = page.locator(`.product[data-product-uid="${pick.a.uid}"]`);
     check('open product: fees, exposures and two actions only',
-      (await card.locator('.product-detail .product-fee-row').count()) >= 1
+      (await card.locator('.product-detail .product-stat').count()) >= 2
       && /^מניות \d+% · חו״ל \d+% · מט״ח \d+%$/.test((await card.locator('.product-expo').textContent()).trim())
       && (await card.locator('.product-actions button').count()) === 2
       && (await card.locator('.product-detail:visible >> text=איך מחושבת ההשוואה?').count()) === 0);
+    const yieldLine = (await card.locator('.product-yield-row').textContent()).replace(/\s+/g, ' ').trim();
+    check('open product shows 3-year return vs. the average', /^תשואה 3 שנים -?\d+\.\d% ממוצע -?\d+\.\d%$/.test(yieldLine), yieldLine);
+    check('every row has an open/close arrow', (await page.locator('#detailsRows .product-row .product-chev').count()) === (await page.locator('#detailsRows .product').count()));
     // שכבה 3: "השוואה מלאה" — טבלה, נתוני מסלול, ו"איך מחושבת ההשוואה?" בפנים.
     await card.locator('.product-actions >> text=השוואה מלאה').click();
     const fullBody = await page.textContent('#infoDialogBody');
@@ -290,7 +293,7 @@ function check(name, ok, detail) {
       div.innerHTML = productIndicatorHtml(item, compareToPeers(item.fund, 0.15, 1.5)) + productDetailHtml(item, compareToPeers(item.fund, 0.15, 1.5));
       return { ind: div.querySelector('.product-ind').textContent, rows: Array.from(div.querySelectorAll('tbody th')).map(th => th.textContent),
         head: Array.from(div.querySelectorAll('thead th')).map(th => th.textContent),
-        layer2: Array.from(div.querySelectorAll('.product-fee-label')).map(el => el.textContent) };
+        layer2: Array.from(div.querySelectorAll('.product-stat:not(.product-yield-row) .product-stat-label')).map(el => el.textContent) };
     });
     check('pension row names the accumulation fee', /^דמי ניהול מצבירה 0\.15% · ממוצע \d\.\d\d%$/.test(pensionRow.ind), pensionRow.ind);
     check('pension open product lists both fees separately', JSON.stringify(pensionRow.layer2) === JSON.stringify(['דמי ניהול מצבירה', 'דמי ניהול מהפקדות']), JSON.stringify(pensionRow.layer2));
@@ -307,7 +310,7 @@ function check(name, ok, detail) {
     check('only one product open at a time', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 1
       && (await fresh.getAttribute(`[data-toggle-uid="${noPeers}"]`, 'aria-expanded')) === 'true');
     check('no-peers detail explains and still takes a fee', /אין כרגע קבוצת השוואה/.test(await fresh.textContent(`.product[data-product-uid="${noPeers}"] .product-detail`))
-      && (await fresh.locator(`.product[data-product-uid="${noPeers}"] .product-fee-input`).count()) >= 1);
+      && (await fresh.locator(`.product[data-product-uid="${noPeers}"] [data-fee-edit]`).count()) >= 1);
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     check('clicking an open row closes it', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 0);
     await fresh.click(`[data-toggle-uid="${withFeePeers}"] [data-ask-fee]`);
@@ -320,12 +323,25 @@ function check(name, ok, detail) {
     check('row switches to the with-fee state', /^דמי ניהול 0\.35% · ממוצע/.test((await ind(withFeePeers)).trim()), await ind(withFeePeers));
     // דמי הניהול המשוקללים מוצגים רק כשהוזנו לכל המוצרים; המוצר השלישי משלים אותם.
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
+    await fresh.click(`.product[data-product-uid="${noPeers}"] [data-fee-edit][data-fee-field="managementFee"]`);
     await fresh.fill(`.product[data-product-uid="${noPeers}"] .product-fee-input[data-fee-field="managementFee"]`, '0.2');
     await fresh.keyboard.press('Enter');
     const expectedFee = ((300000 * 0.5 + 200000 * 0.35 + 100000 * 0.2) / 600000).toFixed(2);
     check('portfolio fee metric updates once every product has a fee', (await fresh.textContent('#feeSavings')) === expectedFee, await fresh.textContent('#feeSavings'));
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     check('fee edit keeps the balance age', /עודכנה? היום|עודכנו היום/.test(await fresh.textContent('#balanceAge')));
+
+    // 13א. דמי ניהול מוצגים כערך; לחיצה פותחת שדה, Escape מבטל בלי לשמור.
+    await fresh.click(`[data-toggle-uid="${withFeePeers}"]`);
+    const feeBtn = `.product[data-product-uid="${withFeePeers}"] [data-fee-edit]`;
+    check('fee shows as a value, not a form field', /^0\.35%/.test((await fresh.textContent(feeBtn)).trim())
+      && (await fresh.locator(`.product[data-product-uid="${withFeePeers}"] .product-fee-input`).count()) === 0);
+    await fresh.click(feeBtn);
+    await fresh.keyboard.type('9');
+    await fresh.keyboard.press('Escape');
+    const afterEsc = await fresh.evaluate(u => JSON.parse(localStorage.getItem(STORAGE_KEY)).find(r => r.uid === u).management_fee, withFeePeers);
+    check('Escape cancels a fee edit', afterEsc === 0.35 && /^0\.35%/.test((await fresh.textContent(feeBtn)).trim()), String(afterEsc));
+    await fresh.click(`[data-toggle-uid="${withFeePeers}"]`);
 
     // 14. PDF: כל המוצרים פתוחים, בלי שדות ובלי פעולות.
     await fresh.evaluate(u => { window.__withFee = u; }, withFeePeers);
@@ -359,9 +375,9 @@ function check(name, ok, detail) {
     await fresh.focus(`[data-toggle-uid="${pick.a.uid}"]`);
     await fresh.keyboard.press('Enter');
     check('keyboard: Enter opens a product', (await fresh.getAttribute(`[data-toggle-uid="${pick.a.uid}"]`, 'aria-expanded')) === 'true');
-    const sizes = await fresh.evaluate(u => Array.from(document.querySelectorAll(`.product[data-product-uid="${CSS.escape(u)}"] .product-action, .product[data-product-uid="${CSS.escape(u)}"] .product-fee-row`))
+    const sizes = await fresh.evaluate(u => Array.from(document.querySelectorAll(`.product[data-product-uid="${CSS.escape(u)}"] .product-action`))
       .map(el => Math.round(el.getBoundingClientRect().height)), pick.a.uid);
-    check('tap targets are at least 44px tall', sizes.length >= 3 && sizes.every(h => h >= 44), JSON.stringify(sizes));
+    check('tap targets are at least 44px tall', sizes.length >= 2 && sizes.every(h => h >= 44), JSON.stringify(sizes));
     await fresh.keyboard.press('Enter');
     check('keyboard: Enter closes it again', (await fresh.getAttribute(`[data-toggle-uid="${pick.a.uid}"]`, 'aria-expanded')) === 'false');
     const minFont = await fresh.evaluate(() => Math.min(...Array.from(document.querySelectorAll('#detailsSection .products-def, #detailsSection .product-ind, #detailsSection .product-amt span, #detailsSection .product-track-line'))
