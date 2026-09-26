@@ -741,7 +741,7 @@ function weightedMetric(key, totalBalance) {
 }
 const COVERAGE_LABELS = [
   ['stock_pct', 'חשיפה למניות'], ['foreign_pct', 'חשיפה לחו״ל'], ['fx_pct', 'חשיפה למט״ח'],
-  ['liquid_pct', 'נכסים סחירים'], ['monthly_yield', 'תשואה חודשית'], ['ytd_yield', 'תשואה מתחילת השנה'],
+  ['monthly_yield', 'תשואה חודשית'], ['ytd_yield', 'תשואה מתחילת השנה'],
   ['yield_trailing_3yrs', 'תשואה ל־3 שנים']
 ];
 /* שורת עדכניות וכיסוי בראש הדוח: מתי עודכן המאגר, איזה חלק מהתיק במסלולים
@@ -861,7 +861,6 @@ function renderDashboard() {
   const aggStock = weightedMetric('stock_pct', totalBalance);
   const aggForeign = weightedMetric('foreign_pct', totalBalance);
   const aggFx = weightedMetric('fx_pct', totalBalance);
-  const aggLiquid = weightedMetric('liquid_pct', totalBalance);
   const perfMonth = weightedMetric('monthly_yield', totalBalance);
   const perfYtd = weightedMetric('ytd_yield', totalBalance);
   const perf3y = weightedMetric('yield_trailing_3yrs', totalBalance);
@@ -874,7 +873,6 @@ function renderDashboard() {
   setMetric('aggStock', aggStock, 1);
   setMetric('aggForeign', aggForeign, 1);
   setMetric('aggFx', aggFx, 1);
-  setMetric('aggLiquid', aggLiquid, 1);
   setMetric('perfMonth', perfMonth, 2);
   setMetric('perfYtd', perfYtd, 2);
   setMetric('perf3y', perf3y, 2);
@@ -884,7 +882,6 @@ function renderDashboard() {
     ['aggStockBar', aggStock],
     ['aggForeignBar', aggForeign],
     ['aggFxBar', aggFx],
-    ['aggLiquidBar', aggLiquid],
   ];
   for (const [id, value] of barPairs) {
     document.getElementById(id).style.width = Math.max(0, Math.min(100, Number(value) || 0)) + '%';
@@ -1293,7 +1290,6 @@ const HIST_METRICS = [
   { id: 'stock', field: 'hist_stock', label: 'חשיפה למניות של התיק', type: 'line', color: '#102743', digits: 1 },
   { id: 'foreign', field: 'hist_foreign', label: 'חשיפה לחו״ל', type: 'line', color: '#dcaf61', digits: 1 },
   { id: 'fx', field: 'hist_fx', label: 'חשיפה למט״ח', type: 'line', color: '#7488a1', digits: 1 },
-  { id: 'liquid', field: 'hist_liquid', label: 'נכסים סחירים', type: 'line', color: '#8a6b1f', digits: 1 },
 ];
 const HIST_DEFAULT_SELECTED = ['yield', 'stock'];
 const HIST_PREFS_KEY = 'pension_dashboard_hist_charts_v1';
@@ -1765,7 +1761,6 @@ function buildShareText(mode) {
   const aggStock = weightedMetric('stock_pct', totalBalance);
   const aggForeign = weightedMetric('foreign_pct', totalBalance);
   const aggFx = weightedMetric('fx_pct', totalBalance);
-  const aggLiquid = weightedMetric('liquid_pct', totalBalance);
   const perfYtd = weightedMetric('ytd_yield', totalBalance);
   const feeSavings = weightedUserManagementFee(totalBalance);
   const lines = [
@@ -1774,7 +1769,6 @@ function buildShareText(mode) {
     `חשיפה למניות: ${fmtPct(aggStock, 1)}`,
     `חשיפה לחו״ל: ${fmtPct(aggForeign, 1)}`,
     `חשיפה למט״ח: ${fmtPct(aggFx, 1)}`,
-    `נכסים סחירים: ${fmtPct(aggLiquid, 1)}`,
     `תשואה מתחילת שנה לפי מסלולים, משוקללת: ${fmtPct(perfYtd, 2)}`,
     `תשואה 3 שנים מצטברת לפי מסלולים, משוקללת: ${fmtPct(weightedMetric('yield_trailing_3yrs', totalBalance), 2)}`,
     ...(withAmounts ? [`דמי ניהול אישיים משוקללים: ${Number.isFinite(feeSavings) ? fmtPct(feeSavings, 2) : 'לא הוזן'}`] : []),

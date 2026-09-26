@@ -8146,3 +8146,11 @@ body.pdf-mode .site-disclosure { display: block !important; }
   /* כפתורי מידע מקופלים אינם תוכן בדוח; ההבהרה והגילוי הנאות מודפסים בנפרד. */
   .site-info-section { display: none !important; }
 }
+
+/* שלושה כרטיסי חשיפה בשורה אחת: ברשת 2×2 הכרטיס השלישי נשאר לבד. */
+#dashboard .metric-grid.exposure-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 10px !important; }
+@media (max-width: 520px) {
+  #dashboard .exposure-grid .metric-card { padding: 14px 12px !important; }
+  #dashboard .exposure-grid .metric-label { font-size: 11.5px !important; letter-spacing: 0 !important; }
+  #dashboard .exposure-grid .metric-value { font-size: 26px !important; }
+}
