@@ -158,6 +158,57 @@ function check(name, ok, detail) {
     await recipient.waitForFunction(() => SHARED_VIEW === true);
     await recipient.click('text=שמירת התיק בדפדפן הזה');
     check('save stores the shared portfolio', (await recipient.evaluate(() => JSON.parse(localStorage.getItem(STORAGE_KEY)).length)) === 2);
+
+    // 8. משתמש חוזר נכנס ישר לתיק; משתמש חדש מתחיל באשף.
+    const fresh = await newPage();
+    check('new visitor starts on the wizard', await fresh.isVisible('#wizScreen') && !(await fresh.isVisible('#dashboard')));
+    const monthsAgo = n => { const d = new Date(); d.setMonth(d.getMonth() - n); return d.toISOString(); };
+    await seed(fresh, [
+      { uid: pick.a.uid, balance: 100000, updated_at: monthsAgo(4) },
+      { uid: pick.n.uid, balance: 50000, updated_at: new Date().toISOString() }
+    ]);
+    await fresh.reload(); await ready(fresh);
+    await fresh.waitForFunction(() => document.body.classList.contains('dashboard-reached'));
+    check('returning user opens on the dashboard', await fresh.isVisible('#dashboard') && !(await fresh.isVisible('#wizScreen')));
+
+    // 9. גיל היתרות ועדכון מהיר.
+    check('balance age names the oldest balance', /חלק מהיתרות עודכנו לפני 4 חודשים/.test(await fresh.textContent('#balanceAge')));
+    await fresh.click('#balanceAge >> text=עדכון מהיר');
+    check('quick update lists every product', (await fresh.locator('#balancesRows input').count()) === 2);
+    await fresh.fill(`#balancesRows input[data-balance-uid="${pick.a.uid}"]`, '');
+    await fresh.click('#balancesDialog button[type=submit]');
+    check('quick update rejects an empty balance', await fresh.isVisible('#balancesError') && await fresh.isVisible('#balancesDialog'));
+    await fresh.fill(`#balancesRows input[data-balance-uid="${pick.a.uid}"]`, '120000');
+    await fresh.keyboard.press('Enter');
+    const savedA = await fresh.evaluate(u => JSON.parse(localStorage.getItem(STORAGE_KEY)).find(r => r.uid === u), pick.a.uid);
+    check('quick update saves the new balance', !(await fresh.isVisible('#balancesDialog')) && savedA.balance === 120000);
+    check('quick update refreshes the age', /היתרות עודכנו היום/.test(await fresh.textContent('#balanceAge')));
+    check('total reflects the quick update', (await fresh.textContent('#totalBalance')).replace(/[^0-9]/g, '') === '170000');
+
+    // 10. הסרת מוצר ניתנת לביטול, בלי חלון אישור.
+    let confirmAsked = false;
+    fresh.on('dialog', () => { confirmAsked = true; });
+    await fresh.evaluate(() => { document.querySelector('.details-toggle-section').open = true; });
+    await fresh.click(`[data-remove-uid="${pick.n.uid}"]`);
+    const afterRemove = await fresh.evaluate(() => JSON.parse(localStorage.getItem(STORAGE_KEY)).length);
+    check('remove is immediate, with an undo toast', !confirmAsked && afterRemove === 1 && await fresh.isVisible('#undoToast'));
+    await fresh.click('#undoToastBtn');
+    const afterUndo = await fresh.evaluate(() => JSON.parse(localStorage.getItem(STORAGE_KEY)).map(r => r.uid));
+    check('undo restores the removed product', afterUndo.length === 2 && afterUndo.includes(pick.n.uid) && !(await fresh.isVisible('#undoToast')));
+    await fresh.click(`[data-remove-uid="${pick.n.uid}"]`);
+    await fresh.click(`[data-remove-uid="${pick.a.uid}"]`);
+    check('removing the last product returns to the wizard', await fresh.isVisible('#wizScreen'));
+    await fresh.click('#undoToastBtn');
+    check('undo of the last product reopens the dashboard', await fresh.isVisible('#dashboard') && !(await fresh.isVisible('#wizScreen')));
+
+    // 11. באשף, מי שיש לו תיק רואה "חזרה לתיק" ולא "התחל מחדש".
+    await fresh.click('.dashboard-edit-actions >> text=הוספת מוצר');
+    check('wizard offers a way back to the portfolio', (await fresh.locator('#wizBar >> text=חזרה לתיק').count()) === 1 && (await fresh.locator('#wizBar >> text=התחל מחדש').count()) === 0);
+    await fresh.click('#wizBar >> text=חזרה לתיק');
+    check('"back to portfolio" shows the dashboard', await fresh.isVisible('#dashboard') && !(await fresh.isVisible('#wizScreen')));
+
+    // 12. מחיקת הכל היא קישור משני מחוץ לסרגל הפעולות.
+    check('delete-all is outside the action toolbar', (await fresh.locator('.action-toolbar >> text=איפוס הכל').count()) === 0 && (await fresh.locator('.reset-link').count()) === 1);
   } catch (error) {
     check('test run completed', false, error.message);
   } finally {

@@ -126,6 +126,10 @@
       <div>
         <div class="total" id="totalBalance">-</div>
         <div class="total-label">יתרה כוללת שהוזנה</div>
+        <div class="balance-age" id="balanceAge" hidden>
+          <span id="balanceAgeText"></span>
+          <button type="button" class="info-link balance-age-btn" onclick="openBalancesDialog()">עדכון מהיר</button>
+        </div>
       </div>
       <div class="source-mix" id="sourceMix"></div>
     </div>
@@ -304,8 +308,8 @@
       <button type="button" class="action-btn" onclick="saveAsPDF()">שמירה / הדפסה ל-PDF</button>
       <button type="button" class="action-btn" onclick="shareWhatsApp()">שליחה לווטסאפ</button>
       <button type="button" class="action-btn" onclick="backToTop()">חזרה לראש העמוד</button>
-      <button type="button" class="action-btn" onclick="resetAllData()">איפוס הכל</button>
     </div>
+    <button type="button" class="reset-link" onclick="resetAllData()">מחיקת כל הנתונים מהדפדפן</button>
   </div>
 </section>
 
@@ -320,6 +324,29 @@
   <div class="info-dialog-body" id="infoDialogBody"></div>
   <button type="button" class="action-btn info-dialog-close" onclick="closeInfoDialog()">סגור</button>
 </dialog>
+
+<dialog class="info-dialog balances-dialog" id="balancesDialog" aria-labelledby="balancesDialogTitle">
+  <div class="info-dialog-head">
+    <div>
+      <h3 id="balancesDialogTitle">עדכון יתרות</h3>
+      <div class="info-dialog-sub">מעדכנים לפי הדוח האחרון. יתרה שלא השתנתה נשארת כמו שהיא.</div>
+    </div>
+    <button type="button" class="info-dialog-x" onclick="closeBalancesDialog()" aria-label="סגירה">✕</button>
+  </div>
+  <form id="balancesForm" class="balances-form" novalidate onsubmit="event.preventDefault(); saveBalancesDialog();">
+    <div id="balancesRows"></div>
+    <p class="balances-error" id="balancesError" role="alert" hidden>יש להזין יתרה גדולה מאפס לכל מוצר.</p>
+    <div class="share-dialog-actions">
+      <button type="submit" class="action-btn">שמירה</button>
+      <button type="button" class="action-btn share-dialog-cancel" onclick="closeBalancesDialog()">ביטול</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="undo-toast" id="undoToast" role="status" aria-live="polite" hidden>
+  <span id="undoToastText"></span>
+  <button type="button" class="undo-toast-btn" id="undoToastBtn">ביטול</button>
+</div>
 
 <dialog class="share-dialog" id="shareDialog" aria-labelledby="shareDialogTitle">
   <h3 id="shareDialogTitle">שליחה לווטסאפ</h3>
