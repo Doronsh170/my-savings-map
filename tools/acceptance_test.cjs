@@ -92,20 +92,28 @@ function check(name, ok, detail) {
     check('product list is not a collapsible section', (await page.locator('#detailsSection details').count()) === 0 && await page.isVisible('#detailsRows'));
     await openProduct(page, pick.a.uid);
     const card = page.locator(`.product[data-product-uid="${pick.a.uid}"]`);
-    await card.locator('text=איך מחושבת ההשוואה?').click();
-    const methodBody = await page.textContent('#infoDialogBody');
-    check('method dialog opens with methodology only',
-      await page.isVisible('#infoDialog') && /ממוצע קופות באותו סוג מסלול/.test(methodBody) && /אותו סוג מוצר/.test(methodBody) && /אותה קטגוריית מסלול השקעה/.test(methodBody)
-      && /אוכלוסיית יעד/.test(methodBody) && /ממוצע פשוט/.test(methodBody) && /לפחות 5 קופות/.test(methodBody) && (await page.locator('#infoDialogBody .detail-card-grid').count()) === 0);
+    check('open product: fees, exposures and two actions only',
+      (await card.locator('.product-detail .product-fee-row').count()) >= 1
+      && /^מניות \d+% · חו״ל \d+% · מט״ח \d+%$/.test((await card.locator('.product-expo').textContent()).trim())
+      && (await card.locator('.product-actions button').count()) === 2
+      && (await card.locator('.product-detail:visible >> text=איך מחושבת ההשוואה?').count()) === 0);
+    // שכבה 3: "השוואה מלאה" — טבלה, נתוני מסלול, ו"איך מחושבת ההשוואה?" בפנים.
+    await card.locator('.product-actions >> text=השוואה מלאה').click();
+    const fullBody = await page.textContent('#infoDialogBody');
+    check('full comparison opens with the table and track data',
+      await page.isVisible('#infoDialog') && /ממוצע קופות באותו סוג מסלול/.test(fullBody) && /נתוני המסלול/.test(fullBody) && /נכסים סחירים/.test(fullBody));
+    check('method is one more layer in, closed', !(await page.isVisible('#infoDialogBody .cmp-method')));
+    await page.click('#infoDialogBody .method-details > summary');
+    const methodBody = await page.textContent('#infoDialogBody .cmp-method');
+    check('method explains the comparison group',
+      await page.isVisible('#infoDialogBody .cmp-method') && /אותו סוג מוצר/.test(methodBody) && /אותה קטגוריית מסלול השקעה/.test(methodBody)
+      && /אוכלוסיית יעד/.test(methodBody) && /ממוצע פשוט/.test(methodBody) && /לפחות 5 קופות/.test(methodBody));
     await page.click('.info-dialog-x');
     check('X closes the dialog', !(await page.isVisible('#infoDialog')));
-    await card.locator('.product-actions >> text=פרטים נוספים').click();
-    const fundBody = await page.textContent('#infoDialogBody');
-    check('details dialog opens with track data only',
-      await page.isVisible('#infoDialog') && /חו״ל/.test(fundBody) && !/ממוצע פשוט/.test(fundBody));
+    await card.locator('.product-actions >> text=השוואה מלאה').click();
     await page.click('.info-dialog-close');
     check('"סגור" closes the dialog', !(await page.isVisible('#infoDialog')));
-    await card.locator('.product-actions >> text=פרטים נוספים').click();
+    await card.locator('.product-actions >> text=השוואה מלאה').click();
     await page.keyboard.press('Escape');
     check('Escape closes the dialog', !(await page.isVisible('#infoDialog')));
 
@@ -190,20 +198,23 @@ function check(name, ok, detail) {
     check('quick update refreshes the age', /היתרות עודכנו היום/.test(await fresh.textContent('#balanceAge')));
     check('total reflects the quick update', (await fresh.textContent('#totalBalance')).replace(/[^0-9]/g, '') === '170000');
 
-    // 10. הסרת מוצר ניתנת לביטול, בלי חלון אישור.
+    // 10. הסרה: דרך "עריכה" ← "הסר מהתיק", מיידית ועם ביטול, בלי חלון אישור.
     let confirmAsked = false;
     fresh.on('dialog', () => { confirmAsked = true; });
+    check('no remove button in the open product', (await fresh.locator('#detailsRows [data-remove-uid]').count()) === 0);
     await openProduct(fresh, pick.n.uid);
-    await fresh.click(`[data-remove-uid="${pick.n.uid}"]`);
+    await fresh.click(`.product-detail [data-edit-uid="${pick.n.uid}"]`);
+    await fresh.click('[data-wiz="removePicked"]');
     const afterRemove = await fresh.evaluate(() => JSON.parse(localStorage.getItem(STORAGE_KEY)).length);
     check('remove is immediate, with an undo toast', !confirmAsked && afterRemove === 1 && await fresh.isVisible('#undoToast'));
     await fresh.click('#undoToastBtn');
     const afterUndo = await fresh.evaluate(() => JSON.parse(localStorage.getItem(STORAGE_KEY)).map(r => r.uid));
     check('undo restores the removed product', afterUndo.length === 2 && afterUndo.includes(pick.n.uid) && !(await fresh.isVisible('#undoToast')));
-    await openProduct(fresh, pick.n.uid);
-    await fresh.click(`[data-remove-uid="${pick.n.uid}"]`);
-    await openProduct(fresh, pick.a.uid);
-    await fresh.click(`[data-remove-uid="${pick.a.uid}"]`);
+    await fresh.click('#wizBar >> text=חזרה לתיק');
+    check('back in the portfolio with both products', (await fresh.locator('#detailsRows .product').count()) === 2 && await fresh.isVisible('#dashboard'));
+    // הסרה מתוך הדשבורד (removeFundByUid) עדיין עובדת עם ביטול, גם למוצר האחרון.
+    await fresh.evaluate(u => removeFundByUid(u), pick.n.uid);
+    await fresh.evaluate(u => removeFundByUid(u), pick.a.uid);
     check('removing the last product returns to the wizard', await fresh.isVisible('#wizScreen'));
     await fresh.click('#undoToastBtn');
     check('undo of the last product reopens the dashboard', await fresh.isVisible('#dashboard') && !(await fresh.isVisible('#wizScreen')));
@@ -266,9 +277,11 @@ function check(name, ok, detail) {
     const rowUids = await fresh.evaluate(() => Array.from(document.querySelectorAll('#detailsRows .product')).map(el => el.dataset.productUid));
     check('one row per product, largest first', JSON.stringify(rowUids) === JSON.stringify([pick.a.uid, withFeePeers, noPeers]));
     const ind = uid => fresh.textContent(`[data-ind-uid="${uid}"]`);
-    check('row with fee: yours and the same-track-type average', /^דמי ניהול 0\.50%ממוצע קופות באותו סוג מסלול \d\.\d\d%$/.test(await ind(pick.a.uid)), await ind(pick.a.uid));
-    check('row without fee: average and "הזן דמי ניהול"', /^ממוצע קופות באותו סוג מסלול \d\.\d\d%הזן דמי ניהול$/.test(await ind(withFeePeers)), await ind(withFeePeers));
-    check('row without a comparison group says so', (await ind(noPeers)) === 'אין כרגע קבוצת השוואה', await ind(noPeers) + ' / ' + noPeers);
+    check('definition shown once under the list heading', (await fresh.textContent('.products-def')) === 'ממוצע = ממוצע קופות באותו סוג מסלול'
+      && (await fresh.locator('#detailsRows :text("ממוצע קופות באותו סוג מסלול"):visible').count()) === 0);
+    check('row with fee: yours · average', /^דמי ניהול 0\.50% · ממוצע \d\.\d\d%$/.test((await ind(pick.a.uid)).trim()), await ind(pick.a.uid));
+    check('row without fee: "הזן דמי ניהול" only', (await ind(withFeePeers)).trim() === 'הזן דמי ניהול', await ind(withFeePeers));
+    check('row without a comparison group has no extra line', (await ind(noPeers)).trim() === '', await ind(noPeers) + ' / ' + noPeers);
     const pensionRow = await fresh.evaluate(() => {
       const r = DATA.find(x => isSelectableFund(x) && x._product === 'pensia' && !withRuntimeFlags(x).is_stale
         && (compareToPeers(withRuntimeFlags(x), null, null) || { rows: [] }).rows.some(row => row.key === 'fee'));
@@ -276,10 +289,12 @@ function check(name, ok, detail) {
       const div = document.createElement('div');
       div.innerHTML = productIndicatorHtml(item, compareToPeers(item.fund, 0.15, 1.5)) + productDetailHtml(item, compareToPeers(item.fund, 0.15, 1.5));
       return { ind: div.querySelector('.product-ind').textContent, rows: Array.from(div.querySelectorAll('tbody th')).map(th => th.textContent),
-        head: Array.from(div.querySelectorAll('thead th')).map(th => th.textContent) };
+        head: Array.from(div.querySelectorAll('thead th')).map(th => th.textContent),
+        layer2: Array.from(div.querySelectorAll('.product-fee-label')).map(el => el.textContent) };
     });
-    check('pension row names the accumulation fee', /^דמי ניהול מצבירה 0\.15%$/.test(pensionRow.ind), pensionRow.ind);
-    check('pension detail lists both fees separately', pensionRow.rows.includes('דמי ניהול מצבירה') && pensionRow.rows.includes('דמי ניהול מהפקדות'), JSON.stringify(pensionRow.rows));
+    check('pension row names the accumulation fee', /^דמי ניהול מצבירה 0\.15% · ממוצע \d\.\d\d%$/.test(pensionRow.ind), pensionRow.ind);
+    check('pension open product lists both fees separately', JSON.stringify(pensionRow.layer2) === JSON.stringify(['דמי ניהול מצבירה', 'דמי ניהול מהפקדות']), JSON.stringify(pensionRow.layer2));
+    check('pension full comparison lists both fees', pensionRow.rows.includes('דמי ניהול מצבירה') && pensionRow.rows.includes('דמי ניהול מהפקדות'), JSON.stringify(pensionRow.rows));
     check('table header: נתון | שלך | ממוצע קופות באותו סוג מסלול', JSON.stringify(pensionRow.head) === JSON.stringify(['נתון', 'שלך', 'ממוצע קופות באותו סוג מסלול']), JSON.stringify(pensionRow.head));
     const staleText = await fresh.evaluate(() => {
       const r = DATA.find(x => isSelectableFund(x) && withRuntimeFlags(x).is_stale);
@@ -302,7 +317,7 @@ function check(name, ok, detail) {
     await fresh.keyboard.press('Enter');
     const savedFee = await fresh.evaluate(u => JSON.parse(localStorage.getItem(STORAGE_KEY)).find(r => r.uid === u).management_fee, withFeePeers);
     check('fee typed in the table is saved', savedFee === 0.35, String(savedFee));
-    check('row switches to the with-fee state', /^דמי ניהול 0\.35%/.test(await ind(withFeePeers)));
+    check('row switches to the with-fee state', /^דמי ניהול 0\.35% · ממוצע/.test((await ind(withFeePeers)).trim()), await ind(withFeePeers));
     // דמי הניהול המשוקללים מוצגים רק כשהוזנו לכל המוצרים; המוצר השלישי משלים אותם.
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     await fresh.fill(`.product[data-product-uid="${noPeers}"] .product-fee-input[data-fee-field="managementFee"]`, '0.2');
@@ -313,16 +328,20 @@ function check(name, ok, detail) {
     check('fee edit keeps the balance age', /עודכנה? היום|עודכנו היום/.test(await fresh.textContent('#balanceAge')));
 
     // 14. PDF: כל המוצרים פתוחים, בלי שדות ובלי פעולות.
+    await fresh.evaluate(u => { window.__withFee = u; }, withFeePeers);
     await fresh.evaluate(() => preparePrintLayout());
     await fresh.emulateMedia({ media: 'print' });
     const printView = await fresh.evaluate(() => ({
       details: Array.from(document.querySelectorAll('#detailsRows .product-detail')).filter(el => getComputedStyle(el).display !== 'none').length,
       inputs: Array.from(document.querySelectorAll('#detailsRows .product-fee-input')).filter(el => getComputedStyle(el).display !== 'none').length,
-      actions: Array.from(document.querySelectorAll('#detailsRows .product-actions')).filter(el => getComputedStyle(el).display !== 'none').length
+      actions: Array.from(document.querySelectorAll('#detailsRows .product-actions')).filter(el => getComputedStyle(el).display !== 'none').length,
+      tables: Array.from(document.querySelectorAll('#detailsRows .print-only')).filter(el => getComputedStyle(el).display !== 'none').length,
+      fee: (document.querySelector(`#detailsRows .product[data-product-uid="${CSS.escape(window.__withFee)}"] .print-only`) || {}).textContent || ''
     }));
     await fresh.emulateMedia({ media: 'screen' });
     await fresh.evaluate(() => restorePrintLayout());
-    check('PDF shows every product in full, without inputs or actions', printView.details === 3 && printView.inputs === 0 && printView.actions === 0, JSON.stringify(printView));
+    check('PDF shows every product in full, without inputs or actions', printView.details === 3 && printView.inputs === 0 && printView.actions === 0 && printView.tables === 3, JSON.stringify(printView));
+    check('PDF full table reflects a fee typed in the list', /0\.35%/.test(printView.fee));
 
     // 15. הסבר למונחים בכרטיסי החשיפה.
     await fresh.click('.exposure-help');
@@ -335,6 +354,19 @@ function check(name, ok, detail) {
     check('open product fits the mobile screen', widths[0] <= widths[1], JSON.stringify(widths));
     await fresh.click(`[data-toggle-uid="${pick.a.uid}"]`);
     await fresh.keyboard.press('Escape');
+
+    // 15ב. נגישות: מקלדת בלבד, ומטרות לחיצה של 44px לפחות.
+    await fresh.focus(`[data-toggle-uid="${pick.a.uid}"]`);
+    await fresh.keyboard.press('Enter');
+    check('keyboard: Enter opens a product', (await fresh.getAttribute(`[data-toggle-uid="${pick.a.uid}"]`, 'aria-expanded')) === 'true');
+    const sizes = await fresh.evaluate(u => Array.from(document.querySelectorAll(`.product[data-product-uid="${CSS.escape(u)}"] .product-action, .product[data-product-uid="${CSS.escape(u)}"] .product-fee-row`))
+      .map(el => Math.round(el.getBoundingClientRect().height)), pick.a.uid);
+    check('tap targets are at least 44px tall', sizes.length >= 3 && sizes.every(h => h >= 44), JSON.stringify(sizes));
+    await fresh.keyboard.press('Enter');
+    check('keyboard: Enter closes it again', (await fresh.getAttribute(`[data-toggle-uid="${pick.a.uid}"]`, 'aria-expanded')) === 'false');
+    const minFont = await fresh.evaluate(() => Math.min(...Array.from(document.querySelectorAll('#detailsSection .products-def, #detailsSection .product-ind, #detailsSection .product-amt span, #detailsSection .product-track-line'))
+      .map(el => parseFloat(getComputedStyle(el).fontSize))));
+    check('secondary text in the list is at least 13px', minFont >= 13, String(minFont));
 
     // 16. באשף: דמי הניהול מקופלים, אלא אם כבר הוזנו.
     await fresh.click('.total-actions >> text=הוספת מוצר');

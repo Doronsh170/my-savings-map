@@ -7135,7 +7135,7 @@ body.pdf-mode .pdf-disclaimer { display: block !important; }
   --ink: #0c1a2b;
   --ink-soft: #24374d;
   --ink-mid: #4a5b70;
-  --ink-muted: #667a91;
+  --ink-muted: #526277; /* היה #667a91 — ניגודיות 3.9:1 על הרקע, מתחת לסף 4.5:1 */
   --ink-faint: #93a1b3;
 
   --line: #e2e8f0;
@@ -8274,3 +8274,103 @@ body.pdf-mode .site-disclosure { display: block !important; }
 #detailsRows .product-cmp-peer { width: 104px !important; }
 #detailsRows .product-cmp thead th:last-child { line-height: 1.3 !important; }
 #detailsRows .product-cmp thead th:first-child { text-align: right !important; }
+
+/* === רשימת המוצרים — שלוש שכבות, ותיקוני נגישות ========================
+   נגישות: טקסט משני 13px לפחות; צבע משני var(--ink-muted) ‏(#5c646f, ניגודיות
+   מעל 4.5:1 גם על רקע המוצר הפתוח); כל פעולה בגובה 44px לפחות; מיקוד גלוי. */
+.products-head { margin-bottom: 2px; }
+.products-def { margin: 0 2px 10px; font-size: 13px; color: var(--ink-muted); }
+.product-title { font-size: 15px; }
+.product-track-line { font-size: 13px; color: var(--ink-muted); line-height: 1.4; }
+.product-ind { font-size: 13px; color: var(--ink-muted); }
+.product-amt span { font-size: 13px; }
+.product-ask { color: var(--accent); }
+.nowrap { white-space: nowrap; }
+/* כשהמוצר פתוח, שורת ההשוואה מופיעה מיד מתחת, בשכבה 2 — לא פעמיים. */
+.product.is-open .product-inds { display: none; }
+.product-row { min-height: 60px; }
+
+.product-fees { display: flex; flex-direction: column; }
+.product-fee-row { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.product-fee-label { flex: 1 1 auto; font-size: 14px; color: var(--ink); }
+.product-fee-avg { flex: 0 0 auto; min-width: 92px; font-size: 13px; color: var(--ink-muted); text-align: left; }
+/* שדה בלי מסגרת — קו תחתון בלבד, כדי שלא ייראה כמו טופס חובה. */
+#detailsRows .fee-cell {
+  border: 0; border-bottom: 1.5px solid #9aa3ae; border-radius: 0; background: transparent;
+  padding: 0 2px; min-height: 40px; min-width: 76px;
+}
+#detailsRows .fee-cell:focus-within { border-bottom: 2px solid var(--accent); outline: 2px solid var(--accent); outline-offset: 3px; }
+#detailsRows .product-fee-input { width: 54px; font-size: 15px; padding: 8px 0; }
+#detailsRows .product-fee-input::placeholder { color: #6b7380; opacity: 1; }
+#detailsRows .fee-cell-sign { font-size: 13px; color: var(--ink-muted); }
+.product-note { font-size: 13px; }
+.product-expo { margin: 8px 0 0; font-size: 14px; }
+
+.product-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 6px; }
+.product-action {
+  min-height: 44px; padding: 0 2px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.product-action-main { color: var(--accent); text-decoration: none; }
+.product-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* שכבה 3 */
+.fund-facts-head { margin: 16px 0 6px; font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.fund-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin: 0; font-size: 13.5px; }
+.fund-fact { display: flex; justify-content: space-between; gap: 8px; }
+.fund-fact dt { color: var(--ink-muted); }
+.fund-fact dd { margin: 0; font-weight: 700; direction: ltr; }
+.method-details { margin-top: 14px; }
+.method-details > summary {
+  min-height: 44px; display: flex; align-items: center; cursor: pointer;
+  font-size: 14px; font-weight: 700; color: var(--accent);
+}
+.method-details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.method-details .cmp-method { font-size: 13.5px; }
+.info-dialog-body .product-cmp { width: 100%; border-collapse: collapse; font-size: 14px; }
+.info-dialog-body .product-cmp th, .info-dialog-body .product-cmp td { padding: 7px 0; border-top: 1px solid var(--line); text-align: left; }
+.info-dialog-body .product-cmp thead th { border-top: 0; font-size: 12.5px; font-weight: 600; color: var(--ink-muted); line-height: 1.3; }
+.info-dialog-body .product-cmp th:first-child { text-align: right; font-weight: 500; }
+.info-dialog-body .product-cmp td { font-weight: 700; direction: ltr; }
+.info-dialog-body .product-cmp-peer { width: 108px; color: var(--ink-muted); }
+.info-dialog-body .product-cmp-mine { width: 70px; }
+.info-dialog-sub { font-size: 13px !important; color: var(--ink-muted) !important; }
+.info-dialog-x { width: 44px !important; height: 44px !important; }
+
+/* במובייל החלון נפתח מלמטה, ברוחב מלא. */
+@media (max-width: 520px) {
+  .info-dialog {
+    width: 100vw; max-width: 100vw; margin: auto 0 0; max-height: 88vh;
+    border-radius: 20px 20px 0 0; border-bottom: 0; padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+}
+
+.print-only { display: none; }
+@media print {
+  .print-only { display: block !important; margin-top: 6px; }
+  .product-fees, .product-actions { display: none !important; }
+  .product.is-open .product-inds { display: flex !important; }
+  .fund-facts { grid-template-columns: repeat(4, 1fr) !important; font-size: 8.5px !important; gap: 2px 10px !important; }
+  .fund-facts-head { font-size: 9px !important; margin: 6px 0 2px !important; }
+}
+
+/* טבלת "השוואה מלאה" בחלון: מבודדת מכללי הטבלה הישנים (רקע לכותרות, 9.5px,
+   אותיות רישיות, רוחב מינימלי). */
+.info-dialog-body table.product-cmp { min-width: 0 !important; width: 100% !important; table-layout: auto !important; font-size: 14px !important; }
+.info-dialog-body .product-cmp th, .info-dialog-body .product-cmp td {
+  background: none !important; letter-spacing: 0 !important; text-transform: none !important;
+  white-space: normal !important; border-bottom: 0 !important; padding: 7px 0 !important; vertical-align: middle !important;
+}
+.info-dialog-body .product-cmp tbody th { font-size: 14px !important; font-weight: 500 !important; color: var(--ink) !important; }
+.info-dialog-body .product-cmp thead th { font-size: 13px !important; font-weight: 600 !important; color: var(--ink-muted) !important; }
+.info-dialog-body .product-cmp th:first-child, .info-dialog-body .product-cmp td:first-child { width: auto !important; }
+/* התוויות הזהובות מעל שורות המידע: #dcaf61 נותן ניגודיות 2:1 על לבן. גוון זהב כהה, 5.4:1. */
+.info-row-kicker { color: #86651c !important; }
+.fund-fact-wide { grid-column: 1 / -1; }
+@media print {
+  .fund-fact-wide { grid-column: span 2 !important; }
+  /* ההערה של שכבה 2 מופיעה גם בטבלת ההדפסה — פעם אחת מספיקה. */
+  .product-detail > .product-note { display: none !important; }
+  .print-only .product-note { font-size: 8.5px !important; margin: 2px 0 !important; }
+}

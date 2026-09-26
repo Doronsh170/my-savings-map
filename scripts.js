@@ -765,15 +765,17 @@ function setMetric(id, value, digits = 1) {
   el.className = metricClass(value);
 }
 
-/* === רשימת המוצרים ===
-   שורה אחת לכל מוצר: לוגו, שם קצר, יתרה, משקל בתיק ואינדיקציית השוואה אחת.
-   לחיצה פותחת את הפירוט המלא, ורק מוצר אחד פתוח בכל פעם. האינדיקציה היא
-   דמי הניהול: הנתון היחיד שהמשתמש יכול לשנות בעצמו, ולכן גם הנתון שכדאי
-   לבקש ממנו דווקא כאן, ליד ממוצע הקופות באותו סוג מסלול. בלי צבע ובלי "מעל" או
-   "מתחת": שני מספרים, בלי שיפוט. */
+/* === רשימת המוצרים: שלוש שכבות ===
+   1. שורה סגורה: שם, יתרה, משקל בתיק ושורת השוואה אחת קטנה — דמי הניהול שלך
+      מול הממוצע, "הזן דמי ניהול", או כלום כשאין קבוצת השוואה.
+   2. מוצר פתוח: דמי ניהול מול הממוצע (עם שדה הזנה), חשיפות בשורה אחת,
+      "השוואה מלאה" ו"עריכה". ההסרה נמצאת בתוך "עריכה".
+   3. חלון "השוואה מלאה": הטבלה, נתוני המסלול ו"איך מחושבת ההשוואה?".
+   בלי צבע ובלי "מעל" או "מתחת": המספר שלך מול הממוצע, בלי שיפוט. */
 let OPEN_PRODUCT_UID = null;
 /* הניסוח מתאר את קבוצת ההשוואה בפועל: אותו סוג מוצר ואותה קטגוריית מסלול
-   השקעה (ראו compareToPeers) — לא "מסלולים דומים" כללי. */
+   השקעה (ראו compareToPeers) — לא "מסלולים דומים" כללי. בשורות עצמן כתוב
+   רק "ממוצע", וההגדרה מופיעה פעם אחת מתחת לכותרת הרשימה. */
 const CMP_PEERS_TEXT = 'ממוצע קופות באותו סוג מסלול';
 const CMP_NONE_TEXT = 'אין כרגע קבוצת השוואה';
 function fmtCmp(value, digits) {
@@ -783,20 +785,41 @@ function fmtWeight(weight) {
   const rounded = Math.round(weight * 10) / 10;
   return (rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)) + '%';
 }
+function fmtRound(value) {
+  return typeof value === 'number' && isFinite(value) ? Math.round(value) + '%' : '—';
+}
+function isPensionFund(f) {
+  return (f._product || productOf(f)) === 'pensia';
+}
+/* שם קצר: סוג המוצר והחברה. כשיש שני מוצרים מאותו סוג באותה חברה, המסלול
+   מופיע בשורה קטנה מתחת לשם, במקום שם הקופה המלא שנשבר לשתי שורות. */
+function productTitleParts(item, activeItems) {
+  const f = item.fund;
+  const product = PRODUCT_LABEL[f._product || productOf(f)];
+  const brand = f._brand || brandOf(f);
+  if (!product || !brand) return { title: f.fund_name || 'המוצר', track: '' };
+  const twins = activeItems.some(other => other !== item
+    && (other.fund._product || productOf(other.fund)) === (f._product || productOf(f))
+    && (other.fund._brand || brandOf(other.fund)) === brand);
+  return { title: `${product} ב${brand}`, track: twins ? trackLabel(f) : '' };
+}
+function feeRowsFor(item, cmp) {
+  const byKey = key => cmp && cmp.rows.find(row => row.key === key);
+  const rows = [{ field: 'managementFee', label: isPensionFund(item.fund) ? 'דמי ניהול מצבירה' : 'דמי ניהול', peer: byKey('fee') }];
+  if (isPensionFund(item.fund)) rows.push({ field: 'depositFee', label: 'דמי ניהול מהפקדות', peer: byKey('deposit_fee') });
+  return rows;
+}
 function productIndicatorHtml(item, cmp) {
   const f = item.fund;
   if (f.is_stale) return `<span class="product-ind">נתוני המסלול לא עודכנו מאז ${escapeHtml(fmtPeriod(f.report_period))}</span>`;
-  const feeRow = cmp && cmp.rows.find(row => row.key === 'fee');
-  if (!feeRow) return `<span class="product-ind">${CMP_NONE_TEXT}</span>`;
-  const peers = `<span class="product-ind">${CMP_PEERS_TEXT} ${fmtCmp(feeRow.peers, 2)}</span>`;
+  const fee = feeRowsFor(item, cmp)[0];
+  if (!fee.peer) return '';
   if (Number.isFinite(item.managementFee)) {
-    // בקרן פנסיה נגבים שני דמי ניהול; השורה מציגה את זה שמהצבירה, ואומרת זאת.
-    const label = (f._product || productOf(f)) === 'pensia' ? 'דמי ניהול מצבירה' : 'דמי ניהול';
-    return `<span class="product-ind">${label} <b>${fmtCmp(item.managementFee, 2)}</b></span>${peers}`;
+    return `<span class="product-ind"><span class="nowrap">${fee.label} <b>${fmtCmp(item.managementFee, 2)}</b></span> <span class="nowrap">· ממוצע ${fmtCmp(fee.peer.peers, 2)}</span></span>`;
   }
-  return `${peers}<span class="product-ind"><span class="product-ask" data-ask-fee>הזן דמי ניהול</span></span>`;
+  return '<span class="product-ind"><span class="product-ask" data-ask-fee>הזן דמי ניהול</span></span>';
 }
-/* שדה דמי ניהול בתוך טבלת ההשוואה. לצדו טקסט להדפסה: שדה ריק מודפס כמסגרת ריקה. */
+/* שדה דמי ניהול בשכבה 2. לצדו טקסט להדפסה: שדה ריק מודפס כמסגרת ריקה. */
 function feeInputHtml(item, field, label) {
   const value = item[field];
   const shown = Number.isFinite(value) ? value.toFixed(2) : '';
@@ -810,36 +833,65 @@ function feeInputHtml(item, field, label) {
 function productDetailHtml(item, cmp) {
   const f = item.fund;
   const uid = escapeHtml(f.uid);
-  const isPension = (f._product || productOf(f)) === 'pensia';
+  const fees = feeRowsFor(item, cmp).map(row => `
+      <div class="product-fee-row">
+        <span class="product-fee-label">${row.label}</span>
+        ${feeInputHtml(item, row.field, row.label)}
+        ${row.peer ? `<span class="product-fee-avg">ממוצע ${fmtCmp(row.peer.peers, 2)}</span>` : ''}
+      </div>`).join('');
+  const note = f.is_stale
+    ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה לקופות באותו סוג מסלול.</p>`
+    : (cmp ? '' : `<p class="product-note">${CMP_NONE_TEXT} למסלול הזה.</p>`);
+  return `
+      <div class="product-fees">${fees}</div>
+      ${note}
+      <p class="product-expo">מניות <b>${fmtRound(f.stock_pct)}</b> · חו״ל <b>${fmtRound(f.foreign_pct)}</b> · מט״ח <b>${fmtRound(f.fx_pct)}</b></p>
+      <div class="product-actions">
+        <button type="button" class="product-action product-action-main" data-info="full" data-info-uid="${uid}" aria-haspopup="dialog">${cmp ? 'השוואה מלאה' : 'פרטי המסלול'} <span aria-hidden="true">›</span></button>
+        <button type="button" class="product-action" data-edit-uid="${uid}" aria-label="עריכת ${escapeHtml(f.fund_name || 'המוצר')}">עריכה</button>
+      </div>
+      <div class="print-only">${fullComparisonHtml(item, cmp, true)}</div>`;
+}
+/* שכבה 3: הטבלה המלאה ונתוני המסלול. משמשת את החלון "השוואה מלאה", ובהדפסה
+   מודפסת בתוך כל מוצר — הדוח ממשיך להציג את כל המידע. */
+function fullComparisonHtml(item, cmp, forPrint) {
+  const f = item.fund;
   const byKey = key => cmp && cmp.rows.find(row => row.key === key);
-  const feeLabel = isPension ? 'דמי ניהול מצבירה' : 'דמי ניהול';
+  const mineFee = field => Number.isFinite(item[field]) ? item[field].toFixed(2) + '%' : 'לא הוזן';
   const rows = [];
   const yieldRow = byKey('yield');
   if (yieldRow) rows.push(['תשואה 3 שנים', fmtCmp(yieldRow.mine, 1), fmtCmp(yieldRow.peers, 1)]);
-  rows.push([feeLabel, feeInputHtml(item, 'managementFee', feeLabel), fmtCmp(byKey('fee') && byKey('fee').peers, 2)]);
-  if (isPension) rows.push(['דמי ניהול מהפקדות', feeInputHtml(item, 'depositFee', 'דמי ניהול מהפקדות'), fmtCmp(byKey('deposit_fee') && byKey('deposit_fee').peers, 2)]);
+  feeRowsFor(item, cmp).forEach(row => rows.push([row.label, mineFee(row.field), fmtCmp(row.peer && row.peer.peers, 2)]));
   const stockRow = byKey('stock');
   if (stockRow) rows.push(['חשיפה למניות', fmtCmp(stockRow.mine, 0), fmtCmp(stockRow.peers, 0)]);
-  const peerCount = cmp ? Math.max(cmp.yieldCount || 0, cmp.feeCount || 0) : 0;
-  const note = f.is_stale
-    ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה לקופות באותו סוג מסלול.</p>`
-    : (cmp ? '' : `<p class="product-note">${CMP_NONE_TEXT}. <span class="screen-only">אפשר עדיין להזין את דמי הניהול שלך — הם נכללים בדמי הניהול המשוקללים של התיק.</span></p>`);
-  return `
-      <div class="product-track">${escapeHtml(f.fund_name || '')} · קופה ${escapeHtml(f.fund_id || '')}</div>
-      <h5 class="product-cmp-head">${cmp ? 'מול קופות באותו סוג מסלול' : 'דמי הניהול שלך'}</h5>
-      ${note}
+  const table = cmp ? `
       <table class="product-cmp">
-        <thead><tr><th scope="col">נתון</th><th scope="col">שלך</th>${cmp ? `<th scope="col">${CMP_PEERS_TEXT}</th>` : ''}</tr></thead>
-        <tbody>${rows.filter(row => cmp || row[1].indexOf('fee-cell') > -1).map(([label, mine, peers]) =>
-          `<tr><th scope="row">${label}</th><td class="product-cmp-mine">${mine}</td>${cmp ? `<td class="product-cmp-peer">${peers}</td>` : ''}</tr>`).join('')}</tbody>
+        <thead><tr><th scope="col">נתון</th><th scope="col">שלך</th><th scope="col">${CMP_PEERS_TEXT}</th></tr></thead>
+        <tbody>${rows.map(([label, mine, peers]) =>
+          `<tr><th scope="row">${label}</th><td class="product-cmp-mine">${mine}</td><td class="product-cmp-peer">${peers}</td></tr>`).join('')}</tbody>
       </table>
-      ${cmp ? `<button type="button" class="info-link" data-info="method" data-info-uid="${uid}">איך מחושבת ההשוואה? (${peerCount} קופות)</button>` : ''}
-      <p class="product-expo">חשיפות המסלול: מניות <b>${fmtPct(f.stock_pct, 1)}</b> · חו״ל <b>${fmtPct(f.foreign_pct, 1)}</b> · מט״ח <b>${fmtPct(f.fx_pct, 1)}</b></p>
-      <div class="product-actions">
-        <button type="button" class="info-link" data-edit-uid="${uid}">עדכון יתרה</button>
-        <button type="button" class="info-link" data-info="fund" data-info-uid="${uid}">פרטים נוספים</button>
-        <button type="button" class="info-link product-remove" data-remove-uid="${uid}" aria-label="הסרת ${escapeHtml(f.fund_name || 'המוצר')} מהתיק">הסרה</button>
-      </div>`;
+      ${yieldRow ? '<p class="product-note">תשואת המסלול ברוטו, לפני דמי ניהול — לא התשואה האישית שלך.</p>' : ''}`
+    : `<p class="product-note">${f.is_stale ? 'המסלול אינו נכלל בהשוואה, כי נתוניו לא עודכנו.' : CMP_NONE_TEXT + ' למסלול הזה.'}</p>`;
+  const fact = (label, value, wide) => `<div class="fund-fact${wide ? ' fund-fact-wide' : ''}"><dt>${label}</dt><dd>${value}</dd></div>`;
+  const facts = [
+    fact('תשואה חודשית', fmtPct(f.monthly_yield, 2)),
+    fact('מתחילת השנה', fmtPct(f.ytd_yield, 2)),
+    yieldRow ? '' : fact('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2)),
+    stockRow ? '' : fact('מניות', fmtPct(f.stock_pct, 1)),
+    fact('חו״ל', fmtPct(f.foreign_pct, 1)),
+    fact('מט״ח', fmtPct(f.fx_pct, 1)),
+    fact('נכסים סחירים', fmtPct(f.liquid_pct, 1)),
+    fact(isPensionFund(f) ? 'דמי ניהול מצבירה שנגבו בפועל בקופה' : 'דמי ניהול שנגבו בפועל בקופה', fmtPct(f.avg_annual_management_fee, 2), true),
+    isPensionFund(f) ? fact('דמי ניהול מהפקדות שנגבו בפועל בקופה', fmtPct(f.avg_deposit_fee, 2), true) : ''
+  ].join('');
+  const method = cmp && !forPrint
+    ? `<details class="method-details"><summary>איך מחושבת ההשוואה?</summary>${renderComparisonMethod(item)}</details>`
+    : '';
+  return `
+      ${table}
+      <h5 class="fund-facts-head">נתוני המסלול</h5>
+      <dl class="fund-facts">${facts}</dl>
+      ${method}`;
 }
 function productItemHtml(item, activeItems, totalBalance) {
   const f = item.fund;
@@ -849,12 +901,14 @@ function productItemHtml(item, activeItems, totalBalance) {
   const brand = BRAND_BY_NAME[f._brand || brandOf(f)];
   const open = OPEN_PRODUCT_UID === f.uid;
   const panelId = 'product-' + String(f.uid).replace(/[^A-Za-z0-9_-]/g, '-');
+  const { title, track } = productTitleParts(item, activeItems);
   return `
     <article class="product${open ? ' is-open' : ''}" data-product-uid="${uid}">
       <button type="button" class="product-row" data-toggle-uid="${uid}" aria-expanded="${open}" aria-controls="${panelId}">
         ${brand ? wizLogo(brand) : '<span class="wiz-logo" aria-hidden="true"></span>'}
         <span class="product-mid">
-          <span class="product-title">${escapeHtml(portfolioItemLabel(item, activeItems))}</span>
+          <span class="product-title">${escapeHtml(title)}</span>
+          ${track ? `<span class="product-track-line">${escapeHtml(track)}</span>` : ''}
           <span class="product-inds" data-ind-uid="${uid}">${productIndicatorHtml(item, cmp)}</span>
         </span>
         <span class="product-amt">
@@ -883,9 +937,9 @@ document.addEventListener('click', event => {
   if (!row) return;
   setProductOpen(row.getAttribute('data-toggle-uid'), !!event.target.closest('[data-ask-fee]'));
 });
-/* שמירת דמי ניהול מתוך הטבלה: מעדכנים את הנתון, את שורת המוצר ואת דמי הניהול
-   המשוקללים — בלי לצייר מחדש את הפירוט, כדי שהמיקוד יישאר בשדה הבא. דמי ניהול
-   אינם משנים את "היתרות עודכנו לפני...". */
+/* שמירת דמי ניהול מתוך המוצר הפתוח: מעדכנים את הנתון, את שורת המוצר, את
+   טבלת ההדפסה ואת דמי הניהול המשוקללים — בלי לצייר מחדש את המוצר, כדי
+   שהמיקוד יישאר בשדה הבא. דמי ניהול אינם משנים את "היתרות עודכנו לפני...". */
 function commitProductFee(input) {
   const idx = findUserFundIndex(input.getAttribute('data-fee-uid'));
   if (idx < 0) return;
@@ -895,10 +949,15 @@ function commitProductFee(input) {
   if (value === item[field] || (value === null && !Number.isFinite(item[field]))) return;
   item[field] = value;
   saveState();
-  const ind = document.querySelector(`#detailsRows [data-ind-uid="${CSS.escape(item.fund.uid)}"]`);
-  if (ind) ind.innerHTML = productIndicatorHtml(item, compareToPeers(item.fund, item.managementFee, item.depositFee));
-  const print = input.parentElement.querySelector('.fee-print');
-  if (print) print.textContent = value === null ? 'לא הוזן' : value.toFixed(2) + '%';
+  const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
+  const product = document.querySelector(`#detailsRows .product[data-product-uid="${CSS.escape(item.fund.uid)}"]`);
+  if (product) {
+    product.querySelector('[data-ind-uid]').innerHTML = productIndicatorHtml(item, cmp);
+    const print = product.querySelector('.print-only');
+    if (print) print.innerHTML = fullComparisonHtml(item, cmp, true);
+  }
+  const printed = input.parentElement.querySelector('.fee-print');
+  if (printed) printed.textContent = value === null ? 'לא הוזן' : value.toFixed(2) + '%';
   setFeeMetric(weightedUserManagementFee(getTotalBalance()));
   refreshSimulationDefaults();
 }
@@ -912,27 +971,6 @@ document.addEventListener('keydown', event => {
   event.target.blur();
 });
 
-/* נתוני המסלול שאינם בתקציר ההשוואה. בכרטיס עם השוואה הם נפתחים בחלון
-   "פרטים נוספים על המסלול"; בכרטיס בלי השוואה הם מוצגים בכרטיס עצמו. */
-function fundExtrasHtml(item, hasComparison) {
-  const f = item.fund;
-  const cell = (label, value, cls) =>
-    `<div class="detail-cell"><dt>${label}</dt><dd class="${cls || ''}">${value}</dd></div>`;
-  return `
-        <dl class="detail-card-grid">
-          ${hasComparison ? '' : cell('מניות', fmtPct(f.stock_pct, 1))}
-          ${cell('חו״ל', fmtPct(f.foreign_pct, 1))}
-          ${cell('מט״ח', fmtPct(f.fx_pct, 1))}
-          ${cell('נכסים סחירים', fmtPct(f.liquid_pct, 1))}
-          ${cell('תשואה חודשית', fmtPct(f.monthly_yield, 2), metricClass(f.monthly_yield))}
-          ${cell('מתחילת השנה', fmtPct(f.ytd_yield, 2), metricClass(f.ytd_yield))}
-          ${hasComparison ? '' : cell('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2), metricClass(f.yield_trailing_3yrs))}
-          ${hasComparison ? '' : cell('דמי ניהול שהזנת', fmtUserFee(item.managementFee))}
-        </dl>`;
-}
-
-/* חלון מידע אחד לשני הקישורים בכרטיס: "פרטים נוספים על המסלול" ו"איך מחושבת
-   ההשוואה?". בא במקום אקורדיון שלא תמיד הציג חץ לסגירה. */
 /* הסבר אחד לשלושת כרטיסי החשיפה. בא במקום כפתור "?" בכל כרטיס, שבמובייל שבר
    את התוויות לשתי שורות. */
 const EXPOSURE_TERMS = [
@@ -956,11 +994,12 @@ function openInfoDialog(kind, uid) {
   const idx = findUserFundIndex(uid);
   if (!dialog || idx < 0) return;
   const item = userFunds[idx];
-  const title = kind === 'method' ? 'איך מחושבת ההשוואה?' : 'פרטים נוספים על המסלול';
-  const body = kind === 'method' ? renderComparisonMethod(item) : fundExtrasHtml(item, true);
-  document.getElementById('infoDialogTitle').textContent = title;
-  document.getElementById('infoDialogSub').textContent = item.fund.fund_name || '';
-  document.getElementById('infoDialogBody').innerHTML = body;
+  const activeItems = userFunds.filter(other => (Number(other.balance) || 0) > 0);
+  const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
+  const { title, track } = productTitleParts(item, activeItems);
+  document.getElementById('infoDialogTitle').textContent = title + (track ? ' · ' + track : '');
+  document.getElementById('infoDialogSub').textContent = `${item.fund.fund_name || ''} · קופה ${item.fund.fund_id || ''}`;
+  document.getElementById('infoDialogBody').innerHTML = fullComparisonHtml(item, cmp, false);
   if (typeof dialog.showModal === 'function') dialog.showModal();
   else dialog.setAttribute('open', '');
 }
