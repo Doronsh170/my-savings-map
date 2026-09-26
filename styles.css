@@ -8069,11 +8069,10 @@ body.pdf-mode .site-disclosure { display: block !important; }
 
 
 /* === משתמש חוזר: גיל היתרות, עדכון מהיר, ביטול הסרה, מחיקה ================ */
-.balance-age {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
-  margin-top: 8px; font-size: 12.5px; color: var(--ink-muted);
-}
-.balance-age .info-link { margin-top: 0; }
+.balance-age { margin-top: 8px; font-size: 12.5px; color: var(--ink-muted); }
+.total-actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 6px; }
+.total-actions .info-link { margin-top: 0; font-size: 13.5px; }
+.total-actions-sep { color: var(--ink-muted); }
 
 .balances-form { margin: 0; }
 .balances-row {
@@ -8124,5 +8123,26 @@ body.pdf-mode .site-disclosure { display: block !important; }
 .reset-link:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
 
 @media print {
-  .balance-age-btn, .balances-dialog, .undo-toast, .reset-link { display: none !important; }
+  .total-actions, .balances-dialog, .undo-toast, .reset-link { display: none !important; }
+}
+
+
+/* === ראש הדשבורד: משפט המבנה, ורווחים אחידים בין האזורים המקופלים ======== */
+.portfolio-summary {
+  margin: 18px 0 6px; font-size: 16px; font-weight: 600; line-height: 1.5; color: var(--ink);
+}
+.portfolio-summary:empty { display: none; }
+.dashboard .coverage-note { margin: 0 0 14px; }
+.dashboard h2 { margin-bottom: 14px !important; }
+
+/* כל אזור מקופל ישב במרחק קבוע מהקודם. קודם כל אחד מהם היה section עם
+   ‎30px‎ ריפוד מעל ומתחת, כך שבין שני אזורים סגורים נפתח רווח של ‎60px‎. */
+#dashboard { padding-bottom: 6px !important; border-bottom: 0 !important; }
+#dashboard .perf-toggle-section { margin-top: 24px !important; }
+#historySection, #detailsSection, #simulationTabSection { padding: 6px 0 !important; }
+#simulationTabSection { padding-bottom: 24px !important; }
+@media print {
+  .portfolio-summary { font-size: 11px !important; margin: 6px 0 4px !important; color: #0b1c2c !important; }
+  /* כפתורי מידע מקופלים אינם תוכן בדוח; ההבהרה והגילוי הנאות מודפסים בנפרד. */
+  .site-info-section { display: none !important; }
 }

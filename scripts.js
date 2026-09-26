@@ -869,6 +869,7 @@ function renderDashboard() {
 
   document.getElementById('totalBalance').textContent = fmtCurrency(totalBalance);
   renderBalanceAge(activeItems);
+  renderPortfolioSummary(activeItems, totalBalance);
   renderCoverageNote(activeItems, totalBalance);
   setMetric('aggStock', aggStock, 1);
   setMetric('aggForeign', aggForeign, 1);
@@ -969,8 +970,7 @@ function fmtAgeSince(iso) {
 }
 function renderBalanceAge(activeItems) {
   const wrap = document.getElementById('balanceAge');
-  const text = document.getElementById('balanceAgeText');
-  if (!wrap || !text) return;
+  if (!wrap) return;
   // בתיק ששותף התאריכים הם רגע פתיחת הקישור, לא מועד העדכון בפועל.
   const stamps = SHARED_VIEW ? [] : activeItems.map(item => item.updated_at).filter(Boolean).sort();
   if (!stamps.length) { wrap.hidden = true; return; }
@@ -978,8 +978,39 @@ function renderBalanceAge(activeItems) {
   const newest = fmtAgeSince(stamps[stamps.length - 1]);
   if (!oldest) { wrap.hidden = true; return; }
   const subject = activeItems.length === 1 ? 'היתרה עודכנה' : (oldest === newest ? 'היתרות עודכנו' : 'חלק מהיתרות עודכנו');
-  text.textContent = `${subject} ${oldest}.`;
+  wrap.textContent = `${subject} ${oldest}.`;
   wrap.hidden = false;
+}
+
+/* משפט המבנה מעל כרטיסי החשיפה: כמה מוצרים, ואיזה מהם מחזיק את רוב הכסף.
+   הכרטיסים כבר מציגים את אחוזי החשיפה, ולכן המשפט לא חוזר עליהם.
+   עובדתי בלבד — בלי "ריכוזי", "מפוזר" או כל שיפוט אחר. */
+function portfolioItemLabel(item, activeItems) {
+  const fund = item.fund;
+  const product = PRODUCT_LABEL[fund._product || productOf(fund)];
+  const brand = fund._brand || brandOf(fund);
+  if (!product || !brand) return fund.fund_name || 'המוצר';
+  const label = `${product} ב${brand}`;
+  // שני מוצרים מאותו סוג באותה חברה: רק שם המסלול מבדיל ביניהם.
+  const twins = activeItems.filter(other => other !== item
+    && (other.fund._product || productOf(other.fund)) === (fund._product || productOf(fund))
+    && (other.fund._brand || brandOf(other.fund)) === brand);
+  return twins.length ? (fund.fund_name || label) : label;
+}
+function portfolioSummaryText(activeItems, totalBalance) {
+  if (!activeItems.length || totalBalance <= 0) return '';
+  const sorted = activeItems.slice().sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0));
+  const share = item => Math.round((Number(item.balance) || 0) / totalBalance * 100);
+  if (sorted.length === 1) return `כל החיסכון במוצר אחד: ${portfolioItemLabel(sorted[0], activeItems)}.`;
+  const [first, second] = sorted;
+  if (share(first) === share(second)) {
+    return `${sorted.length} מוצרים. הגדולים שבהם, ${portfolioItemLabel(first, activeItems)} ו${portfolioItemLabel(second, activeItems)}, הם ${share(first)}% מהתיק כל אחד.`;
+  }
+  return `${sorted.length} מוצרים. הגדול שבהם, ${portfolioItemLabel(first, activeItems)}, הוא ${share(first)}% מהתיק.`;
+}
+function renderPortfolioSummary(activeItems, totalBalance) {
+  const el = document.getElementById('portfolioSummary');
+  if (el) el.textContent = portfolioSummaryText(activeItems, totalBalance);
 }
 
 /* "עדכון מהיר": כל היתרות במסך אחד, במקום מעבר מוצר אחרי מוצר באשף.
@@ -2004,14 +2035,6 @@ function prepareAnotherFund() {
   wizScrollIntoView();
 }
 window.prepareAnotherFund = prepareAnotherFund;
-/* "עריכת יתרות" בראש הדשבורד פותחת את פירוט המוצרים, שבו לכל מוצר כפתור עריכה. */
-function openProductDetails() {
-  const section = document.querySelector('.details-toggle-section');
-  if (!section) return;
-  section.open = true;
-  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-window.openProductDetails = openProductDetails;
 window.openQuickEditor = openQuickEditor;
 window.commitQuickUpdate = commitQuickUpdate;
 window.removeCurrentQuickFund = removeCurrentQuickFund;

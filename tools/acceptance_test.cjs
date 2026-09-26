@@ -80,7 +80,7 @@ function check(name, ok, detail) {
 
     // 4. עריכה מתוך הדשבורד פותחת את טופס היתרה.
     await page.evaluate(() => goToDashboard());
-    await page.click('text=עריכת יתרות ודמי ניהול');
+    await page.evaluate(() => { document.querySelector('.details-toggle-section').open = true; });
     await page.locator('.row-edit-btn').first().click();
     check('edit button opens the balance form', await page.isVisible('#quickBalanceInput'));
     // 4א. הסבר ההשוואה ופרטי המסלול בחלונות נפרדים, בלי אקורדיון.
@@ -105,7 +105,8 @@ function check(name, ok, detail) {
     await page.keyboard.press('Escape');
     check('Escape closes the dialog', !(await page.isVisible('#infoDialog')));
 
-    check('add-product button exists on dashboard', (await page.locator('.dashboard-edit-actions >> text=הוספת מוצר').count()) === 1);
+    check('add-product button exists on dashboard', (await page.locator('.total-actions >> text=הוספת מוצר').count()) === 1);
+    check('no duplicate balance-edit button', (await page.locator('text=עריכת יתרות ודמי ניהול').count()) === 0);
 
     // 5. המחשבון: גלוי, היסטורי בלבד, המרה גאומטרית.
     await seed(page, [{ uid: pick.a.uid, balance: 100000 }]);
@@ -173,7 +174,7 @@ function check(name, ok, detail) {
 
     // 9. גיל היתרות ועדכון מהיר.
     check('balance age names the oldest balance', /חלק מהיתרות עודכנו לפני 4 חודשים/.test(await fresh.textContent('#balanceAge')));
-    await fresh.click('#balanceAge >> text=עדכון מהיר');
+    await fresh.click('.total-actions >> text=עדכון יתרות');
     check('quick update lists every product', (await fresh.locator('#balancesRows input').count()) === 2);
     await fresh.fill(`#balancesRows input[data-balance-uid="${pick.a.uid}"]`, '');
     await fresh.click('#balancesDialog button[type=submit]');
@@ -202,10 +203,33 @@ function check(name, ok, detail) {
     check('undo of the last product reopens the dashboard', await fresh.isVisible('#dashboard') && !(await fresh.isVisible('#wizScreen')));
 
     // 11. באשף, מי שיש לו תיק רואה "חזרה לתיק" ולא "התחל מחדש".
-    await fresh.click('.dashboard-edit-actions >> text=הוספת מוצר');
+    await fresh.click('.total-actions >> text=הוספת מוצר');
     check('wizard offers a way back to the portfolio', (await fresh.locator('#wizBar >> text=חזרה לתיק').count()) === 1 && (await fresh.locator('#wizBar >> text=התחל מחדש').count()) === 0);
     await fresh.click('#wizBar >> text=חזרה לתיק');
     check('"back to portfolio" shows the dashboard', await fresh.isVisible('#dashboard') && !(await fresh.isVisible('#wizScreen')));
+
+    // 12א. ראש הדשבורד: יתרה, משפט מבנה, ואז כרטיסי החשיפה; המידע הכללי למטה.
+    const order = await fresh.evaluate(() => ['totalBalance', 'portfolioSummary', 'aggStock', 'siteInfoSection']
+      .map(id => document.getElementById(id).getBoundingClientRect().top));
+    check('dashboard top reads total → summary → exposure, info rows below', order[0] < order[1] && order[1] < order[2] && order[2] < order[3]);
+    check('summary sentence shown on the dashboard', /^כל החיסכון במוצר אחד: .+\.$/.test(await fresh.textContent('#portfolioSummary')));
+    const summaries = await fresh.evaluate(([a, n]) => {
+      const item = (uid, balance) => ({ fund: withRuntimeFlags(DATA.find(r => r.uid === uid)), balance });
+      return {
+        two: portfolioSummaryText([item(a, 300000), item(n, 100000)], 400000),
+        tie: portfolioSummaryText([item(a, 100000), item(n, 100000)], 200000)
+      };
+    }, [pick.a.uid, pick.n.uid]);
+    check('summary names product count and largest share', /^2 מוצרים\. הגדול שבהם, .+, הוא 75% מהתיק\.$/.test(summaries.two), summaries.two);
+    check('summary handles a tie for largest', /^2 מוצרים\. הגדולים שבהם, .+, הם 50% מהתיק כל אחד\.$/.test(summaries.tie), summaries.tie);
+    check('tab title has no version', (await fresh.title()) === 'מפת החיסכון');
+    const gaps = await fresh.evaluate(() => {
+      const tops = ['historySection', 'detailsSection', 'simulationTabSection']
+        .map(id => document.getElementById(id)).filter(el => el.offsetParent)
+        .map(el => el.querySelector('summary').getBoundingClientRect());
+      return tops.slice(1).map((r, i) => r.top - tops[i].bottom);
+    });
+    check('collapsed sections sit close together', gaps.length > 0 && gaps.every(g => g < 30), JSON.stringify(gaps.map(Math.round)));
 
     // 12. מחיקת הכל היא קישור משני מחוץ לסרגל הפעולות.
     check('delete-all is outside the action toolbar', (await fresh.locator('.action-toolbar >> text=איפוס הכל').count()) === 0 && (await fresh.locator('.reset-link').count()) === 1);

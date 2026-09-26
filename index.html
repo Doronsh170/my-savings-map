@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>מפת החיסכון | v5.0</title>
+<title>מפת החיסכון</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -31,55 +31,6 @@
       <header class="wiz-bar" id="wizBar"></header>
       <nav class="wiz-crumbs" id="wizCrumbs" aria-label="הבחירות עד כה" hidden></nav>
       <div class="wiz-screen" id="wizScreen" aria-live="polite"></div>
-    </div>
-  </div>
-</section>
-
-<section class="section site-info-section" id="siteInfoSection">
-  <div class="container">
-    <div class="info-rows" aria-label="מידע על הכלי">
-      <button type="button" class="info-row" id="landingAboutBtn" aria-expanded="false" aria-controls="landingAboutPanel">
-        <span class="info-row-text">
-          <span class="info-row-kicker">הסבר פשוט</span>
-          <span class="info-row-title">מה הכלי עושה?</span>
-        </span>
-        <span class="info-row-chevron" aria-hidden="true"></span>
-      </button>
-      <div class="landing-panel info-panel" id="landingAboutPanel" hidden>
-<h3>מה הכלי עושה?</h3>
-      הכלי מיועד לעזור גם למי שפחות מכיר את עולם החיסכון הפנסיוני והפיננסי. במקום להסתכל על כל קופה בנפרד, אפשר להוסיף את הקופות והקרנות שלך, להזין יתרה ודמי ניהול אישיים, ולקבל תמונה אחת מרוכזת: מה החשיפה הכוללת למניות, כמה מהכסף מושקע בחו״ל, מה החשיפה למט״ח, ומה המשקל של כל מוצר בתיק. המטרה היא לתת תמונת מצב פשוטה וברורה, לא המלצה ולא ייעוץ.
-      <br>
-      <button type="button" class="guidance-toggle-btn" id="savingsLocateToggle" aria-expanded="false" aria-controls="savingsLocateContent" onclick="const panel=document.getElementById('savingsLocateContent'); const expanded=this.getAttribute('aria-expanded')==='true'; this.setAttribute('aria-expanded', String(!expanded)); panel.hidden=expanded;">
-        לא בטוח איפה הכסף שלך מנוהל?
-      </button>
-      <div class="guidance-content" id="savingsLocateContent" hidden>
-        אפשר לאתר את שם החברה והמסלול בדוחות שנשלחו לדואר או למייל, או בכניסה לאזור האישי באתר חברת הביטוח, קרן הפנסיה, קופת הגמל או קרן ההשתלמות. אם עדיין אינך בטוח, ניתן להיעזר באתר “הר הכסף” של משרד האוצר. לאחר האיתור, חזור לכאן ובחר את סוג המוצר, החברה והמסלול כדי לבנות את דשבורד החשיפות שלך.
-        <br>
-        <a class="external-link-btn" href="https://www.gov.il/he/service/pension_savings_search" target="_blank" rel="noopener noreferrer">מעבר להר הכסף</a>
-      </div>
-      </div>
-      <button type="button" class="info-row" id="landingDisclosureBtn" aria-expanded="false" aria-controls="landingDisclosurePanel">
-        <span class="info-row-text">
-          <span class="info-row-kicker">חשוב לדעת</span>
-          <span class="info-row-title">הבהרה מקצועית</span>
-        </span>
-        <span class="info-row-chevron" aria-hidden="true"></span>
-      </button>
-      <div class="landing-panel info-panel" id="landingDisclosurePanel" hidden>
-<h3>הבהרה מקצועית</h3>
-      הדשבורד מציג חשיפות וביצועים מתוך נתונים ציבוריים של המסלולים בלבד. הוא אינו מושך יתרות אישיות ממסלקה פנסיונית, אינו מחליף ייעוץ פנסיוני או פיננסי, ואינו מציג המלצה. נתוני התשואה הם נתוני מסלול ציבוריים, ודמי הניהול בדשבורד מבוססים רק על הנתון שהוזן ידנית עבור כל מוצר.
-      </div>
-      <button type="button" class="info-row" id="landingPrivacyBtn" aria-expanded="false" aria-controls="landingPrivacyPanel">
-        <span class="info-row-text">
-          <span class="info-row-kicker">אמון ופרטיות</span>
-          <span class="info-row-title">פרטיות ומקור נתונים</span>
-        </span>
-        <span class="info-row-chevron" aria-hidden="true"></span>
-      </button>
-      <div class="landing-panel info-panel" id="landingPrivacyPanel" hidden>
-<h3>פרטיות ומקור נתונים</h3>
-      היתרות ודמי הניהול שהזנת נשמרים בדפדפן שלך. הם אינם נשמרים בשרת ואינם משויכים לפרטים אישיים. מקור הנתונים: קובצי המידע הציבוריים של רשות שוק ההון, הביטוח והחיסכון, מתוך מאגרי גמל נט, פנסיה נט וביטוח נט כפי שפורסמו ב-data.gov.il.
-      </div>
     </div>
   </div>
 </section>
@@ -114,25 +65,24 @@
         <button type="button" class="action-btn" onclick="closeSharedPortfolio()">סגירה וחזרה לתיק שלי</button>
       </div>
     </div>
-    <h2>דשבורד מצרפי</h2>
-    <div class="subtitle">החישוב משוקלל לפי היתרות שהוזנו לכל מוצר</div>
-    <div class="perf-note coverage-note" id="coverageNote"></div>
-    <div class="dashboard-edit-actions">
-      <button type="button" class="action-btn" onclick="prepareAnotherFund()">+ הוספת מוצר</button>
-      <button type="button" class="action-btn" onclick="openProductDetails()">עריכת יתרות ודמי ניהול</button>
-    </div>
+    <h2>התיק שלך</h2>
 
     <div class="total-row">
       <div>
         <div class="total" id="totalBalance">-</div>
         <div class="total-label">יתרה כוללת שהוזנה</div>
-        <div class="balance-age" id="balanceAge" hidden>
-          <span id="balanceAgeText"></span>
-          <button type="button" class="info-link balance-age-btn" onclick="openBalancesDialog()">עדכון מהיר</button>
+        <div class="balance-age" id="balanceAge" hidden></div>
+        <div class="total-actions">
+          <button type="button" class="info-link" onclick="openBalancesDialog()">עדכון יתרות</button>
+          <span class="total-actions-sep" aria-hidden="true">·</span>
+          <button type="button" class="info-link" onclick="prepareAnotherFund()">+ הוספת מוצר</button>
         </div>
       </div>
       <div class="source-mix" id="sourceMix"></div>
     </div>
+
+    <p class="portfolio-summary" id="portfolioSummary"></p>
+    <div class="perf-note coverage-note" id="coverageNote"></div>
 
     <div class="metric-grid">
       <div class="metric-card">
@@ -310,6 +260,55 @@
       <button type="button" class="action-btn" onclick="backToTop()">חזרה לראש העמוד</button>
     </div>
     <button type="button" class="reset-link" onclick="resetAllData()">מחיקת כל הנתונים מהדפדפן</button>
+  </div>
+</section>
+
+<section class="section site-info-section" id="siteInfoSection">
+  <div class="container">
+    <div class="info-rows" aria-label="מידע על הכלי">
+      <button type="button" class="info-row" id="landingAboutBtn" aria-expanded="false" aria-controls="landingAboutPanel">
+        <span class="info-row-text">
+          <span class="info-row-kicker">הסבר פשוט</span>
+          <span class="info-row-title">מה הכלי עושה?</span>
+        </span>
+        <span class="info-row-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="landing-panel info-panel" id="landingAboutPanel" hidden>
+<h3>מה הכלי עושה?</h3>
+      הכלי מיועד לעזור גם למי שפחות מכיר את עולם החיסכון הפנסיוני והפיננסי. במקום להסתכל על כל קופה בנפרד, אפשר להוסיף את הקופות והקרנות שלך, להזין יתרה ודמי ניהול אישיים, ולקבל תמונה אחת מרוכזת: מה החשיפה הכוללת למניות, כמה מהכסף מושקע בחו״ל, מה החשיפה למט״ח, ומה המשקל של כל מוצר בתיק. המטרה היא לתת תמונת מצב פשוטה וברורה, לא המלצה ולא ייעוץ.
+      <br>
+      <button type="button" class="guidance-toggle-btn" id="savingsLocateToggle" aria-expanded="false" aria-controls="savingsLocateContent" onclick="const panel=document.getElementById('savingsLocateContent'); const expanded=this.getAttribute('aria-expanded')==='true'; this.setAttribute('aria-expanded', String(!expanded)); panel.hidden=expanded;">
+        לא בטוח איפה הכסף שלך מנוהל?
+      </button>
+      <div class="guidance-content" id="savingsLocateContent" hidden>
+        אפשר לאתר את שם החברה והמסלול בדוחות שנשלחו לדואר או למייל, או בכניסה לאזור האישי באתר חברת הביטוח, קרן הפנסיה, קופת הגמל או קרן ההשתלמות. אם עדיין אינך בטוח, ניתן להיעזר באתר “הר הכסף” של משרד האוצר. לאחר האיתור, חזור לכאן ובחר את סוג המוצר, החברה והמסלול כדי לבנות את דשבורד החשיפות שלך.
+        <br>
+        <a class="external-link-btn" href="https://www.gov.il/he/service/pension_savings_search" target="_blank" rel="noopener noreferrer">מעבר להר הכסף</a>
+      </div>
+      </div>
+      <button type="button" class="info-row" id="landingDisclosureBtn" aria-expanded="false" aria-controls="landingDisclosurePanel">
+        <span class="info-row-text">
+          <span class="info-row-kicker">חשוב לדעת</span>
+          <span class="info-row-title">הבהרה מקצועית</span>
+        </span>
+        <span class="info-row-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="landing-panel info-panel" id="landingDisclosurePanel" hidden>
+<h3>הבהרה מקצועית</h3>
+      הדשבורד מציג חשיפות וביצועים מתוך נתונים ציבוריים של המסלולים בלבד. הוא אינו מושך יתרות אישיות ממסלקה פנסיונית, אינו מחליף ייעוץ פנסיוני או פיננסי, ואינו מציג המלצה. נתוני התשואה הם נתוני מסלול ציבוריים, ודמי הניהול בדשבורד מבוססים רק על הנתון שהוזן ידנית עבור כל מוצר.
+      </div>
+      <button type="button" class="info-row" id="landingPrivacyBtn" aria-expanded="false" aria-controls="landingPrivacyPanel">
+        <span class="info-row-text">
+          <span class="info-row-kicker">אמון ופרטיות</span>
+          <span class="info-row-title">פרטיות ומקור נתונים</span>
+        </span>
+        <span class="info-row-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="landing-panel info-panel" id="landingPrivacyPanel" hidden>
+<h3>פרטיות ומקור נתונים</h3>
+      היתרות ודמי הניהול שהזנת נשמרים בדפדפן שלך. הם אינם נשמרים בשרת ואינם משויכים לפרטים אישיים. מקור הנתונים: קובצי המידע הציבוריים של רשות שוק ההון, הביטוח והחיסכון, מתוך מאגרי גמל נט, פנסיה נט וביטוח נט כפי שפורסמו ב-data.gov.il.
+      </div>
+    </div>
   </div>
 </section>
 
