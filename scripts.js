@@ -868,6 +868,7 @@ function renderDashboard() {
   const feeSavings = weightedUserManagementFee(totalBalance);
 
   document.getElementById('totalBalance').textContent = fmtCurrency(totalBalance);
+  renderBalanceAge(activeItems);
   renderCoverageNote(activeItems, totalBalance);
   setMetric('aggStock', aggStock, 1);
   setMetric('aggForeign', aggForeign, 1);
@@ -949,6 +950,103 @@ function renderDashboard() {
   if (bottomActions) bottomActions.style.display = 'block';
   refreshSimulationDefaults();
 }
+
+/* גיל היתרות: היתרה מוזנת פעם אחת ומתיישנת, והמשתמש החוזר צריך לדעת
+   שהתמונה שהוא רואה נכונה לתאריך מסוים. מוצג לפי היתרה הוותיקה ביותר. */
+function fmtAgeSince(iso) {
+  const then = new Date(iso);
+  if (isNaN(then.getTime())) return '';
+  const now = new Date();
+  const days = Math.floor((now - then) / 86400000);
+  if (days < 1 && now.getDate() === then.getDate()) return 'היום';
+  if (days < 2) return 'אתמול';
+  if (days < 30) return `לפני ${days} ימים`;
+  const months = (now.getFullYear() - then.getFullYear()) * 12 + now.getMonth() - then.getMonth() - (now.getDate() < then.getDate() ? 1 : 0);
+  if (months <= 1) return 'לפני חודש';
+  if (months === 2) return 'לפני חודשיים';
+  if (months < 12) return `לפני ${months} חודשים`;
+  return months < 24 ? 'לפני שנה' : 'לפני יותר משנתיים';
+}
+function renderBalanceAge(activeItems) {
+  const wrap = document.getElementById('balanceAge');
+  const text = document.getElementById('balanceAgeText');
+  if (!wrap || !text) return;
+  // בתיק ששותף התאריכים הם רגע פתיחת הקישור, לא מועד העדכון בפועל.
+  const stamps = SHARED_VIEW ? [] : activeItems.map(item => item.updated_at).filter(Boolean).sort();
+  if (!stamps.length) { wrap.hidden = true; return; }
+  const oldest = fmtAgeSince(stamps[0]);
+  const newest = fmtAgeSince(stamps[stamps.length - 1]);
+  if (!oldest) { wrap.hidden = true; return; }
+  const subject = activeItems.length === 1 ? 'היתרה עודכנה' : (oldest === newest ? 'היתרות עודכנו' : 'חלק מהיתרות עודכנו');
+  text.textContent = `${subject} ${oldest}.`;
+  wrap.hidden = false;
+}
+
+/* "עדכון מהיר": כל היתרות במסך אחד, במקום מעבר מוצר אחרי מוצר באשף.
+   שמירה מסמנת את כל המוצרים כמעודכנים — גם יתרה שלא השתנתה אושרה עכשיו. */
+function openBalancesDialog() {
+  const dialog = document.getElementById('balancesDialog');
+  const rows = document.getElementById('balancesRows');
+  if (!dialog || !rows) return;
+  const items = userFunds.slice().sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0));
+  rows.innerHTML = items.map(item => {
+    const uid = escapeHtml(item.fund.uid);
+    const brand = BRAND_BY_NAME[item.fund._brand || brandOf(item.fund)];
+    const age = item.updated_at ? fmtAgeSince(item.updated_at) : '';
+    return `
+      <label class="balances-row">
+        ${brand ? wizLogo(brand) : ''}
+        <span class="balances-row-text">
+          <span class="balances-row-name">${escapeHtml(item.fund.fund_name || '')}</span>
+          ${age ? `<span class="balances-row-age">עודכן ${escapeHtml(age)}</span>` : ''}
+        </span>
+        <span class="balances-row-input">
+          <span aria-hidden="true">₪</span>
+          <input type="number" min="0" step="1" inputmode="numeric" enterkeyhint="done" data-balance-uid="${uid}" value="${Math.round(Number(item.balance) || 0)}" />
+        </span>
+      </label>`;
+  }).join('');
+  document.getElementById('balancesError').hidden = true;
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+  const first = rows.querySelector('input');
+  if (first) { first.focus(); first.select(); }
+}
+function closeBalancesDialog() {
+  const dialog = document.getElementById('balancesDialog');
+  if (!dialog) return;
+  if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+  else dialog.removeAttribute('open');
+}
+function saveBalancesDialog() {
+  const inputs = Array.from(document.querySelectorAll('#balancesRows input[data-balance-uid]'));
+  let firstInvalid = null;
+  const updates = inputs.map(input => {
+    const value = Number(input.value);
+    const valid = input.value.trim() !== '' && Number.isFinite(value) && value > 0;
+    input.closest('.balances-row').classList.toggle('is-invalid', !valid);
+    if (!valid && !firstInvalid) firstInvalid = input;
+    return [input.getAttribute('data-balance-uid'), value];
+  });
+  document.getElementById('balancesError').hidden = !firstInvalid;
+  if (firstInvalid) { firstInvalid.focus(); return; }
+  const now = new Date().toISOString();
+  updates.forEach(([uid, value]) => {
+    const idx = findUserFundIndex(uid);
+    if (idx < 0) return;
+    userFunds[idx].balance = value;
+    userFunds[idx].updated_at = now;
+  });
+  saveState();
+  renderFunds();
+  closeBalancesDialog();
+}
+window.openBalancesDialog = openBalancesDialog;
+window.closeBalancesDialog = closeBalancesDialog;
+window.saveBalancesDialog = saveBalancesDialog;
+document.addEventListener('click', event => {
+  if (event.target.id === 'balancesDialog') closeBalancesDialog();
+});
 
 /* מתג להסתרת המחשבון כולו מהגרסה הציבורית, אם יידרש שוב. */
 const SIMULATION_ENABLED = true;
@@ -1851,6 +1949,12 @@ function goToDashboard() {
   const dashboard = document.getElementById('dashboard');
   if (dashboard) dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+/* משתמש חוזר עם תיק שמור נכנס ישר לתיק, לא למסך "מי מנהל את החיסכון שלך?".
+   בלי גלילה: הדפדפן משחזר ממילא את מיקום הגלילה ברענון. */
+function openSavedPortfolio() {
+  renderDashboard();
+  if (typeof window.enterDashboardView === 'function') window.enterDashboardView();
+}
 function resetAllData() {
   if (SHARED_VIEW) { closeSharedPortfolio(); return; }
   const hasData = userFunds.length > 0 || localStorage.getItem(STORAGE_KEY);
@@ -1858,7 +1962,8 @@ function resetAllData() {
     prepareAnotherFund();
     return;
   }
-  const ok = window.confirm('לאפס את כל הקופות, היתרות ודמי הניהול שהוזנו?');
+  const count = userFunds.length + missingSavedFunds.length;
+  const ok = window.confirm(`למחוק מהדפדפן הזה את ${count === 1 ? 'המוצר' : 'כל ' + count + ' המוצרים'}, היתרות ודמי הניהול שהוזנו? אי אפשר לבטל את המחיקה.`);
   if (!ok) return;
   userFunds = [];
   missingSavedFunds = [];
@@ -1949,23 +2054,66 @@ function removeFund(idx) {
   saveState();
   renderFunds();
 }
+/* ביטול הסרה: ה-✕ צמוד לכפתור "עריכה", ולחיצה בטעות קורית. במקום חלון
+   אישור לפני כל הסרה — הסרה מיידית והודעה עם "ביטול" לכמה שניות.
+   רק ההסרה האחרונה ניתנת לביטול. */
+const UNDO_TOAST_MS = 7000;
+let UNDO_TIMER = null;
+let UNDO_ACTION = null;
+function hideUndoToast() {
+  const toast = document.getElementById('undoToast');
+  if (toast) toast.hidden = true;
+  if (UNDO_TIMER) clearTimeout(UNDO_TIMER);
+  UNDO_TIMER = null;
+  UNDO_ACTION = null;
+}
+function showUndoToast(message, onUndo) {
+  const toast = document.getElementById('undoToast');
+  if (!toast) return;
+  if (UNDO_TIMER) clearTimeout(UNDO_TIMER);
+  document.getElementById('undoToastText').textContent = message;
+  UNDO_ACTION = onUndo;
+  toast.hidden = false;
+  UNDO_TIMER = setTimeout(hideUndoToast, UNDO_TOAST_MS);
+}
+document.addEventListener('click', event => {
+  if (!event.target.closest('#undoToastBtn')) return;
+  const action = UNDO_ACTION;
+  hideUndoToast();
+  if (action) action();
+});
+function restoreRemovedFund(item, idx) {
+  if (findUserFundIndex(item.fund.uid) >= 0) return;
+  userFunds.splice(Math.min(idx, userFunds.length), 0, item);
+  saveState();
+}
+function fundRemovedMessage(item) {
+  return `${(item.fund && item.fund.fund_name) || 'המוצר'} הוסר מהתיק`;
+}
+
 /* הסרת מוצר שנוסף בטעות, מתוך טבלת הפירוט בדשבורד. */
 function removeFundByUid(uid) {
   const idx = findUserFundIndex(uid);
   if (idx < 0) return;
-  const label = (userFunds[idx].fund && userFunds[idx].fund.fund_name) || 'המוצר';
-  if (!window.confirm(`להסיר את "${label}" מהדוח?`)) return;
+  const removed = userFunds[idx];
   // ציור הדשבורד מחדש סוגר את כל האקורדיונים. שומרים את מצבם כדי
   // שהמשתמש יישאר בטבלה שממנה מחק, גם כשהוא מוחק כמה מוצרים ברצף.
   const openState = Array.from(document.querySelectorAll('.dashboard-toggle-section')).map(section => [section, section.open]);
   removeFund(idx);
   openState.forEach(([section, wasOpen]) => { section.open = wasOpen; });
-  if (getTotalBalance() <= 0) {
+  const emptied = getTotalBalance() <= 0;
+  if (emptied) {
     // הדוח התרוקן — הדשבורד מוסתר ממילא, אז מחזירים את המשתמש לאשף.
     document.body.classList.remove('dashboard-reached');
     wizReset();
     wizScrollIntoView();
   }
+  showUndoToast(fundRemovedMessage(removed), () => {
+    restoreRemovedFund(removed, idx);
+    renderFunds();
+    openState.forEach(([section, wasOpen]) => { section.open = wasOpen; });
+    if (emptied) goToDashboard();
+  });
 }
 document.addEventListener('click', event => {
   const trigger = event.target.closest('[data-edit-uid]');
@@ -2409,11 +2557,19 @@ function wizRenderBar() {
     <div class="wiz-bar-row">
       ${back ? '<button type="button" class="wiz-back" data-wiz="back" aria-label="חזרה"></button>' : '<span class="wiz-back-placeholder" aria-hidden="true"></span>'}
       <span class="wiz-bar-title">${escapeHtml(meta.title)}</span>
-      ${wizard.step === 'company' ? '<span class="wiz-back-placeholder" aria-hidden="true"></span>' : '<button type="button" class="wiz-bar-reset" data-wiz="reset">התחל מחדש</button>'}
+      ${wizExitButton()}
     </div>
     <div class="wiz-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${WIZ_TOTAL_STEPS}" aria-valuenow="${meta.progress}">
       <span class="wiz-progress-fill" style="width:${pct}%"></span>
     </div>`;
+}
+
+/* מי שיש לו תיק רואה "חזרה לתיק" במקום "התחל מחדש": האשף הוא תוספת
+   לתיק, ו"התחל מחדש" נקרא כמו מחיקתו. */
+function wizExitButton() {
+  if (hasReportData()) return '<button type="button" class="wiz-bar-reset" data-wiz="dashboard">חזרה לתיק</button>';
+  if (wizard.step === 'company') return '<span class="wiz-back-placeholder" aria-hidden="true"></span>';
+  return '<button type="button" class="wiz-bar-reset" data-wiz="reset">התחל מחדש</button>';
 }
 
 /* --- שורת ההקשר: מה כבר נבחר --- */
@@ -2522,9 +2678,16 @@ function wizRemovePicked() {
   if (!rec) return;
   const idx = findUserFundIndex(rec.uid);
   if (idx >= 0) {
+    const removed = userFunds[idx];
     userFunds.splice(idx, 1);
     saveState();
     renderDashboard();
+    showUndoToast(fundRemovedMessage(removed), () => {
+      restoreRemovedFund(removed, idx);
+      renderDashboard();
+      wizSyncShell();
+      wizRenderBar();
+    });
   }
   wizSet({ step: 'results', pickUid: '' });
 }
@@ -2627,6 +2790,7 @@ function wizScrollIntoView() {
     wizRender();
     renderFunds();
     if (OPEN_DASHBOARD_AFTER_INIT) goToDashboard();
+    else if (hasReportData()) openSavedPortfolio();
     // קישור ששותף שנפתח בלשונית שהאתר כבר פתוח בה משנה רק את ה-#, בלי טעינה.
     window.addEventListener('hashchange', () => {
       OPEN_DASHBOARD_AFTER_INIT = false;
