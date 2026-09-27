@@ -526,17 +526,56 @@ function cmpIsFresh(rec) {
   return monthDiff(rec.report_period, DATASET_MAX_PERIOD) <= 3;
 }
 
+/* === קבוצת המדיניות: ממוצע התשואה והחשיפה ===
+   ממוצע תשואה וחשיפה מוצג רק מול מסלולים עם אותה מדיניות השקעה, ולא רק אותה
+   תווית: אותו סוג מוצר, אותו סוג מסלול (classifyTrack), ובנוסף ההבחנות
+   שמשנות את המדיניות — תקרת המניות, "סחיר" מול מנוהל, פאסיבי מול פעיל,
+   ממשלתי / אשראי באג״ח, הלכה יהודית / איסלאמית, מניות ישראל, שנת היעד,
+   ומסלול למקבלי קצבה. מסלול בניהול אישי, או בלי סוג ברור, אינו מושווה.
+   דמי הניהול נשארים בקבוצות _cmpCategory + אוכלוסייה, כמו קודם. */
+const CMP_PASSIVE = /עוקב|מחקה|פאסיבי/;
+const CMP_INHERENTLY_PASSIVE = { sp500: 1, index_equity: 1, index_flex: 1, index_bond: 1 };
+const CMP_POLICY_KIND_LABEL = { base: 'מסלול למקבלי קצבה' };
+function cmpPolicy(rec) {
+  const { kind, cap, pensioners, general } = trackKindOf(rec);
+  if (kind === 'personal' || (!kind && !pensioners)) return '';
+  const name = normalizeText(rec.fund_name);
+  const sub = rec.source === 'gemelnet' ? normalizeText(rec.sub_specialization) : '';
+  const text = name + ' ' + sub;
+  const parts = [rec._cmpProduct, kind || 'base'];
+  if (cap !== null) parts.push('cap' + cap);
+  if (general) parts.push('general');
+  if (kind !== 'mixed_tradable' && /סחיר/.test(text)) parts.push('tradable');
+  if (!CMP_INHERENTLY_PASSIVE[kind] && CMP_PASSIVE.test(text)) parts.push('passive');
+  if (kind === 'equity' && /ישראל/.test(text)) parts.push('israel');
+  if (kind === 'index_equity' && /תל אביב|ת ?א ?\d|ת ?א ?35/.test(text)) parts.push('israel');
+  if (kind === 'bond' || kind === 'bond_equity') {
+    if (/ממשל/.test(text)) parts.push('gov');
+    if (/אשראי|קונצרני/.test(text)) parts.push('credit');
+  }
+  if (kind === 'halacha') parts.push(/איסלאמ|שריעה/.test(text) ? 'islamic' : 'jewish');
+  if (kind === 'target') { const year = name.match(/20\d\d/); parts.push(year ? year[0] : 'noyear'); }
+  if (pensioners) parts.push('pensioners');
+  return parts.join('|');
+}
+
 let CMP_YIELD_GROUPS = {};
 let CMP_FEE_GROUPS = {};
+let CMP_POLICY_GROUPS = {};
 
 function buildComparisonIndexes() {
   CMP_YIELD_GROUPS = {};
   CMP_FEE_GROUPS = {};
+  CMP_POLICY_GROUPS = {};
   DATA.forEach(rec => {
     rec._cmpProduct = cmpProduct(rec);
     rec._cmpCategory = cmpCategory(rec);
     rec._cmpPopulation = cmpPopulation(rec);
     rec._cmpExposure = cmpAvgExposure(rec);
+    rec._cmpPolicy = cmpPolicy(rec);
+    if (isSelectableFund(rec) && cmpIsFresh(rec) && rec._cmpPolicy) {
+      (CMP_POLICY_GROUPS[rec._cmpPolicy] = CMP_POLICY_GROUPS[rec._cmpPolicy] || []).push(rec);
+    }
     if (!isSelectableFund(rec) || !cmpIsComparable(rec) || !cmpIsFresh(rec)) return;
     const yKey = rec._cmpProduct + '|' + rec._cmpCategory;
     const fKey = yKey + '|' + rec._cmpPopulation;
@@ -574,18 +613,42 @@ function cmpGroupLabel(rec, withPopulation) {
   return label;
 }
 
+/* העמיתים לממוצע התשואה והחשיפה: אותה קבוצת מדיניות, אותו חודש דיווח (אותה
+   תקופה בדיוק), ובדיקת התאמת החשיפה הקיימת (CMP_EXPOSURE_GAP מחציון הקבוצה) —
+   גם על המסלול הנבחן. בלי 18 חודשי היסטוריית חשיפה אין התאמה, לא למסלול
+   ולא לעמית. null = אין ממוצע מתאים. */
+function cmpPolicyPeers(rec) {
+  if (!rec._cmpPolicy) return null;
+  const period = Number(rec.report_period);
+  const members = (CMP_POLICY_GROUPS[rec._cmpPolicy] || []).filter(r => Number(r.report_period) === period);
+  const median = cmpMedian(members.map(r => r._cmpExposure).filter(v => typeof v === 'number'));
+  const fits = r => typeof r._cmpExposure === 'number' && Math.abs(r._cmpExposure - median) <= CMP_EXPOSURE_GAP;
+  if (median === null || !fits(rec)) return null;
+  return members.filter(r => r.uid !== rec.uid && fits(r));
+}
+function cmpPolicyLabel(rec) {
+  const { kind } = trackKindOf(rec);
+  const label = trackLabel(rec) || CMP_POLICY_KIND_LABEL[kind] || 'מסלול';
+  const parts = String(rec._cmpPolicy || '').split('|');
+  const extra = [parts.includes('tradable') ? 'סחיר' : '', parts.includes('passive') ? 'פאסיבי' : '',
+    parts.includes('islamic') ? 'הלכה איסלאמית' : '', parts.includes('israel') ? 'ישראל' : '',
+    parts.includes('gov') ? 'ממשלתי' : '', parts.includes('credit') ? 'אשראי' : ''].filter(Boolean);
+  return (CMP_PRODUCT_LABEL[rec._cmpProduct] || '') + ' · ' + label + (extra.length ? ' · ' + extra.join(' · ') : '');
+}
+
 /* התוצאה שהמסך מציג: הנתון שלך, ממוצע המסלולים הדומים, והפער. */
 function compareToPeers(rec, userFee, userDepositFee) {
-  if (!rec || !cmpIsComparable(rec) || !cmpIsFresh(rec)) return null;
+  if (!rec || !cmpIsFresh(rec)) return null;
   const self = uid => uid !== rec.uid;
-  const yieldPeers = cmpFilterByExposure(CMP_YIELD_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory] || [])
-    .filter(r => self(r.uid));
-  const feePeers = cmpFilterByExposure(CMP_FEE_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory + '|' + rec._cmpPopulation] || [])
-    .filter(r => self(r.uid));
+  const yieldPeers = cmpPolicyPeers(rec) || [];
+  const feePeers = cmpIsComparable(rec)
+    ? cmpFilterByExposure(CMP_FEE_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory + '|' + rec._cmpPopulation] || [])
+      .filter(r => self(r.uid))
+    : [];
   if (yieldPeers.length < CMP_MIN_PEERS && feePeers.length < CMP_MIN_PEERS) return null;
 
   const out = {
-    yieldGroup: cmpGroupLabel(rec, false), yieldCount: yieldPeers.length,
+    yieldGroup: cmpPolicyLabel(rec), yieldCount: yieldPeers.length,
     feeGroup: cmpGroupLabel(rec, true), feeCount: feePeers.length,
     isPension: rec.source === 'pensia', rows: []
   };
@@ -641,18 +704,18 @@ function renderComparisonMethod(item) {
       <p>"${CMP_PEERS_TEXT}" הוא ממוצע של קופות שעומדות בכל התנאים האלה:</p>
       <ul>
         <li>אותו סוג מוצר — ${escapeHtml(CMP_PRODUCT_LABEL[f._cmpProduct] || '')}.</li>
-        <li>אותה קטגוריית מסלול השקעה — ${escapeHtml(CMP_CATEGORY_LABEL[f._cmpCategory] || 'מסלול')}.</li>
-        <li>בדמי ניהול, גם אותה אוכלוסיית יעד — ${escapeHtml(CMP_POPULATION_LABEL[f._cmpPopulation] || '')}. הסכם קבוצתי משפיע על המחיר.</li>
+        <li>בתשואה ובחשיפה: אותה מדיניות השקעה — ${escapeHtml(cmp.yieldGroup)} — ואותו חודש דיווח. החשיפה הממוצעת למניות בשנתיים האחרונות, של הקופה שלך ושל כל קופה בקבוצה, קרובה עד 20 נקודות אחוז לחציון הקבוצה; קופה בלי 18 חודשי נתונים אינה נכללת.</li>
+        <li>בדמי ניהול: אותה קטגוריית מסלול — ${escapeHtml(CMP_CATEGORY_LABEL[f._cmpCategory] || 'מסלול')} — ואותה אוכלוסיית יעד — ${escapeHtml(CMP_POPULATION_LABEL[f._cmpPopulation] || '')}. הסכם קבוצתי משפיע על המחיר.</li>
         <li>ממוצע פשוט: כל קופה נספרת פעם אחת, בלי שקלול לפי גודל.</li>
         <li>לפחות ${CMP_MIN_PEERS} קופות בקבוצה. אם יש פחות, לא מוצגת השוואה.</li>
       </ul>
       <p>בקבוצה של הקופה שלך: ${cmp.yieldCount} קופות בתשואה ובחשיפה, ${cmp.feeCount} קופות בדמי ניהול. הקופה שלך עצמה אינה נספרת.</p>
       ${fundFees ? `<ul>${fundFees}</ul>` : ''}
-      <p>לא נכללות: קופות שלא דיווחו יותר משלושה חודשים, מסלולים בניהול אישי, וקופה שחשיפתה הממוצעת למניות בשנתיים האחרונות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה.</p>
+      <p>לא נכללות: קופות שלא דיווחו יותר משלושה חודשים ומסלולים בניהול אישי; בדמי ניהול — גם קופה שחשיפתה הממוצעת למניות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה.</p>
       ${yieldRow
         ? '<p>בממוצע התשואה נכללות רק קופות בנות שלוש שנים לפחות. התשואה היא תשואת המסלול שבו החיסכון מושקע, לפני דמי ניהול.</p>'
           + (annual !== null ? `<p>התשואה המוצגת מצטברת לכל שלוש השנים יחד, ואינה תשואה שנתית. היא שווה ערך ל-${annual.toFixed(2)}% בשנה בממוצע.</p>` : '')
-        : '<p>תשואה ל־3 שנים אינה מוצגת כאן: לקופה או לקבוצת ההשוואה אין ותק מלא של שלוש שנים.</p>'}
+        : `<p>לתשואה: ${CMP_NONE_TEXT}.</p>`}
       <p>הנתונים מדיווחי גמל־נט, פנסיה־נט וביטוח־נט.</p>
     </div>`;
 }
@@ -888,7 +951,15 @@ let OPEN_PRODUCT_UID = null;
    השקעה (ראו compareToPeers) — לא "מסלולים דומים" כללי. בשורות עצמן כתוב
    רק "ממוצע", וההגדרה מופיעה פעם אחת מתחת לכותרת הרשימה. */
 const CMP_PEERS_TEXT = 'ממוצע קופות באותו סוג מסלול';
-const CMP_NONE_TEXT = 'אין כרגע קבוצת השוואה';
+const CMP_NONE_TEXT = 'אין כרגע ממוצע מתאים להשוואה';
+/* הערה אחת כשחסר ממוצע לתשואה או לחשיפה. בלי השוואה כלל — הנוסח המלא. */
+function cmpMissingNote(f, cmp) {
+  if (!cmp) return `${CMP_NONE_TEXT}.`;
+  const has = key => cmp.rows.some(row => row.key === key);
+  if (!has('yield') && !has('stock')) return `לתשואה ולחשיפה: ${CMP_NONE_TEXT}.`;
+  if (!has('yield') && typeof f.yield_trailing_3yrs === 'number') return `לתשואה: ${CMP_NONE_TEXT}.`;
+  return '';
+}
 function fmtCmp(value, digits) {
   return typeof value === 'number' && isFinite(value) ? value.toFixed(digits) + '%' : '—';
 }
@@ -976,7 +1047,7 @@ function productDetailHtml(item, cmp) {
     .join('');
   const note = f.is_stale
     ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה לקופות באותו סוג מסלול.</p>`
-    : (cmp ? '' : `<p class="product-note">${CMP_NONE_TEXT} למסלול הזה.</p>`);
+    : (cmpMissingNote(f, cmp) ? `<p class="product-note">${cmpMissingNote(f, cmp)}</p>` : '');
   return `
       <div class="product-fees product-stats">${yieldHtml}${fees}</div>
       ${note}
@@ -1009,9 +1080,10 @@ function fullComparisonHtml(item, cmp, forPrint) {
         <tbody>${rows.map(([label, mine, peers]) =>
           `<tr><th scope="row">${label}</th><td class="product-cmp-mine">${mine}</td><td class="product-cmp-peer">${peers}</td></tr>`).join('')}</tbody>
       </table>
+      ${cmpMissingNote(f, cmp) ? `<p class="product-note">${cmpMissingNote(f, cmp)}</p>` : ''}
       ${yieldRow ? '<p class="product-note">התשואה מצטברת לכל שלוש השנים יחד, ואינה תשואה שנתית. היא מתייחסת לתקופה המוצגת; התוצאה בחיסכון שלך תלויה גם במועד ההצטרפות, בהפקדות ובמשיכות ובדמי הניהול.</p>' : ''}
       <p class="product-note">דמי הניהול שלך — כפי שהזנת. הממוצע — דמי הניהול הממוצעים בקבוצת ההשוואה. דמי הניהול הממוצעים במסלול עצמו מופיעים בנתוני המסלול.</p>`
-    : `<p class="product-note">${f.is_stale ? 'המסלול אינו נכלל בהשוואה, כי נתוניו לא עודכנו.' : CMP_NONE_TEXT + ' למסלול הזה.'}</p>`;
+    : `<p class="product-note">${f.is_stale ? 'המסלול אינו נכלל בהשוואה, כי נתוניו לא עודכנו.' : CMP_NONE_TEXT + '.'}</p>`;
   const fact = (label, value, wide) => `<div class="fund-fact${wide ? ' fund-fact-wide' : ''}"><dt>${label}</dt><dd>${value}</dd></div>`;
   const facts = [
     fact('תשואה חודשית', fmtPct(f.monthly_yield, 2)),

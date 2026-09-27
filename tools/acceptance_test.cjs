@@ -109,7 +109,7 @@ function check(name, ok, detail) {
     await page.click('#infoDialogBody .method-details > summary');
     const methodBody = await page.textContent('#infoDialogBody .cmp-method');
     check('method explains the comparison group',
-      await page.isVisible('#infoDialogBody .cmp-method') && /אותו סוג מוצר/.test(methodBody) && /אותה קטגוריית מסלול השקעה/.test(methodBody)
+      await page.isVisible('#infoDialogBody .cmp-method') && /אותו סוג מוצר/.test(methodBody) && /אותה מדיניות השקעה/.test(methodBody) && /אותו חודש דיווח/.test(methodBody) && /אותה קטגוריית מסלול/.test(methodBody)
       && /אוכלוסיית יעד/.test(methodBody) && /ממוצע פשוט/.test(methodBody) && /לפחות 5 קופות/.test(methodBody));
     await page.click('.info-dialog-x');
     check('X closes the dialog', !(await page.isVisible('#infoDialog')));
@@ -309,7 +309,7 @@ function check(name, ok, detail) {
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     check('only one product open at a time', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 1
       && (await fresh.getAttribute(`[data-toggle-uid="${noPeers}"]`, 'aria-expanded')) === 'true');
-    check('no-peers detail explains and still takes a fee', /אין כרגע קבוצת השוואה/.test(await fresh.textContent(`.product[data-product-uid="${noPeers}"] .product-detail`))
+    check('no-peers detail explains and still takes a fee', /אין כרגע ממוצע מתאים להשוואה/.test(await fresh.textContent(`.product[data-product-uid="${noPeers}"] .product-detail`))
       && (await fresh.locator(`.product[data-product-uid="${noPeers}"] [data-fee-edit]`).count()) >= 1);
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     check('clicking an open row closes it', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 0);
@@ -442,7 +442,7 @@ function check(name, ok, detail) {
     // 17א. קבוצות ההשוואה: מקרי הקצה שתוקנו. בודקים את הקבוצה עצמה, לא רק שהבדיקות עוברות.
     const grp = await fresh.evaluate(() => {
       const r = uid => DATA.find(x => x.uid === uid);
-      const peersOf = uid => { const x = withRuntimeFlags(r(uid)); const c = compareToPeers(x, null, null); return c ? c.yieldCount : 0; };
+      const peersOf = uid => { const x = withRuntimeFlags(r(uid)); const c = compareToPeers(x, null, null); return c ? c.feeCount : 0; };
       const pitzuimEquity = CMP_YIELD_GROUPS['pitzuim|equity'] || [];
       return {
         noStockSub: r('gemelnet:1372')._cmpCategory, cap10Sub: r('gemelnet:1276')._cmpCategory,
@@ -461,6 +461,41 @@ function check(name, ok, detail) {
     check('cmp: "ללא אג״ח" is not a bond peer', grp.noBonds === 'unclassified', grp.noBonds);
     check('cmp: bond tracks keep their groups', grp.bondsNoStock === 'bonds_credit' && grp.harel === 'bonds_equity_sleeve');
     check('cmp: a group below the minimum shows no comparison', grp.smallGroupHidden && grp.bondsPeers >= 5, String(grp.bondsPeers));
+
+    // 17ב. ממוצע התשואה והחשיפה: קבוצת מדיניות, אותו חודש, התאמת חשיפה גם למסלול הנבחן.
+    const pol = await fresh.evaluate(() => {
+      const sel = DATA.filter(r => isSelectableFund(r) && cmpIsFresh(r));
+      const withAvg = sel.map(r => ({ r, c: compareToPeers(withRuntimeFlags(r), null, null) }))
+        .filter(x => x.c && x.c.rows.some(row => row.key === 'yield' || row.key === 'stock'));
+      const peersOk = withAvg.every(({ r }) => {
+        const peers = cmpPolicyPeers(r);
+        return peers && peers.length >= CMP_MIN_PEERS && peers.every(p => p.uid !== r.uid && p._cmpPolicy === r._cmpPolicy
+          && Number(p.report_period) === Number(r.report_period) && typeof p._cmpExposure === 'number');
+      });
+      const med = r => cmpMedian((CMP_POLICY_GROUPS[r._cmpPolicy] || []).filter(p => Number(p.report_period) === Number(r.report_period)).map(p => p._cmpExposure).filter(v => typeof v === 'number'));
+      const subjectFar = withAvg.filter(({ r }) => typeof r._cmpExposure !== 'number' || Math.abs(r._cmpExposure - med(r)) > CMP_EXPOSURE_GAP).length;
+      const u = uid => DATA.find(x => x.uid === uid);
+      const pc = uid => { const c = compareToPeers(withRuntimeFlags(u(uid)), null, null); return c ? c.rows.map(row => row.key) : []; };
+      return {
+        n: withAvg.length, peersOk, subjectFar,
+        personal: pc('gemelnet:1541').filter(k => k === 'yield' || k === 'stock').length,
+        unclear: pc('gemelnet:124').filter(k => k === 'yield' || k === 'stock').length,
+        tradableSplit: u('gemelnet:15302')._cmpPolicy !== u('gemelnet:763')._cmpPolicy,
+        capSplit: u('gemelnet:416')._cmpPolicy !== u('gemelnet:15303')._cmpPolicy && /cap25/.test(u('gemelnet:416')._cmpPolicy),
+        ageSplit: new Set(['age50', 'age5060', 'age60'].map(k => DATA.find(x => isSelectableFund(x) && trackKindOf(x).kind === k && x._cmpProduct === 'gemel')._cmpPolicy)).size === 3,
+        childSplit: new Set(DATA.filter(x => x._product === 'child' && isSelectableFund(x)).map(x => x._cmpPolicy)).size >= 3,
+        pensionersSplit: /pensioners/.test(u('pensia:13226')._cmpPolicy),
+        targetYears: new Set(DATA.filter(x => trackKindOf(x).kind === 'target' && isSelectableFund(x)).map(x => x._cmpPolicy.split('|').pop())).size >= 5,
+        halachaSplit: u('gemelnet:2058')._cmpPolicy !== u('gemelnet:1523')._cmpPolicy,
+        feeUnchanged: u('gemelnet:416')._cmpCategory === 'bonds_equity_sleeve'
+      };
+    });
+    check('policy average: ≥5 same-policy, same-month peers with history, self excluded', pol.n > 0 && pol.peersOk, JSON.stringify(pol));
+    check('policy average: the track itself passes the exposure match', pol.subjectFar === 0, String(pol.subjectFar));
+    check('no yield/exposure average for personal or unclear tracks', pol.personal === 0 && pol.unclear === 0);
+    check('separate groups: tradable, caps, ages, child risk, pensioners, target years, halacha',
+      pol.tradableSplit && pol.capSplit && pol.ageSplit && pol.childSplit && pol.pensionersSplit && pol.targetYears && pol.halachaSplit, JSON.stringify(pol));
+    check('fee comparison keeps its own grouping', pol.feeUnchanged);
 
     // 18. חיסכון עם יתרה בלבד, ושני מסלולים מאותו סוג באותה חברה.
     await seed(fresh, [
