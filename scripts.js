@@ -1030,7 +1030,7 @@ function fullComparisonHtml(item, cmp, forPrint) {
   return `
       ${table}
       <h5 class="fund-facts-head">נתוני המסלול</h5>
-      ${trackLabel(f) ? `<p class="fund-facts-kind">${escapeHtml(trackLabel(f))}${trackNote(f) ? ': ' + escapeHtml(trackNote(f)) : ''}</p>` : ''}
+      ${trackLabel(f) ? `<p class="fund-facts-kind"><strong>${escapeHtml(trackLabel(f))}</strong>${trackNote(f) ? ' — ' + escapeHtml(trackNote(f)) : ''}</p>` : ''}
       <p class="fund-facts-sub">נתוני הדיווח הציבורי של המסלול כולו. דמי הניהול כאן הם הממוצע שנגבה מכלל העמיתים במסלול.</p>
       <dl class="fund-facts">${facts}</dl>
       ${method}`;
