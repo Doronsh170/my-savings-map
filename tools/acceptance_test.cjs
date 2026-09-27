@@ -109,7 +109,7 @@ function check(name, ok, detail) {
     await page.click('#infoDialogBody .method-details > summary');
     const methodBody = await page.textContent('#infoDialogBody .cmp-method');
     check('method explains the comparison group',
-      await page.isVisible('#infoDialogBody .cmp-method') && /אותו סוג מוצר/.test(methodBody) && /אותה קטגוריית מסלול השקעה/.test(methodBody)
+      await page.isVisible('#infoDialogBody .cmp-method') && /אותו סוג מוצר/.test(methodBody) && /אותה מדיניות השקעה/.test(methodBody) && /אותו חודש דיווח/.test(methodBody) && /אותה קטגוריית מסלול/.test(methodBody)
       && /אוכלוסיית יעד/.test(methodBody) && /ממוצע פשוט/.test(methodBody) && /לפחות 5 קופות/.test(methodBody));
     await page.click('.info-dialog-x');
     check('X closes the dialog', !(await page.isVisible('#infoDialog')));
@@ -309,7 +309,7 @@ function check(name, ok, detail) {
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     check('only one product open at a time', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 1
       && (await fresh.getAttribute(`[data-toggle-uid="${noPeers}"]`, 'aria-expanded')) === 'true');
-    check('no-peers detail explains and still takes a fee', /אין כרגע קבוצת השוואה/.test(await fresh.textContent(`.product[data-product-uid="${noPeers}"] .product-detail`))
+    check('no-peers detail explains and still takes a fee', /אין כרגע ממוצע מתאים להשוואה/.test(await fresh.textContent(`.product[data-product-uid="${noPeers}"] .product-detail`))
       && (await fresh.locator(`.product[data-product-uid="${noPeers}"] [data-fee-edit]`).count()) >= 1);
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     check('clicking an open row closes it', (await fresh.locator('#detailsRows .product-detail:visible').count()) === 0);
@@ -411,22 +411,91 @@ function check(name, ok, detail) {
         sp500: trackLabel(byUid('gemelnet:13502')), indexEq: trackLabel(byUid('gemelnet:15300')),
         indexBond: trackLabel(byUid('gemelnet:15298')), noStock: trackLabel(byUid('gemelnet:1374')),
         pensionEq: trackLabel(byUid('pensia:2175')), pensionCap: trackLabel(byUid('pensia:9980')),
-        ira: trackLabel(byUid('gemelnet:1541')),
+        ira: trackLabel(byUid('gemelnet:1541')), ambiguous: trackLabel(byUid('gemelnet:124')),
+        mixed: trackLabel(byUid('gemelnet:1034')), mixedNote: trackNote(byUid('gemelnet:1034')),
+        annuity: trackLabel(byUid('pensia:8588')), noBonds: trackLabel(byUid('bituach:12981')),
+        generalCap: trackLabel(byUid('gemelnet:384')), generalNoStockSub: trackLabel(byUid('gemelnet:1372')),
+        // חשיפה מדווחת חריגה (30%) אינה מסתירה סיווג רשמי ברור.
+        oddExposure: trackLabel(byUid('gemelnet:15962')), oddStock: byUid('gemelnet:15962').stock_pct,
         cappedAsEquity: namedCap.filter(r => trackLabel(r) === 'מסלול מנייתי').map(r => r.uid),
-        lowStockEquity: equityLabelled.filter(r => typeof r.stock_pct === 'number' && r.stock_pct < 50).map(r => r.uid),
+        nonEquityOfficial: equityLabelled.filter(r => r.source === 'gemelnet' && !/מניות|s&p|מדד/i.test(r.sub_specialization + r.specialization)).map(r => r.uid),
         chipLeak: equityChip.filter(r => /עד \d+ ?%|ללא מניות|אג"ח/.test(r.fund_name)).map(r => r.uid)
       };
     });
     check('bond track with up to 25% stocks is not labelled equity', cls.harel === 'מסלול אג״ח · עד 25% מניות', cls.harel);
     check('no capped / no-stock track is labelled equity', cls.cappedAsEquity.length === 0, cls.cappedAsEquity.join(','));
-    check('every "מסלול מנייתי" reports at least 50% stocks', cls.lowStockEquity.length === 0, cls.lowStockEquity.join(','));
+    check('every Gemel-Net "מסלול מנייתי" has an equity official class', cls.nonEquityOfficial.length === 0, cls.nonEquityOfficial.join(','));
+    check('reported exposure alone does not hide an official label', cls.oddExposure === 'מסלול עוקב מדד S&P 500' && cls.oddStock < 50, cls.oddExposure + ' / ' + cls.oddStock);
     check('equity filter chip excludes bond / capped tracks', cls.chipLeak.length === 0 && !cls.harelChips.includes('equity') && cls.harelChips.includes('bond'), cls.chipLeak.join(','));
     check('labels for equity, general, index and no-stock tracks',
       cls.equity === 'מסלול מנייתי' && cls.general === 'מסלול כללי' && cls.sp500 === 'מסלול עוקב מדד S&P 500'
-      && cls.indexEq === 'מסלול עוקב מדדי מניות' && cls.indexBond === 'מסלול עוקב מדדי אג״ח' && cls.noStock === 'מסלול ללא מניות'
+      && cls.indexEq === 'מסלול עוקב מדדי מניות' && cls.indexBond === 'מסלול עוקב מדדי אג״ח' && cls.noStock === 'מסלול כללי · ללא מניות'
       && cls.pensionEq === 'מסלול מנייתי' && cls.pensionCap === 'מסלול אג״ח · עד 25% מניות', JSON.stringify(cls));
-    check('track without a reliable type gets no label', cls.ira === '', cls.ira);
+    check('official "כללי" with a stock cap stays general, not bonds', cls.generalCap === 'מסלול כללי · עד 15% מניות' && cls.generalNoStockSub === 'מסלול כללי · ללא מניות', cls.generalCap + ' / ' + cls.generalNoStockSub);
+    check('IRA shows "בניהול אישי" only', cls.ira === 'מסלול בניהול אישי', cls.ira);
+    check('"משולב סחיר" and existing-annuity tracks are labelled, with a note for the term',
+      cls.mixed === 'מסלול משולב סחיר' && /נסחרים בבורסה/.test(cls.mixedNote) && cls.annuity === 'מסלול קצבה לזכאים קיימים', JSON.stringify([cls.mixed, cls.annuity]));
+    check('"ללא אג״ח" is not labelled a bond track', cls.noBonds === '', cls.noBonds);
+    check('track without a reliable type gets no label', cls.ambiguous === '', cls.ambiguous);
     check('comparison group is unchanged by the label fix', cls.harelCmp === 'bonds_equity_sleeve', cls.harelCmp);
+
+    // 17א. קבוצות ההשוואה: מקרי הקצה שתוקנו. בודקים את הקבוצה עצמה, לא רק שהבדיקות עוברות.
+    const grp = await fresh.evaluate(() => {
+      const r = uid => DATA.find(x => x.uid === uid);
+      const peersOf = uid => { const x = withRuntimeFlags(r(uid)); const c = compareToPeers(x, null, null); return c ? c.feeCount : 0; };
+      const pitzuimEquity = CMP_YIELD_GROUPS['pitzuim|equity'] || [];
+      return {
+        noStockSub: r('gemelnet:1372')._cmpCategory, cap10Sub: r('gemelnet:1276')._cmpCategory,
+        generalCapName: r('gemelnet:384')._cmpCategory, generalNoStockName: r('gemelnet:1374')._cmpCategory,
+        typo: r('pensia:2242')._cmpCategory, noBonds: r('bituach:12981')._cmpCategory,
+        bondsNoStock: r('gemelnet:1107')._cmpCategory, harel: r('gemelnet:416')._cmpCategory,
+        equityHasNoLimited: pitzuimEquity.every(x => !/ללא מניות|עד \d+ ?% ?מניות/.test(normalizeText(x.fund_name + ' ' + x.sub_specialization))),
+        smallGroupHidden: compareToPeers(withRuntimeFlags(r('gemelnet:1374')), null, null) === null,
+        bondsPeers: peersOf('gemelnet:1107')
+      };
+    });
+    check('cmp: official "ללא מניות" / "עד 10% מניות" are not equity peers',
+      grp.noStockSub === 'general_no_stock' && grp.cap10Sub === 'general_capped' && grp.equityHasNoLimited, JSON.stringify(grp));
+    check('cmp: official "כללי" with a cap in the name is not a bond peer', grp.generalCapName === 'general_capped' && grp.generalNoStockName === 'general_no_stock');
+    check('cmp: typo "במנית" joins the bonds-with-stocks group', grp.typo === 'bonds_equity_sleeve', grp.typo);
+    check('cmp: "ללא אג״ח" is not a bond peer', grp.noBonds === 'unclassified', grp.noBonds);
+    check('cmp: bond tracks keep their groups', grp.bondsNoStock === 'bonds_credit' && grp.harel === 'bonds_equity_sleeve');
+    check('cmp: a group below the minimum shows no comparison', grp.smallGroupHidden && grp.bondsPeers >= 5, String(grp.bondsPeers));
+
+    // 17ב. ממוצע התשואה והחשיפה: קבוצת מדיניות, אותו חודש, התאמת חשיפה גם למסלול הנבחן.
+    const pol = await fresh.evaluate(() => {
+      const sel = DATA.filter(r => isSelectableFund(r) && cmpIsFresh(r));
+      const withAvg = sel.map(r => ({ r, c: compareToPeers(withRuntimeFlags(r), null, null) }))
+        .filter(x => x.c && x.c.rows.some(row => row.key === 'yield' || row.key === 'stock'));
+      const peersOk = withAvg.every(({ r }) => {
+        const peers = cmpPolicyPeers(r);
+        return peers && peers.length >= CMP_MIN_PEERS && peers.every(p => p.uid !== r.uid && p._cmpPolicy === r._cmpPolicy
+          && Number(p.report_period) === Number(r.report_period) && typeof p._cmpExposure === 'number');
+      });
+      const med = r => cmpMedian((CMP_POLICY_GROUPS[r._cmpPolicy] || []).filter(p => Number(p.report_period) === Number(r.report_period)).map(p => p._cmpExposure).filter(v => typeof v === 'number'));
+      const subjectFar = withAvg.filter(({ r }) => typeof r._cmpExposure !== 'number' || Math.abs(r._cmpExposure - med(r)) > CMP_EXPOSURE_GAP).length;
+      const u = uid => DATA.find(x => x.uid === uid);
+      const pc = uid => { const c = compareToPeers(withRuntimeFlags(u(uid)), null, null); return c ? c.rows.map(row => row.key) : []; };
+      return {
+        n: withAvg.length, peersOk, subjectFar,
+        personal: pc('gemelnet:1541').filter(k => k === 'yield' || k === 'stock').length,
+        unclear: pc('gemelnet:124').filter(k => k === 'yield' || k === 'stock').length,
+        tradableSplit: u('gemelnet:15302')._cmpPolicy !== u('gemelnet:763')._cmpPolicy,
+        capSplit: u('gemelnet:416')._cmpPolicy !== u('gemelnet:15303')._cmpPolicy && /cap25/.test(u('gemelnet:416')._cmpPolicy),
+        ageSplit: new Set(['age50', 'age5060', 'age60'].map(k => DATA.find(x => isSelectableFund(x) && trackKindOf(x).kind === k && x._cmpProduct === 'gemel')._cmpPolicy)).size === 3,
+        childSplit: new Set(DATA.filter(x => x._product === 'child' && isSelectableFund(x)).map(x => x._cmpPolicy)).size >= 3,
+        pensionersSplit: /pensioners/.test(u('pensia:13226')._cmpPolicy),
+        targetYears: new Set(DATA.filter(x => trackKindOf(x).kind === 'target' && isSelectableFund(x)).map(x => x._cmpPolicy.split('|').pop())).size >= 5,
+        halachaSplit: u('gemelnet:2058')._cmpPolicy !== u('gemelnet:1523')._cmpPolicy,
+        feeUnchanged: u('gemelnet:416')._cmpCategory === 'bonds_equity_sleeve'
+      };
+    });
+    check('policy average: ≥5 same-policy, same-month peers with history, self excluded', pol.n > 0 && pol.peersOk, JSON.stringify(pol));
+    check('policy average: the track itself passes the exposure match', pol.subjectFar === 0, String(pol.subjectFar));
+    check('no yield/exposure average for personal or unclear tracks', pol.personal === 0 && pol.unclear === 0);
+    check('separate groups: tradable, caps, ages, child risk, pensioners, target years, halacha',
+      pol.tradableSplit && pol.capSplit && pol.ageSplit && pol.childSplit && pol.pensionersSplit && pol.targetYears && pol.halachaSplit, JSON.stringify(pol));
+    check('fee comparison keeps its own grouping', pol.feeUnchanged);
 
     // 18. חיסכון עם יתרה בלבד, ושני מסלולים מאותו סוג באותה חברה.
     await seed(fresh, [

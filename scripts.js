@@ -203,13 +203,16 @@ function rankTracks(list) {
    2. בגמל-נט: הסיווג הרשמי (תת-התמחות, ואם אין — התמחות).
    3. בפנסיה-נט ובביטוח-נט: ביטויים מפורשים בשם המסלול בלבד.
    הופעת המילה "מניות" בשם אינה מספיקה: "אג״ח עם מניות (עד 25% מניות)" אינו
-   מסלול מנייתי. לבסוף הסוג מאומת מול החשיפה למניות שהמסלול מדווח; סוג
-   שסותר אותה, או מסלול בלי סיווג אמין, מוצג בלי תווית — רק בשמו המקורי. */
+   מסלול מנייתי. מסלול בלי סיווג אמין מוצג בלי תווית — רק בשמו המקורי.
+   החשיפה המדווחת אינה פוסלת תווית: היא נכונה לחודש מסוים, והמדיניות או
+   הסיווג הרשמי הם שקובעים את סוג המסלול. פער ביניהם הוא סימן לבדיקת איכות
+   נתונים (tools/track_report.cjs), לא הוכחה שהתווית שגויה. */
 const TRACK_KIND_LABEL = {
   general: 'מסלול כללי', equity: 'מסלול מנייתי', sp500: 'מסלול עוקב מדד S&P 500',
   index_equity: 'מסלול עוקב מדדי מניות', index_flex: 'מסלול עוקב מדדים גמיש', index_bond: 'מסלול עוקב מדדי אג״ח',
   bond: 'מסלול אג״ח', bond_equity: 'מסלול אג״ח עם רכיב מניות', no_stock: 'מסלול ללא מניות',
   money: 'מסלול כספי', halacha: 'מסלול הלכתי', esg: 'מסלול קיימות', foreign: 'מסלול חו״ל',
+  mixed_tradable: 'מסלול משולב סחיר', personal: 'מסלול בניהול אישי', annuity_existing: 'מסלול קצבה לזכאים קיימים',
   age50: 'מסלול לפי גיל · עד 50', age5060: 'מסלול לפי גיל · 50 עד 60', age60: 'מסלול לפי גיל · 60 ומעלה',
   target: 'מסלול יעד לפרישה', guaranteed: 'מסלול מבטיח תשואה',
   child_low: 'חיסכון לילד · סיכון מועט', child_mid: 'חיסכון לילד · סיכון בינוני', child_high: 'חיסכון לילד · סיכון גבוה'
@@ -227,13 +230,14 @@ const GEMEL_KIND = {
   'כספי שקלי': 'money', 'שקלי': 'money', 'שקלי טווח קצר': 'money',
   'הלכה יהודית': 'halacha', 'הלכה איסלאמית': 'halacha',
   'עד 50': 'age50', '50 60': 'age5060', '60 ומעלה': 'age60',
-  'קיימות': 'esg', 'חול': 'foreign', 'מבטיח תשואה': 'guaranteed',
+  'קיימות': 'esg', 'חול': 'foreign', 'מבטיח תשואה': 'guaranteed', 'משולב סחיר': 'mixed_tradable',
   'חיסכון לילד חוסכים המעדיפים סיכון מועט': 'child_low',
   'חיסכון לילד חוסכים המעדיפים סיכון בינוני': 'child_mid',
   'חיסכון לילד חוסכים המעדיפים סיכון גבוה': 'child_high'
 };
 // בפנסיה ובביטוח: הכלל הראשון שמתאים לשם קובע.
 const TRACK_NAME_RULES = [
+  ['annuity_existing', /קצבה לזכאים קיימים/],
   ['target', /יעד לפרישה|יעד פרישה/],
   ['age50', /עד 50|50 ומטה|לבני 50 ומטה|גילאי 50 ומטה|עד גיל 50/],
   ['age5060', /\b50 60\b|50 עד 60|גילאי 50 עד 60|לבני 50 60/],
@@ -243,21 +247,23 @@ const TRACK_NAME_RULES = [
   ['index_flex', /עוקב מדדים גמיש/],
   ['index_bond', /עוקב מדדי אגח|(מחקה|עוקב) מדד.*(ממשלת|אגח|אג ח|שקלי|ריבית)/],
   ['halacha', /הלכ|שריעה|איסלאמ/],
+  // "ללא אג״ח" אינו מסלול אג״ח, ואין בשם די מידע לסוג אחר.
+  ['', /ללא אג ?ח/],
   ['bond', /אגח|אג ח|אשראי|ממשלת/],
   ['money', /כספי|שקלי/],
   ['equity', /(^|\s)מניות($|\s)|מנייתי/],
   ['esg', /קיימות/],
+  ['mixed_tradable', /משולב סחיר/],
   ['foreign', /(^|\s)חול($|\s)/],
   ['general', /(^|\s)כללי($|\s)/]
 ];
 const BOND_WORDS = /אגח|אג ח|אשראי|ממשלת/;
-const EQUITY_KINDS = { equity: 1, index_equity: 1, sp500: 1 };
-const LOW_EQUITY_KINDS = { bond: 1, index_bond: 1, money: 1 };
-
-function trackStockLevel(rec) {
-  const current = fundMetricValue(rec, 'stock_pct');
-  return current !== null ? current : cmpAvgExposure(rec);
-}
+/* הסבר קצר למונח רשמי שאינו מוכר לכולם. "משולב סחיר": לפי מסמכי המדיניות
+   שהחברות מפרסמות למסלול — נכסים סחירים בלבד, תמהיל מניות ואג״ח. */
+const TRACK_KIND_NOTE = {
+  mixed_tradable: 'משקיע רק בנכסים שנסחרים בבורסה, בתמהיל של מניות ואג״ח בישראל ובחו״ל. שיעור המניות שונה ממסלול למסלול.',
+  personal: 'ההשקעות נקבעות לפי הוראות העמית, ולכן אין למסלול מדיניות השקעה אחידה.'
+};
 function classifyTrack(rec) {
   const name = normalizeText(rec.fund_name);
   const sub = rec.source === 'gemelnet' ? normalizeText(rec.sub_specialization) : '';
@@ -266,33 +272,25 @@ function classifyTrack(rec) {
   let kind = '';
   let cap = null;
   const capMatch = text.match(/עד (\d{1,2}) ?(%|אחוז)/);
-  // בניהול אישי / IRA: מדיניות ההשקעה נקבעת בידי העמית, ואין לה סוג אחד.
-  if (/בניהול אישי|בניהול עצמי|\bira\b/.test(name)) kind = '';
+  // בניהול אישי / IRA: מציינים זאת, בלי להסיק מדיניות השקעה.
+  if (/בניהול אישי|בניהול עצמי|\bira\b/.test(name)) kind = 'personal';
   else if (/ללא מניות/.test(text)) kind = 'no_stock';
   else if (capMatch && /מני/.test(text)) {
     cap = Number(capMatch[1]);
     kind = BOND_WORDS.test(name + ' ' + sub + ' ' + spec) ? 'bond_equity' : 'capped';
   } else if (rec.source === 'gemelnet') {
     kind = GEMEL_KIND[sub] || GEMEL_KIND[spec] || '';
-    // שם שמזכיר אג״ח סותר סיווג מנייתי; מסלול כזה מוצג בלי תווית.
-    if (EQUITY_KINDS[kind] && BOND_WORDS.test(name)) kind = '';
   } else {
     const rule = TRACK_NAME_RULES.find(([, pattern]) => pattern.test(name));
     kind = rule ? rule[0] : '';
     if (kind === 'bond' && /מני/.test(name)) kind = 'bond_equity';
   }
-  // אימות מול החשיפה המדווחת: תווית "מנייתי" על מסלול עם מעט מניות, או "אג״ח"
-  // על מסלול עם הרבה מניות, מטעה יותר מהיעדר תווית.
-  const stock = trackStockLevel(rec);
-  if (stock !== null) {
-    if (EQUITY_KINDS[kind] && stock < 50) kind = '';
-    else if (LOW_EQUITY_KINDS[kind] && stock > 30) kind = '';
-    else if (kind === 'no_stock' && stock > 10) kind = '';
-    else if (cap !== null && stock > cap + 10) kind = '';
-  }
   if (!kind) cap = null;
+  // הסיווג הרשמי בגמל-נט "כללי": התקרה או "ללא מניות" מוצגות לצידו, בלי להפוך
+  // את המסלול למסלול אג״ח.
+  const general = rec.source === 'gemelnet' && spec === 'כללי' && (kind === 'capped' || kind === 'no_stock');
   const pensioners = /מקבלי קצבה|לפנסיונרים|למקבלי פנסיה/.test(name);
-  return { kind, cap, pensioners };
+  return { kind, cap, pensioners, general };
 }
 function trackKindOf(rec) {
   if (!rec._trackKind) rec._trackKind = classifyTrack(rec);
@@ -300,13 +298,18 @@ function trackKindOf(rec) {
 }
 /* התווית שמוצגת ליד שם המסלול. מחרוזת ריקה = אין סיווג אמין. */
 function trackLabel(rec) {
-  const { kind, cap, pensioners } = trackKindOf(rec);
+  const { kind, cap, pensioners, general } = trackKindOf(rec);
   let label = '';
   if (kind === 'bond_equity') label = cap !== null ? `מסלול אג״ח · עד ${cap}% מניות` : TRACK_KIND_LABEL.bond_equity;
+  else if (general) label = kind === 'capped' ? `מסלול כללי · עד ${cap}% מניות` : 'מסלול כללי · ללא מניות';
   else if (kind === 'capped') label = `מסלול עד ${cap}% מניות`;
   else label = TRACK_KIND_LABEL[kind] || '';
   if (pensioners) label = label ? label + ' · למקבלי קצבה' : 'מסלול למקבלי קצבה';
   return label;
+}
+
+function trackNote(rec) {
+  return TRACK_KIND_NOTE[trackKindOf(rec).kind] || '';
 }
 
 // צ'יפי הסינון באשף. כל צ'יפ מכיל סוגי מסלול מתוך classifyTrack.
@@ -412,10 +415,15 @@ function cmpPopulation(rec) {
 
 // וטו על שם המסלול, לפני כל השאר: השדות הרשמיים בגמל-נט גסים מדי. קופה
 // ששמה "אג״ח עד 25% מניות" מסווגת שם "מניות", ומסלול בניהול אישי "כללי".
+// הווטו נבדק על השם, ובגמל-נט גם על תת-ההתמחות הרשמית: "ללא מניות" ו"עד 10%
+// מניות" מופיעים שם, והכלל "מניות" היה משייך אותם למסלולים המנייתיים.
+const CMP_PERSONAL = /בניהול אישי|בניהול עצמי|\bira\b/;
+const CMP_STOCK_LIMIT = /ללא מניות|עד \d+ ?(%|אחוז) ?ב?(מניות|מנית)/;   // "במנית" — שגיאת כתיב במאגר
 const CMP_NAME_VETO = [
-  ['personal', /בניהול אישי|בניהול עצמי|\bira\b/],
+  ['personal', CMP_PERSONAL],
+  ['unclassified', /ללא אג ?ח/],
   ['bonds_credit', /ללא מניות/],
-  ['bonds_equity_sleeve', /עד \d+ ?% ?ב?מניות|עד \d+ ?% ?מניות/],
+  ['bonds_equity_sleeve', /עד \d+ ?(%|אחוז) ?ב?(מניות|מנית)/],
   ['bonds_credit', /(מחקה|עוקב) מדד.*(ממשלת|אג ?ח|שקלי|צמוד|ריבית)/],
   ['bonds_equity_sleeve', /(אג ?ח|אשראי).*מניות/]
 ];
@@ -445,7 +453,7 @@ const CMP_RULES = [
   ['general', /(^|\s)כללי($|\s)|מדרגות|חכ ?מ|גמיש/]
 ];
 const CMP_CATEGORY_LABEL = {
-  general: 'מסלול כללי', equity: 'מסלול מנייתי', sp500: 'עוקב S&P 500',
+  general: 'מסלול כללי', general_capped: 'כללי עם תקרת מניות', general_no_stock: 'כללי ללא מניות', equity: 'מסלול מנייתי', sp500: 'עוקב S&P 500',
   index_equity: 'עוקב מדדי מניות', index_mixed: 'עוקב מדדים', mixed_tradable: 'משולב סחיר',
   bonds_credit: 'אג״ח ואשראי', bonds_equity_sleeve: 'אג״ח עם רכיב מניות',
   money_market: 'כספי / שקלי', age_under_50: 'לפי גיל — עד 50',
@@ -458,8 +466,16 @@ const CMP_CATEGORY_LABEL = {
 
 function cmpCategory(rec) {
   const name = normalizeText(rec.fund_name);
+  const sub = rec.source === 'gemelnet' ? normalizeText(rec.sub_specialization) : '';
+  // סיווג רשמי "כללי" עם תקרת מניות או "ללא מניות": התקרה אינה הופכת את המסלול
+  // למסלול אג״ח. "ללא מניות" ו"עד N% מניות" הן מדיניות שונות, ולכן שתי קבוצות
+  // נפרדות; השוואה מוצגת רק אם יש בקבוצה די מסלולים (CMP_MIN_PEERS).
+  const officialGeneral = rec.source === 'gemelnet' && normalizeText(rec.specialization) === 'כללי';
+  if (officialGeneral && !CMP_PERSONAL.test(name) && CMP_STOCK_LIMIT.test(name + ' ' + sub)) {
+    return /ללא מניות/.test(name + ' ' + sub) ? 'general_no_stock' : 'general_capped';
+  }
   for (const [key, pattern] of CMP_NAME_VETO) {
-    if (pattern.test(name)) return key;
+    if (pattern.test(name) || (sub && pattern.test(sub))) return key;
   }
   // גמל-נט מפרסם סיווג רשמי; בפנסיה ובביטוח השם הוא כל מה שיש.
   const texts = rec.source === 'gemelnet'
@@ -510,17 +526,56 @@ function cmpIsFresh(rec) {
   return monthDiff(rec.report_period, DATASET_MAX_PERIOD) <= 3;
 }
 
+/* === קבוצת המדיניות: ממוצע התשואה והחשיפה ===
+   ממוצע תשואה וחשיפה מוצג רק מול מסלולים עם אותה מדיניות השקעה, ולא רק אותה
+   תווית: אותו סוג מוצר, אותו סוג מסלול (classifyTrack), ובנוסף ההבחנות
+   שמשנות את המדיניות — תקרת המניות, "סחיר" מול מנוהל, פאסיבי מול פעיל,
+   ממשלתי / אשראי באג״ח, הלכה יהודית / איסלאמית, מניות ישראל, שנת היעד,
+   ומסלול למקבלי קצבה. מסלול בניהול אישי, או בלי סוג ברור, אינו מושווה.
+   דמי הניהול נשארים בקבוצות _cmpCategory + אוכלוסייה, כמו קודם. */
+const CMP_PASSIVE = /עוקב|מחקה|פאסיבי/;
+const CMP_INHERENTLY_PASSIVE = { sp500: 1, index_equity: 1, index_flex: 1, index_bond: 1 };
+const CMP_POLICY_KIND_LABEL = { base: 'מסלול למקבלי קצבה' };
+function cmpPolicy(rec) {
+  const { kind, cap, pensioners, general } = trackKindOf(rec);
+  if (kind === 'personal' || (!kind && !pensioners)) return '';
+  const name = normalizeText(rec.fund_name);
+  const sub = rec.source === 'gemelnet' ? normalizeText(rec.sub_specialization) : '';
+  const text = name + ' ' + sub;
+  const parts = [rec._cmpProduct, kind || 'base'];
+  if (cap !== null) parts.push('cap' + cap);
+  if (general) parts.push('general');
+  if (kind !== 'mixed_tradable' && /סחיר/.test(text)) parts.push('tradable');
+  if (!CMP_INHERENTLY_PASSIVE[kind] && CMP_PASSIVE.test(text)) parts.push('passive');
+  if (kind === 'equity' && /ישראל/.test(text)) parts.push('israel');
+  if (kind === 'index_equity' && /תל אביב|ת ?א ?\d|ת ?א ?35/.test(text)) parts.push('israel');
+  if (kind === 'bond' || kind === 'bond_equity') {
+    if (/ממשל/.test(text)) parts.push('gov');
+    if (/אשראי|קונצרני/.test(text)) parts.push('credit');
+  }
+  if (kind === 'halacha') parts.push(/איסלאמ|שריעה/.test(text) ? 'islamic' : 'jewish');
+  if (kind === 'target') { const year = name.match(/20\d\d/); parts.push(year ? year[0] : 'noyear'); }
+  if (pensioners) parts.push('pensioners');
+  return parts.join('|');
+}
+
 let CMP_YIELD_GROUPS = {};
 let CMP_FEE_GROUPS = {};
+let CMP_POLICY_GROUPS = {};
 
 function buildComparisonIndexes() {
   CMP_YIELD_GROUPS = {};
   CMP_FEE_GROUPS = {};
+  CMP_POLICY_GROUPS = {};
   DATA.forEach(rec => {
     rec._cmpProduct = cmpProduct(rec);
     rec._cmpCategory = cmpCategory(rec);
     rec._cmpPopulation = cmpPopulation(rec);
     rec._cmpExposure = cmpAvgExposure(rec);
+    rec._cmpPolicy = cmpPolicy(rec);
+    if (isSelectableFund(rec) && cmpIsFresh(rec) && rec._cmpPolicy) {
+      (CMP_POLICY_GROUPS[rec._cmpPolicy] = CMP_POLICY_GROUPS[rec._cmpPolicy] || []).push(rec);
+    }
     if (!isSelectableFund(rec) || !cmpIsComparable(rec) || !cmpIsFresh(rec)) return;
     const yKey = rec._cmpProduct + '|' + rec._cmpCategory;
     const fKey = yKey + '|' + rec._cmpPopulation;
@@ -558,18 +613,42 @@ function cmpGroupLabel(rec, withPopulation) {
   return label;
 }
 
+/* העמיתים לממוצע התשואה והחשיפה: אותה קבוצת מדיניות, אותו חודש דיווח (אותה
+   תקופה בדיוק), ובדיקת התאמת החשיפה הקיימת (CMP_EXPOSURE_GAP מחציון הקבוצה) —
+   גם על המסלול הנבחן. בלי 18 חודשי היסטוריית חשיפה אין התאמה, לא למסלול
+   ולא לעמית. null = אין ממוצע מתאים. */
+function cmpPolicyPeers(rec) {
+  if (!rec._cmpPolicy) return null;
+  const period = Number(rec.report_period);
+  const members = (CMP_POLICY_GROUPS[rec._cmpPolicy] || []).filter(r => Number(r.report_period) === period);
+  const median = cmpMedian(members.map(r => r._cmpExposure).filter(v => typeof v === 'number'));
+  const fits = r => typeof r._cmpExposure === 'number' && Math.abs(r._cmpExposure - median) <= CMP_EXPOSURE_GAP;
+  if (median === null || !fits(rec)) return null;
+  return members.filter(r => r.uid !== rec.uid && fits(r));
+}
+function cmpPolicyLabel(rec) {
+  const { kind } = trackKindOf(rec);
+  const label = trackLabel(rec) || CMP_POLICY_KIND_LABEL[kind] || 'מסלול';
+  const parts = String(rec._cmpPolicy || '').split('|');
+  const extra = [parts.includes('tradable') ? 'סחיר' : '', parts.includes('passive') ? 'פאסיבי' : '',
+    parts.includes('islamic') ? 'הלכה איסלאמית' : '', parts.includes('israel') ? 'ישראל' : '',
+    parts.includes('gov') ? 'ממשלתי' : '', parts.includes('credit') ? 'אשראי' : ''].filter(Boolean);
+  return (CMP_PRODUCT_LABEL[rec._cmpProduct] || '') + ' · ' + label + (extra.length ? ' · ' + extra.join(' · ') : '');
+}
+
 /* התוצאה שהמסך מציג: הנתון שלך, ממוצע המסלולים הדומים, והפער. */
 function compareToPeers(rec, userFee, userDepositFee) {
-  if (!rec || !cmpIsComparable(rec) || !cmpIsFresh(rec)) return null;
+  if (!rec || !cmpIsFresh(rec)) return null;
   const self = uid => uid !== rec.uid;
-  const yieldPeers = cmpFilterByExposure(CMP_YIELD_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory] || [])
-    .filter(r => self(r.uid));
-  const feePeers = cmpFilterByExposure(CMP_FEE_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory + '|' + rec._cmpPopulation] || [])
-    .filter(r => self(r.uid));
+  const yieldPeers = cmpPolicyPeers(rec) || [];
+  const feePeers = cmpIsComparable(rec)
+    ? cmpFilterByExposure(CMP_FEE_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory + '|' + rec._cmpPopulation] || [])
+      .filter(r => self(r.uid))
+    : [];
   if (yieldPeers.length < CMP_MIN_PEERS && feePeers.length < CMP_MIN_PEERS) return null;
 
   const out = {
-    yieldGroup: cmpGroupLabel(rec, false), yieldCount: yieldPeers.length,
+    yieldGroup: cmpPolicyLabel(rec), yieldCount: yieldPeers.length,
     feeGroup: cmpGroupLabel(rec, true), feeCount: feePeers.length,
     isPension: rec.source === 'pensia', rows: []
   };
@@ -625,18 +704,18 @@ function renderComparisonMethod(item) {
       <p>"${CMP_PEERS_TEXT}" הוא ממוצע של קופות שעומדות בכל התנאים האלה:</p>
       <ul>
         <li>אותו סוג מוצר — ${escapeHtml(CMP_PRODUCT_LABEL[f._cmpProduct] || '')}.</li>
-        <li>אותה קטגוריית מסלול השקעה — ${escapeHtml(CMP_CATEGORY_LABEL[f._cmpCategory] || 'מסלול')}.</li>
-        <li>בדמי ניהול, גם אותה אוכלוסיית יעד — ${escapeHtml(CMP_POPULATION_LABEL[f._cmpPopulation] || '')}. הסכם קבוצתי משפיע על המחיר.</li>
+        <li>בתשואה ובחשיפה: אותה מדיניות השקעה — ${escapeHtml(cmp.yieldGroup)} — ואותו חודש דיווח. החשיפה הממוצעת למניות בשנתיים האחרונות, של הקופה שלך ושל כל קופה בקבוצה, קרובה עד 20 נקודות אחוז לחציון הקבוצה; קופה בלי 18 חודשי נתונים אינה נכללת.</li>
+        <li>בדמי ניהול: אותה קטגוריית מסלול — ${escapeHtml(CMP_CATEGORY_LABEL[f._cmpCategory] || 'מסלול')} — ואותה אוכלוסיית יעד — ${escapeHtml(CMP_POPULATION_LABEL[f._cmpPopulation] || '')}. הסכם קבוצתי משפיע על המחיר.</li>
         <li>ממוצע פשוט: כל קופה נספרת פעם אחת, בלי שקלול לפי גודל.</li>
         <li>לפחות ${CMP_MIN_PEERS} קופות בקבוצה. אם יש פחות, לא מוצגת השוואה.</li>
       </ul>
       <p>בקבוצה של הקופה שלך: ${cmp.yieldCount} קופות בתשואה ובחשיפה, ${cmp.feeCount} קופות בדמי ניהול. הקופה שלך עצמה אינה נספרת.</p>
       ${fundFees ? `<ul>${fundFees}</ul>` : ''}
-      <p>לא נכללות: קופות שלא דיווחו יותר משלושה חודשים, מסלולים בניהול אישי, וקופה שחשיפתה הממוצעת למניות בשנתיים האחרונות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה.</p>
+      <p>לא נכללות: קופות שלא דיווחו יותר משלושה חודשים ומסלולים בניהול אישי; בדמי ניהול — גם קופה שחשיפתה הממוצעת למניות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה.</p>
       ${yieldRow
         ? '<p>בממוצע התשואה נכללות רק קופות בנות שלוש שנים לפחות. התשואה היא תשואת המסלול שבו החיסכון מושקע, לפני דמי ניהול.</p>'
           + (annual !== null ? `<p>התשואה המוצגת מצטברת לכל שלוש השנים יחד, ואינה תשואה שנתית. היא שווה ערך ל-${annual.toFixed(2)}% בשנה בממוצע.</p>` : '')
-        : '<p>תשואה ל־3 שנים אינה מוצגת כאן: לקופה או לקבוצת ההשוואה אין ותק מלא של שלוש שנים.</p>'}
+        : `<p>לתשואה: ${CMP_NONE_TEXT}.</p>`}
       <p>הנתונים מדיווחי גמל־נט, פנסיה־נט וביטוח־נט.</p>
     </div>`;
 }
@@ -872,7 +951,15 @@ let OPEN_PRODUCT_UID = null;
    השקעה (ראו compareToPeers) — לא "מסלולים דומים" כללי. בשורות עצמן כתוב
    רק "ממוצע", וההגדרה מופיעה פעם אחת מתחת לכותרת הרשימה. */
 const CMP_PEERS_TEXT = 'ממוצע קופות באותו סוג מסלול';
-const CMP_NONE_TEXT = 'אין כרגע קבוצת השוואה';
+const CMP_NONE_TEXT = 'אין כרגע ממוצע מתאים להשוואה';
+/* הערה אחת כשחסר ממוצע לתשואה או לחשיפה. בלי השוואה כלל — הנוסח המלא. */
+function cmpMissingNote(f, cmp) {
+  if (!cmp) return `${CMP_NONE_TEXT}.`;
+  const has = key => cmp.rows.some(row => row.key === key);
+  if (!has('yield') && !has('stock')) return `לתשואה ולחשיפה: ${CMP_NONE_TEXT}.`;
+  if (!has('yield') && typeof f.yield_trailing_3yrs === 'number') return `לתשואה: ${CMP_NONE_TEXT}.`;
+  return '';
+}
 function fmtCmp(value, digits) {
   return typeof value === 'number' && isFinite(value) ? value.toFixed(digits) + '%' : '—';
 }
@@ -960,7 +1047,7 @@ function productDetailHtml(item, cmp) {
     .join('');
   const note = f.is_stale
     ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה לקופות באותו סוג מסלול.</p>`
-    : (cmp ? '' : `<p class="product-note">${CMP_NONE_TEXT} למסלול הזה.</p>`);
+    : (cmpMissingNote(f, cmp) ? `<p class="product-note">${cmpMissingNote(f, cmp)}</p>` : '');
   return `
       <div class="product-fees product-stats">${yieldHtml}${fees}</div>
       ${note}
@@ -993,9 +1080,10 @@ function fullComparisonHtml(item, cmp, forPrint) {
         <tbody>${rows.map(([label, mine, peers]) =>
           `<tr><th scope="row">${label}</th><td class="product-cmp-mine">${mine}</td><td class="product-cmp-peer">${peers}</td></tr>`).join('')}</tbody>
       </table>
+      ${cmpMissingNote(f, cmp) ? `<p class="product-note">${cmpMissingNote(f, cmp)}</p>` : ''}
       ${yieldRow ? '<p class="product-note">התשואה מצטברת לכל שלוש השנים יחד, ואינה תשואה שנתית. היא מתייחסת לתקופה המוצגת; התוצאה בחיסכון שלך תלויה גם במועד ההצטרפות, בהפקדות ובמשיכות ובדמי הניהול.</p>' : ''}
       <p class="product-note">דמי הניהול שלך — כפי שהזנת. הממוצע — דמי הניהול הממוצעים בקבוצת ההשוואה. דמי הניהול הממוצעים במסלול עצמו מופיעים בנתוני המסלול.</p>`
-    : `<p class="product-note">${f.is_stale ? 'המסלול אינו נכלל בהשוואה, כי נתוניו לא עודכנו.' : CMP_NONE_TEXT + ' למסלול הזה.'}</p>`;
+    : `<p class="product-note">${f.is_stale ? 'המסלול אינו נכלל בהשוואה, כי נתוניו לא עודכנו.' : CMP_NONE_TEXT + '.'}</p>`;
   const fact = (label, value, wide) => `<div class="fund-fact${wide ? ' fund-fact-wide' : ''}"><dt>${label}</dt><dd>${value}</dd></div>`;
   const facts = [
     fact('תשואה חודשית', fmtPct(f.monthly_yield, 2)),
@@ -1014,6 +1102,7 @@ function fullComparisonHtml(item, cmp, forPrint) {
   return `
       ${table}
       <h5 class="fund-facts-head">נתוני המסלול</h5>
+      ${trackLabel(f) ? `<p class="fund-facts-kind"><strong>${escapeHtml(trackLabel(f))}</strong>${trackNote(f) ? ' — ' + escapeHtml(trackNote(f)) : ''}</p>` : ''}
       <p class="fund-facts-sub">נתוני הדיווח הציבורי של המסלול כולו. דמי הניהול כאן הם הממוצע שנגבה מכלל העמיתים במסלול.</p>
       <dl class="fund-facts">${facts}</dl>
       ${method}`;
@@ -2845,6 +2934,7 @@ function wizScreenBalance() {
       <div class="wiz-picked-text">
         <div class="wiz-picked-name">${escapeHtml(rec.fund_name)}</div>
         <div class="wiz-picked-meta">${escapeHtml([trackLabel(rec), 'קופה ' + (rec.fund_id || '')].filter(Boolean).join(' · '))}</div>
+        ${trackNote(rec) ? `<div class="wiz-picked-note">${escapeHtml(trackNote(rec))}</div>` : ''}
       </div>
       <div class="wiz-spark" id="quickEditorSpark" dir="ltr"></div>
     </div>
