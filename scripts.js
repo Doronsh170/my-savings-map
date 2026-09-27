@@ -415,10 +415,15 @@ function cmpPopulation(rec) {
 
 // וטו על שם המסלול, לפני כל השאר: השדות הרשמיים בגמל-נט גסים מדי. קופה
 // ששמה "אג״ח עד 25% מניות" מסווגת שם "מניות", ומסלול בניהול אישי "כללי".
+// הווטו נבדק על השם, ובגמל-נט גם על תת-ההתמחות הרשמית: "ללא מניות" ו"עד 10%
+// מניות" מופיעים שם, והכלל "מניות" היה משייך אותם למסלולים המנייתיים.
+const CMP_PERSONAL = /בניהול אישי|בניהול עצמי|\bira\b/;
+const CMP_STOCK_LIMIT = /ללא מניות|עד \d+ ?(%|אחוז) ?ב?(מניות|מנית)/;   // "במנית" — שגיאת כתיב במאגר
 const CMP_NAME_VETO = [
-  ['personal', /בניהול אישי|בניהול עצמי|\bira\b/],
+  ['personal', CMP_PERSONAL],
+  ['unclassified', /ללא אג ?ח/],
   ['bonds_credit', /ללא מניות/],
-  ['bonds_equity_sleeve', /עד \d+ ?% ?ב?מניות|עד \d+ ?% ?מניות/],
+  ['bonds_equity_sleeve', /עד \d+ ?(%|אחוז) ?ב?(מניות|מנית)/],
   ['bonds_credit', /(מחקה|עוקב) מדד.*(ממשלת|אג ?ח|שקלי|צמוד|ריבית)/],
   ['bonds_equity_sleeve', /(אג ?ח|אשראי).*מניות/]
 ];
@@ -448,7 +453,7 @@ const CMP_RULES = [
   ['general', /(^|\s)כללי($|\s)|מדרגות|חכ ?מ|גמיש/]
 ];
 const CMP_CATEGORY_LABEL = {
-  general: 'מסלול כללי', equity: 'מסלול מנייתי', sp500: 'עוקב S&P 500',
+  general: 'מסלול כללי', general_capped: 'כללי עם תקרת מניות', general_no_stock: 'כללי ללא מניות', equity: 'מסלול מנייתי', sp500: 'עוקב S&P 500',
   index_equity: 'עוקב מדדי מניות', index_mixed: 'עוקב מדדים', mixed_tradable: 'משולב סחיר',
   bonds_credit: 'אג״ח ואשראי', bonds_equity_sleeve: 'אג״ח עם רכיב מניות',
   money_market: 'כספי / שקלי', age_under_50: 'לפי גיל — עד 50',
@@ -461,8 +466,16 @@ const CMP_CATEGORY_LABEL = {
 
 function cmpCategory(rec) {
   const name = normalizeText(rec.fund_name);
+  const sub = rec.source === 'gemelnet' ? normalizeText(rec.sub_specialization) : '';
+  // סיווג רשמי "כללי" עם תקרת מניות או "ללא מניות": התקרה אינה הופכת את המסלול
+  // למסלול אג״ח. "ללא מניות" ו"עד N% מניות" הן מדיניות שונות, ולכן שתי קבוצות
+  // נפרדות; השוואה מוצגת רק אם יש בקבוצה די מסלולים (CMP_MIN_PEERS).
+  const officialGeneral = rec.source === 'gemelnet' && normalizeText(rec.specialization) === 'כללי';
+  if (officialGeneral && !CMP_PERSONAL.test(name) && CMP_STOCK_LIMIT.test(name + ' ' + sub)) {
+    return /ללא מניות/.test(name + ' ' + sub) ? 'general_no_stock' : 'general_capped';
+  }
   for (const [key, pattern] of CMP_NAME_VETO) {
-    if (pattern.test(name)) return key;
+    if (pattern.test(name) || (sub && pattern.test(sub))) return key;
   }
   // גמל-נט מפרסם סיווג רשמי; בפנסיה ובביטוח השם הוא כל מה שיש.
   const texts = rec.source === 'gemelnet'

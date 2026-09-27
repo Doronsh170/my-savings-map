@@ -439,6 +439,29 @@ function check(name, ok, detail) {
     check('track without a reliable type gets no label', cls.ambiguous === '', cls.ambiguous);
     check('comparison group is unchanged by the label fix', cls.harelCmp === 'bonds_equity_sleeve', cls.harelCmp);
 
+    // 17א. קבוצות ההשוואה: מקרי הקצה שתוקנו. בודקים את הקבוצה עצמה, לא רק שהבדיקות עוברות.
+    const grp = await fresh.evaluate(() => {
+      const r = uid => DATA.find(x => x.uid === uid);
+      const peersOf = uid => { const x = withRuntimeFlags(r(uid)); const c = compareToPeers(x, null, null); return c ? c.yieldCount : 0; };
+      const pitzuimEquity = CMP_YIELD_GROUPS['pitzuim|equity'] || [];
+      return {
+        noStockSub: r('gemelnet:1372')._cmpCategory, cap10Sub: r('gemelnet:1276')._cmpCategory,
+        generalCapName: r('gemelnet:384')._cmpCategory, generalNoStockName: r('gemelnet:1374')._cmpCategory,
+        typo: r('pensia:2242')._cmpCategory, noBonds: r('bituach:12981')._cmpCategory,
+        bondsNoStock: r('gemelnet:1107')._cmpCategory, harel: r('gemelnet:416')._cmpCategory,
+        equityHasNoLimited: pitzuimEquity.every(x => !/ללא מניות|עד \d+ ?% ?מניות/.test(normalizeText(x.fund_name + ' ' + x.sub_specialization))),
+        smallGroupHidden: compareToPeers(withRuntimeFlags(r('gemelnet:1374')), null, null) === null,
+        bondsPeers: peersOf('gemelnet:1107')
+      };
+    });
+    check('cmp: official "ללא מניות" / "עד 10% מניות" are not equity peers',
+      grp.noStockSub === 'general_no_stock' && grp.cap10Sub === 'general_capped' && grp.equityHasNoLimited, JSON.stringify(grp));
+    check('cmp: official "כללי" with a cap in the name is not a bond peer', grp.generalCapName === 'general_capped' && grp.generalNoStockName === 'general_no_stock');
+    check('cmp: typo "במנית" joins the bonds-with-stocks group', grp.typo === 'bonds_equity_sleeve', grp.typo);
+    check('cmp: "ללא אג״ח" is not a bond peer', grp.noBonds === 'unclassified', grp.noBonds);
+    check('cmp: bond tracks keep their groups', grp.bondsNoStock === 'bonds_credit' && grp.harel === 'bonds_equity_sleeve');
+    check('cmp: a group below the minimum shows no comparison', grp.smallGroupHidden && grp.bondsPeers >= 5, String(grp.bondsPeers));
+
     // 18. חיסכון עם יתרה בלבד, ושני מסלולים מאותו סוג באותה חברה.
     await seed(fresh, [
       { uid: 'gemelnet:416', balance: 84000, updated_at: new Date().toISOString() },
