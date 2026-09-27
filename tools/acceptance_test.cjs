@@ -411,21 +411,32 @@ function check(name, ok, detail) {
         sp500: trackLabel(byUid('gemelnet:13502')), indexEq: trackLabel(byUid('gemelnet:15300')),
         indexBond: trackLabel(byUid('gemelnet:15298')), noStock: trackLabel(byUid('gemelnet:1374')),
         pensionEq: trackLabel(byUid('pensia:2175')), pensionCap: trackLabel(byUid('pensia:9980')),
-        ira: trackLabel(byUid('gemelnet:1541')),
+        ira: trackLabel(byUid('gemelnet:1541')), ambiguous: trackLabel(byUid('gemelnet:124')),
+        mixed: trackLabel(byUid('gemelnet:1034')), mixedNote: trackNote(byUid('gemelnet:1034')),
+        annuity: trackLabel(byUid('pensia:8588')), noBonds: trackLabel(byUid('bituach:12981')),
+        generalCap: trackLabel(byUid('gemelnet:384')), generalNoStockSub: trackLabel(byUid('gemelnet:1372')),
+        // חשיפה מדווחת חריגה (30%) אינה מסתירה סיווג רשמי ברור.
+        oddExposure: trackLabel(byUid('gemelnet:15962')), oddStock: byUid('gemelnet:15962').stock_pct,
         cappedAsEquity: namedCap.filter(r => trackLabel(r) === 'מסלול מנייתי').map(r => r.uid),
-        lowStockEquity: equityLabelled.filter(r => typeof r.stock_pct === 'number' && r.stock_pct < 50).map(r => r.uid),
+        nonEquityOfficial: equityLabelled.filter(r => r.source === 'gemelnet' && !/מניות|s&p|מדד/i.test(r.sub_specialization + r.specialization)).map(r => r.uid),
         chipLeak: equityChip.filter(r => /עד \d+ ?%|ללא מניות|אג"ח/.test(r.fund_name)).map(r => r.uid)
       };
     });
     check('bond track with up to 25% stocks is not labelled equity', cls.harel === 'מסלול אג״ח · עד 25% מניות', cls.harel);
     check('no capped / no-stock track is labelled equity', cls.cappedAsEquity.length === 0, cls.cappedAsEquity.join(','));
-    check('every "מסלול מנייתי" reports at least 50% stocks', cls.lowStockEquity.length === 0, cls.lowStockEquity.join(','));
+    check('every Gemel-Net "מסלול מנייתי" has an equity official class', cls.nonEquityOfficial.length === 0, cls.nonEquityOfficial.join(','));
+    check('reported exposure alone does not hide an official label', cls.oddExposure === 'מסלול עוקב מדד S&P 500' && cls.oddStock < 50, cls.oddExposure + ' / ' + cls.oddStock);
     check('equity filter chip excludes bond / capped tracks', cls.chipLeak.length === 0 && !cls.harelChips.includes('equity') && cls.harelChips.includes('bond'), cls.chipLeak.join(','));
     check('labels for equity, general, index and no-stock tracks',
       cls.equity === 'מסלול מנייתי' && cls.general === 'מסלול כללי' && cls.sp500 === 'מסלול עוקב מדד S&P 500'
-      && cls.indexEq === 'מסלול עוקב מדדי מניות' && cls.indexBond === 'מסלול עוקב מדדי אג״ח' && cls.noStock === 'מסלול ללא מניות'
+      && cls.indexEq === 'מסלול עוקב מדדי מניות' && cls.indexBond === 'מסלול עוקב מדדי אג״ח' && cls.noStock === 'מסלול כללי · ללא מניות'
       && cls.pensionEq === 'מסלול מנייתי' && cls.pensionCap === 'מסלול אג״ח · עד 25% מניות', JSON.stringify(cls));
-    check('track without a reliable type gets no label', cls.ira === '', cls.ira);
+    check('official "כללי" with a stock cap stays general, not bonds', cls.generalCap === 'מסלול כללי · עד 15% מניות' && cls.generalNoStockSub === 'מסלול כללי · ללא מניות', cls.generalCap + ' / ' + cls.generalNoStockSub);
+    check('IRA shows "בניהול אישי" only', cls.ira === 'מסלול בניהול אישי', cls.ira);
+    check('"משולב סחיר" and existing-annuity tracks are labelled, with a note for the term',
+      cls.mixed === 'מסלול משולב סחיר' && /נסחרים בבורסה/.test(cls.mixedNote) && cls.annuity === 'מסלול קצבה לזכאים קיימים', JSON.stringify([cls.mixed, cls.annuity]));
+    check('"ללא אג״ח" is not labelled a bond track', cls.noBonds === '', cls.noBonds);
+    check('track without a reliable type gets no label', cls.ambiguous === '', cls.ambiguous);
     check('comparison group is unchanged by the label fix', cls.harelCmp === 'bonds_equity_sleeve', cls.harelCmp);
 
     // 18. חיסכון עם יתרה בלבד, ושני מסלולים מאותו סוג באותה חברה.

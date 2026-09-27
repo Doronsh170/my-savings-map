@@ -203,13 +203,16 @@ function rankTracks(list) {
    2. בגמל-נט: הסיווג הרשמי (תת-התמחות, ואם אין — התמחות).
    3. בפנסיה-נט ובביטוח-נט: ביטויים מפורשים בשם המסלול בלבד.
    הופעת המילה "מניות" בשם אינה מספיקה: "אג״ח עם מניות (עד 25% מניות)" אינו
-   מסלול מנייתי. לבסוף הסוג מאומת מול החשיפה למניות שהמסלול מדווח; סוג
-   שסותר אותה, או מסלול בלי סיווג אמין, מוצג בלי תווית — רק בשמו המקורי. */
+   מסלול מנייתי. מסלול בלי סיווג אמין מוצג בלי תווית — רק בשמו המקורי.
+   החשיפה המדווחת אינה פוסלת תווית: היא נכונה לחודש מסוים, והמדיניות או
+   הסיווג הרשמי הם שקובעים את סוג המסלול. פער ביניהם הוא סימן לבדיקת איכות
+   נתונים (tools/track_report.cjs), לא הוכחה שהתווית שגויה. */
 const TRACK_KIND_LABEL = {
   general: 'מסלול כללי', equity: 'מסלול מנייתי', sp500: 'מסלול עוקב מדד S&P 500',
   index_equity: 'מסלול עוקב מדדי מניות', index_flex: 'מסלול עוקב מדדים גמיש', index_bond: 'מסלול עוקב מדדי אג״ח',
   bond: 'מסלול אג״ח', bond_equity: 'מסלול אג״ח עם רכיב מניות', no_stock: 'מסלול ללא מניות',
   money: 'מסלול כספי', halacha: 'מסלול הלכתי', esg: 'מסלול קיימות', foreign: 'מסלול חו״ל',
+  mixed_tradable: 'מסלול משולב סחיר', personal: 'מסלול בניהול אישי', annuity_existing: 'מסלול קצבה לזכאים קיימים',
   age50: 'מסלול לפי גיל · עד 50', age5060: 'מסלול לפי גיל · 50 עד 60', age60: 'מסלול לפי גיל · 60 ומעלה',
   target: 'מסלול יעד לפרישה', guaranteed: 'מסלול מבטיח תשואה',
   child_low: 'חיסכון לילד · סיכון מועט', child_mid: 'חיסכון לילד · סיכון בינוני', child_high: 'חיסכון לילד · סיכון גבוה'
@@ -227,13 +230,14 @@ const GEMEL_KIND = {
   'כספי שקלי': 'money', 'שקלי': 'money', 'שקלי טווח קצר': 'money',
   'הלכה יהודית': 'halacha', 'הלכה איסלאמית': 'halacha',
   'עד 50': 'age50', '50 60': 'age5060', '60 ומעלה': 'age60',
-  'קיימות': 'esg', 'חול': 'foreign', 'מבטיח תשואה': 'guaranteed',
+  'קיימות': 'esg', 'חול': 'foreign', 'מבטיח תשואה': 'guaranteed', 'משולב סחיר': 'mixed_tradable',
   'חיסכון לילד חוסכים המעדיפים סיכון מועט': 'child_low',
   'חיסכון לילד חוסכים המעדיפים סיכון בינוני': 'child_mid',
   'חיסכון לילד חוסכים המעדיפים סיכון גבוה': 'child_high'
 };
 // בפנסיה ובביטוח: הכלל הראשון שמתאים לשם קובע.
 const TRACK_NAME_RULES = [
+  ['annuity_existing', /קצבה לזכאים קיימים/],
   ['target', /יעד לפרישה|יעד פרישה/],
   ['age50', /עד 50|50 ומטה|לבני 50 ומטה|גילאי 50 ומטה|עד גיל 50/],
   ['age5060', /\b50 60\b|50 עד 60|גילאי 50 עד 60|לבני 50 60/],
@@ -243,21 +247,23 @@ const TRACK_NAME_RULES = [
   ['index_flex', /עוקב מדדים גמיש/],
   ['index_bond', /עוקב מדדי אגח|(מחקה|עוקב) מדד.*(ממשלת|אגח|אג ח|שקלי|ריבית)/],
   ['halacha', /הלכ|שריעה|איסלאמ/],
+  // "ללא אג״ח" אינו מסלול אג״ח, ואין בשם די מידע לסוג אחר.
+  ['', /ללא אג ?ח/],
   ['bond', /אגח|אג ח|אשראי|ממשלת/],
   ['money', /כספי|שקלי/],
   ['equity', /(^|\s)מניות($|\s)|מנייתי/],
   ['esg', /קיימות/],
+  ['mixed_tradable', /משולב סחיר/],
   ['foreign', /(^|\s)חול($|\s)/],
   ['general', /(^|\s)כללי($|\s)/]
 ];
 const BOND_WORDS = /אגח|אג ח|אשראי|ממשלת/;
-const EQUITY_KINDS = { equity: 1, index_equity: 1, sp500: 1 };
-const LOW_EQUITY_KINDS = { bond: 1, index_bond: 1, money: 1 };
-
-function trackStockLevel(rec) {
-  const current = fundMetricValue(rec, 'stock_pct');
-  return current !== null ? current : cmpAvgExposure(rec);
-}
+/* הסבר קצר למונח רשמי שאינו מוכר לכולם. "משולב סחיר": לפי מסמכי המדיניות
+   שהחברות מפרסמות למסלול — נכסים סחירים בלבד, תמהיל מניות ואג״ח. */
+const TRACK_KIND_NOTE = {
+  mixed_tradable: 'משקיע רק בנכסים שנסחרים בבורסה, בתמהיל של מניות ואג״ח בישראל ובחו״ל. שיעור המניות שונה ממסלול למסלול.',
+  personal: 'ההשקעות נקבעות לפי הוראות העמית, ולכן אין למסלול מדיניות השקעה אחידה.'
+};
 function classifyTrack(rec) {
   const name = normalizeText(rec.fund_name);
   const sub = rec.source === 'gemelnet' ? normalizeText(rec.sub_specialization) : '';
@@ -266,33 +272,25 @@ function classifyTrack(rec) {
   let kind = '';
   let cap = null;
   const capMatch = text.match(/עד (\d{1,2}) ?(%|אחוז)/);
-  // בניהול אישי / IRA: מדיניות ההשקעה נקבעת בידי העמית, ואין לה סוג אחד.
-  if (/בניהול אישי|בניהול עצמי|\bira\b/.test(name)) kind = '';
+  // בניהול אישי / IRA: מציינים זאת, בלי להסיק מדיניות השקעה.
+  if (/בניהול אישי|בניהול עצמי|\bira\b/.test(name)) kind = 'personal';
   else if (/ללא מניות/.test(text)) kind = 'no_stock';
   else if (capMatch && /מני/.test(text)) {
     cap = Number(capMatch[1]);
     kind = BOND_WORDS.test(name + ' ' + sub + ' ' + spec) ? 'bond_equity' : 'capped';
   } else if (rec.source === 'gemelnet') {
     kind = GEMEL_KIND[sub] || GEMEL_KIND[spec] || '';
-    // שם שמזכיר אג״ח סותר סיווג מנייתי; מסלול כזה מוצג בלי תווית.
-    if (EQUITY_KINDS[kind] && BOND_WORDS.test(name)) kind = '';
   } else {
     const rule = TRACK_NAME_RULES.find(([, pattern]) => pattern.test(name));
     kind = rule ? rule[0] : '';
     if (kind === 'bond' && /מני/.test(name)) kind = 'bond_equity';
   }
-  // אימות מול החשיפה המדווחת: תווית "מנייתי" על מסלול עם מעט מניות, או "אג״ח"
-  // על מסלול עם הרבה מניות, מטעה יותר מהיעדר תווית.
-  const stock = trackStockLevel(rec);
-  if (stock !== null) {
-    if (EQUITY_KINDS[kind] && stock < 50) kind = '';
-    else if (LOW_EQUITY_KINDS[kind] && stock > 30) kind = '';
-    else if (kind === 'no_stock' && stock > 10) kind = '';
-    else if (cap !== null && stock > cap + 10) kind = '';
-  }
   if (!kind) cap = null;
+  // הסיווג הרשמי בגמל-נט "כללי": התקרה או "ללא מניות" מוצגות לצידו, בלי להפוך
+  // את המסלול למסלול אג״ח.
+  const general = rec.source === 'gemelnet' && spec === 'כללי' && (kind === 'capped' || kind === 'no_stock');
   const pensioners = /מקבלי קצבה|לפנסיונרים|למקבלי פנסיה/.test(name);
-  return { kind, cap, pensioners };
+  return { kind, cap, pensioners, general };
 }
 function trackKindOf(rec) {
   if (!rec._trackKind) rec._trackKind = classifyTrack(rec);
@@ -300,13 +298,18 @@ function trackKindOf(rec) {
 }
 /* התווית שמוצגת ליד שם המסלול. מחרוזת ריקה = אין סיווג אמין. */
 function trackLabel(rec) {
-  const { kind, cap, pensioners } = trackKindOf(rec);
+  const { kind, cap, pensioners, general } = trackKindOf(rec);
   let label = '';
   if (kind === 'bond_equity') label = cap !== null ? `מסלול אג״ח · עד ${cap}% מניות` : TRACK_KIND_LABEL.bond_equity;
+  else if (general) label = kind === 'capped' ? `מסלול כללי · עד ${cap}% מניות` : 'מסלול כללי · ללא מניות';
   else if (kind === 'capped') label = `מסלול עד ${cap}% מניות`;
   else label = TRACK_KIND_LABEL[kind] || '';
   if (pensioners) label = label ? label + ' · למקבלי קצבה' : 'מסלול למקבלי קצבה';
   return label;
+}
+
+function trackNote(rec) {
+  return TRACK_KIND_NOTE[trackKindOf(rec).kind] || '';
 }
 
 // צ'יפי הסינון באשף. כל צ'יפ מכיל סוגי מסלול מתוך classifyTrack.
@@ -1014,6 +1017,7 @@ function fullComparisonHtml(item, cmp, forPrint) {
   return `
       ${table}
       <h5 class="fund-facts-head">נתוני המסלול</h5>
+      ${trackLabel(f) ? `<p class="fund-facts-kind">${escapeHtml(trackLabel(f))}${trackNote(f) ? ': ' + escapeHtml(trackNote(f)) : ''}</p>` : ''}
       <p class="fund-facts-sub">נתוני הדיווח הציבורי של המסלול כולו. דמי הניהול כאן הם הממוצע שנגבה מכלל העמיתים במסלול.</p>
       <dl class="fund-facts">${facts}</dl>
       ${method}`;
@@ -2845,6 +2849,7 @@ function wizScreenBalance() {
       <div class="wiz-picked-text">
         <div class="wiz-picked-name">${escapeHtml(rec.fund_name)}</div>
         <div class="wiz-picked-meta">${escapeHtml([trackLabel(rec), 'קופה ' + (rec.fund_id || '')].filter(Boolean).join(' · '))}</div>
+        ${trackNote(rec) ? `<div class="wiz-picked-note">${escapeHtml(trackNote(rec))}</div>` : ''}
       </div>
       <div class="wiz-spark" id="quickEditorSpark" dir="ltr"></div>
     </div>
