@@ -8429,3 +8429,75 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 .product-stat { padding: 9px 10px; }
 .stat-value { font-size: 18px; }
 .stat-input input { width: 72px; font-size: 16px; padding: 3px 4px; }
+
+/* === הנגשה לקהל רחב: מסך פתיחה, הסבר חשיפות, תשואות ודמי ניהול ======== */
+/* מסך הפתיחה: משפט אחד על מה מקבלים, ו"לא יודע" מעל רשת החברות. */
+.wiz-lead { margin: 0 0 10px; font-size: 15px; font-weight: 600; line-height: 1.5; color: var(--ink); }
+.wiz-unknown-top {
+  display: flex !important; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 48px; margin: 0 0 14px; padding: 12px 14px !important;
+  border: 1px solid var(--accent-soft-2) !important; border-radius: 12px !important;
+  background: var(--accent-soft) !important; color: var(--accent-dark, var(--accent)) !important;
+  font-size: 14.5px !important; font-weight: 700 !important; text-decoration: none !important;
+}
+.wiz-unknown-top::before {
+  content: "?" !important; flex: 0 0 auto; width: 21px; height: 21px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 900;
+  display: flex !important; align-items: center; justify-content: center;
+}
+.wiz-unknown-top:hover { background: var(--accent-soft-2) !important; }
+.wiz-company-grid ~ .wiz-links { display: grid !important; grid-template-columns: 1fr !important; }
+.wiz-link:focus-visible, .wiz-chip:focus-visible, .wiz-back:focus-visible, .wiz-bar-reset:focus-visible,
+.wiz-more:focus-visible, .wiz-result:focus-visible, .wiz-fees-toggle:focus-visible, .wiz-cta:focus-visible,
+.wiz-cta-ghost:focus-visible, .wiz-crumb:focus-visible, .wiz-company-row:focus-visible, .wiz-company:focus-visible,
+.wiz-done-btn:focus-visible, .exposure-help:focus-visible, .info-dialog-x:focus-visible, .info-dialog-close:focus-visible {
+  outline: 2px solid var(--accent) !important; outline-offset: 2px !important;
+}
+@media (min-width: 721px) { .wiz-lead { font-size: 16px; } }
+
+/* הסבר פשוט לכל מדד חשיפה: בתוך הכרטיס במסך רחב, ורשימה מתחת לכרטיסים
+   בטלפון — שלושה כרטיסים צרים אינם מקום לשורת הסבר. */
+.metric-explain { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ink-muted); }
+.exposure-explain { display: none; margin: 12px 2px 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-muted); }
+.exposure-explain div { margin: 0 0 3px; }
+.exposure-explain dt { display: inline; font-weight: 700; color: var(--ink); }
+.exposure-explain dd { display: inline; margin: 0 4px 0 0; }
+.exposure-overlap { margin: 10px 2px 0; font-size: 13.5px; line-height: 1.5; color: var(--ink); }
+@media (max-width: 600px) {
+  .metric-explain { display: none; }
+  .exposure-explain { display: block; }
+}
+@media print {
+  .metric-explain { display: none !important; }
+  .exposure-explain { display: block !important; font-size: 9px !important; margin-top: 4px !important; color: #0b1c2c !important; }
+  .exposure-overlap { font-size: 9px !important; margin-top: 3px !important; color: #0b1c2c !important; }
+}
+
+/* תשואה: התקופה ואופן החישוב צמודים לכותרת. */
+.product-stat-note, .cmp-row-note { display: block; font-size: 13px; line-height: 1.3; color: var(--ink-muted); }
+.product-stat-label { font-weight: 600; color: var(--ink); }
+.product-yield-row { grid-column: span 2; }
+#detailsRows .product-cmp tbody th .cmp-row-note, .info-dialog-body .product-cmp tbody th .cmp-row-note { font-size: 13px !important; font-weight: 400; color: var(--ink-muted); }
+.stat-add { font-size: 15px !important; }
+.metric-note { margin-top: 4px; font-size: 13px; color: var(--ink-muted); }
+.fund-facts-sub { margin: -2px 0 8px; font-size: 13px; line-height: 1.45; color: var(--ink-muted); }
+@media print {
+  .product-stat-note, .cmp-row-note, .fund-facts-sub, .metric-note { font-size: 8.5px !important; }
+  #detailsRows .product-cmp tbody th .cmp-row-note { font-size: 8px !important; }
+}
+
+/* שם המסלול תמיד בשורת משנה, נשבר לשורות ולא נחתך. */
+.product-track-line { overflow-wrap: anywhere; }
+
+/* טקסט משני קריא: תוויות הכרטיסים היו 9.5–11.5px עם ריווח אותיות רחב. במסך בלבד;
+   הדוח המודפס שומר על הגדלים שלו. */
+@media screen {
+  #dashboard .total-label, .dashboard .metric-label, #dashboard .exposure-grid .metric-label,
+  #perfSection .metric-label, .metric-label {
+    font-size: 13px !important; letter-spacing: 0 !important; line-height: 1.3 !important;
+  }
+  #dashboard .total-label { font-size: 13.5px !important; }
+  .sim-summary-label { font-size: 13px !important; }
+  .info-row-kicker { font-size: 12px !important; letter-spacing: .02em !important; }
+  .site-disclosure-text { font-size: 12.5px !important; }
+}

@@ -75,7 +75,7 @@
         <div class="total-actions">
           <button type="button" class="info-link" onclick="openBalancesDialog()">עדכון יתרות</button>
           <span class="total-actions-sep" aria-hidden="true">·</span>
-          <button type="button" class="info-link" onclick="prepareAnotherFund()">+ הוספת מוצר</button>
+          <button type="button" class="info-link" onclick="prepareAnotherFund()">+ הוספת חיסכון</button>
         </div>
       </div>
     </div>
@@ -88,19 +88,28 @@
         <div class="metric-label">חשיפה למניות</div>
         <div class="metric-value"><span id="aggStock">0</span><span class="pct">%</span></div>
         <div class="metric-bar"><div class="metric-bar-fill stock-fill" id="aggStockBar"></div></div>
+        <p class="metric-explain">עד כמה החיסכון חשוף לשינויים בשוק המניות.</p>
       </div>
       <div class="metric-card">
         <div class="metric-label">חשיפה לחו״ל</div>
         <div class="metric-value"><span id="aggForeign">0</span><span class="pct">%</span></div>
         <div class="metric-bar"><div class="metric-bar-fill foreign-fill" id="aggForeignBar"></div></div>
+        <p class="metric-explain">עד כמה החיסכון חשוף להשקעות מחוץ לישראל.</p>
       </div>
       <div class="metric-card">
         <div class="metric-label">חשיפה למט״ח</div>
         <div class="metric-value"><span id="aggFx">0</span><span class="pct">%</span></div>
         <div class="metric-bar"><div class="metric-bar-fill fx-fill" id="aggFxBar"></div></div>
+        <p class="metric-explain">עד כמה שינויים בשערי מטבעות זרים עשויים להשפיע על החיסכון.</p>
       </div>
     </div>
-    <button type="button" class="info-link exposure-help" data-info="term" data-info-uid="exposure">מה ההבדל בין מניות, חו״ל ומט״ח?</button>
+    <dl class="exposure-explain">
+      <div><dt>מניות:</dt><dd>עד כמה החיסכון חשוף לשינויים בשוק המניות.</dd></div>
+      <div><dt>חו״ל:</dt><dd>עד כמה החיסכון חשוף להשקעות מחוץ לישראל.</dd></div>
+      <div><dt>מט״ח:</dt><dd>עד כמה שינויים בשערי מטבעות זרים עשויים להשפיע על החיסכון.</dd></div>
+    </dl>
+    <p class="exposure-overlap">המדדים עשויים לחפוף: אותה השקעה יכולה להיכלל ביותר ממדד אחד, ולכן אין לחבר את האחוזים.</p>
+    <button type="button" class="info-link exposure-help" data-info="term" data-info-uid="exposure" aria-haspopup="dialog">מה ההבדל בין מניות, חו״ל ומט״ח?</button>
 
   </div>
 </section>
@@ -108,7 +117,7 @@
 <section class="details products-section" id="detailsSection">
   <div class="container">
     <div class="products-head">
-      <h3>המוצרים שלך</h3>
+      <h3>החסכונות שלך</h3>
     </div>
     <p class="products-def">ממוצע = ממוצע קופות באותו סוג מסלול</p>
     <div class="product-list" id="detailsRows"></div>
@@ -119,11 +128,11 @@
   <div class="container">
     <details class="dashboard-toggle-section perf-toggle-section">
       <summary class="dashboard-toggle-summary">
-        <span>אינדיקציית ביצועי מסלולים</span>
+        <span>תשואות המסלולים שלך</span>
         <span class="dashboard-toggle-hint">פתח / סגור</span>
       </summary>
       <div class="perf-wrap dashboard-toggle-content">
-        <div class="perf-note">מידע תומך בלבד: הנתונים משקפים את תשואות המסלולים הציבוריות לפי המאגר, ולא את התשואה האישית בפועל.</div>
+        <div class="perf-note">הנתון הכולל הוא שקלול תשואות המסלולים שבהם החיסכון מושקע, לפי היתרות הנוכחיות שהזנת: חיסכון עם יתרה גדולה יותר משפיע יותר. התשואות לפני דמי ניהול. זה אינו חישוב מתוך ההפקדות, המשיכות והמעברים בחשבון שלך — האתר אינו מקבל אותם.</div>
         <div class="perf-note perf-report-period" id="perfReportPeriod">נתוני התשואה מוצגים לפי הדיווח האחרון הזמין במאגר.</div>
         <div class="metric-grid">
           <div class="metric-card">
@@ -135,12 +144,13 @@
             <div class="metric-value"><span id="perfYtd">-</span><span class="pct">%</span></div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">3 שנים מצטבר</div>
+            <div class="metric-label">מצטברת ל־3 שנים</div>
             <div class="metric-value"><span id="perf3y">-</span><span class="pct">%</span></div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">דמי ניהול אישיים</div>
-            <div class="metric-value"><span id="feeSavings">לא הוזן</span><span class="pct" id="feeSavingsPct" style="display:none">%</span></div>
+            <div class="metric-label">דמי הניהול שלך, משוקלל</div>
+            <div class="metric-value"><span id="feeSavings">לא הוזנו</span><span class="pct" id="feeSavingsPct" style="display:none">%</span></div>
+            <div class="metric-note" id="feeSavingsNote" hidden></div>
           </div>
         </div>
       </div>
@@ -156,7 +166,7 @@
         <span class="dashboard-toggle-hint">פתח / סגור</span>
       </summary>
       <div class="dashboard-toggle-content history-wrap">
-        <div class="perf-note">תיאור בלבד: ממוצע משוקלל לפי היתרות שהוזנו, מתוך נתוני המסלולים הציבוריים בחודשים שבהם קיים דיווח במאגר. ההיסטוריה מצטברת עם עדכוני המאגר החודשיים.</div>
+        <div class="perf-note">לפי נתוני המסלולים שלך בחודשים שבהם יש דיווח במאגר, ולפי היתרות שהזנת היום: חיסכון עם יתרה גדולה יותר משפיע יותר. ההיסטוריה מצטברת עם עדכוני המאגר החודשיים.</div>
         <div class="history-options" id="historyOptions" role="group" aria-label="בחירת הגרפים המוצגים"></div>
         <div class="history-grid" id="historyGrid"></div>
       </div>
@@ -365,7 +375,7 @@
   </div>
 </dialog>
 
-<div class="pdf-disclaimer" aria-hidden="true">הבהרה: הנתונים בדוח זה מבוססים על נתונים ציבוריים מהמאגר ועל יתרות שהוזנו ידנית. תשואות המסלולים הן ציבוריות ואינן משקפות את התשואה האישית בפועל. הדוח נועד למידע כללי בלבד ואינו מהווה ייעוץ פנסיוני, ייעוץ השקעות, שיווק פנסיוני, תחזית או המלצה.</div>
+<div class="pdf-disclaimer" aria-hidden="true">הבהרה: הנתונים בדוח זה מבוססים על נתונים ציבוריים מהמאגר ועל יתרות שהוזנו ידנית. התשואות הן תשואות המסלולים שבהם החיסכון מושקע, לפני דמי ניהול; התוצאה בחיסכון עצמו תלויה גם במועד ההצטרפות, בהפקדות ובמשיכות ובדמי הניהול. הדוח נועד למידע כללי בלבד ואינו מהווה ייעוץ פנסיוני, ייעוץ השקעות, שיווק פנסיוני, תחזית או המלצה.</div>
 
 <div class="site-disclosure">
   <h2 class="site-disclosure-title">גילוי נאות</h2>
