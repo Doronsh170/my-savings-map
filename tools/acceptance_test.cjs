@@ -98,7 +98,7 @@ function check(name, ok, detail) {
       && (await card.locator('.product-actions button').count()) === 2
       && (await card.locator('.product-detail:visible >> text=איך מחושבת ההשוואה?').count()) === 0);
     const yieldLine = (await card.locator('.product-yield-row').textContent()).replace(/\s+/g, ' ').trim();
-    check('open product shows 3-year return vs. the average', /^תשואה 3 שנים -?\d+\.\d% ממוצע -?\d+\.\d%$/.test(yieldLine), yieldLine);
+    check('open product shows the track return with its period vs. the average', /^תשואת המסלול שלך מצטברת ל־3 שנים, לפני דמי ניהול -?\d+\.\d% ממוצע -?\d+\.\d%$/.test(yieldLine), yieldLine);
     check('every row has an open/close arrow', (await page.locator('#detailsRows .product-row .product-chev').count()) === (await page.locator('#detailsRows .product').count()));
     // שכבה 3: "השוואה מלאה" — טבלה, נתוני מסלול, ו"איך מחושבת ההשוואה?" בפנים.
     await card.locator('.product-actions >> text=השוואה מלאה').click();
@@ -120,7 +120,7 @@ function check(name, ok, detail) {
     await page.keyboard.press('Escape');
     check('Escape closes the dialog', !(await page.isVisible('#infoDialog')));
 
-    check('add-product button exists on dashboard', (await page.locator('.total-actions >> text=הוספת מוצר').count()) === 1);
+    check('add-product button exists on dashboard', (await page.locator('.total-actions >> text=הוספת חיסכון').count()) === 1);
     check('no duplicate balance-edit button', (await page.locator('text=עריכת יתרות ודמי ניהול').count()) === 0);
 
     // 5. המחשבון: גלוי, היסטורי בלבד, המרה גאומטרית.
@@ -147,7 +147,7 @@ function check(name, ok, detail) {
 
     // 6. רמות השיתוף: מה נכלל בכל אחת.
     const texts = await page.evaluate(() => ({ e: buildShareText('exposure'), f: buildShareText('full'), l: buildShareText('link') }));
-    check('share "exposure" has no amounts or fees', !/₪|דמי ניהול/.test(texts.e) && !texts.e.includes('#p='));
+    check('share "exposure" has no amounts or entered fees', !/₪|דמי הניהול שהוזנו/.test(texts.e) && !texts.e.includes('#p='));
     check('share "full" has amounts, no link', /₪/.test(texts.f) && !texts.f.includes('#p='));
     check('share "link" has amounts and link', /₪/.test(texts.l) && texts.l.includes('#p='));
     await page.evaluate(() => { window.open = () => ({}); shareWhatsApp(); });
@@ -223,7 +223,7 @@ function check(name, ok, detail) {
     check('undo of the last product reopens the dashboard', await fresh.isVisible('#dashboard') && !(await fresh.isVisible('#wizScreen')));
 
     // 11. באשף, מי שיש לו תיק רואה "חזרה לתיק" ולא "התחל מחדש".
-    await fresh.click('.total-actions >> text=הוספת מוצר');
+    await fresh.click('.total-actions >> text=הוספת חיסכון');
     check('wizard offers a way back to the portfolio', (await fresh.locator('#wizBar >> text=חזרה לתיק').count()) === 1 && (await fresh.locator('#wizBar >> text=התחל מחדש').count()) === 0);
     await fresh.click('#wizBar >> text=חזרה לתיק');
     check('"back to portfolio" shows the dashboard', await fresh.isVisible('#dashboard') && !(await fresh.isVisible('#wizScreen')));
@@ -232,7 +232,7 @@ function check(name, ok, detail) {
     const order = await fresh.evaluate(() => ['totalBalance', 'portfolioSummary', 'aggStock', 'detailsRows', 'perfSection', 'siteInfoSection']
       .map(id => document.getElementById(id).getBoundingClientRect().top));
     check('dashboard reads total → summary → exposure → products → performance, info rows below', order.every((top, i) => i === 0 || order[i - 1] < top), JSON.stringify(order.map(Math.round)));
-    check('summary sentence shown on the dashboard', /^כל החיסכון במוצר אחד: .+\.$/.test(await fresh.textContent('#portfolioSummary')));
+    check('summary sentence shown on the dashboard', /^עד עכשיו הוספת חיסכון אחד: .+\.$/.test(await fresh.textContent('#portfolioSummary')));
     const summaries = await fresh.evaluate(([a, n]) => {
       const item = (uid, balance) => ({ fund: withRuntimeFlags(DATA.find(r => r.uid === uid)), balance });
       return {
@@ -240,8 +240,8 @@ function check(name, ok, detail) {
         tie: portfolioSummaryText([item(a, 100000), item(n, 100000)], 200000)
       };
     }, [pick.a.uid, pick.n.uid]);
-    check('summary names product count and largest share', /^2 מוצרים\. הגדול שבהם, .+, הוא 75% מהתיק\.$/.test(summaries.two), summaries.two);
-    check('summary handles a tie for largest', /^2 מוצרים\. הגדולים שבהם, .+, הם 50% מהתיק כל אחד\.$/.test(summaries.tie), summaries.tie);
+    check('summary names product count and largest share', /^עד עכשיו הוספת 2 חסכונות\. הגדול שבהם, .+, הוא 75% מהיתרה שהוזנה\.$/.test(summaries.two), summaries.two);
+    check('summary handles a tie for largest', /^עד עכשיו הוספת 2 חסכונות\. הגדולים שבהם, .+, הם 50% מהיתרה שהוזנה כל אחד\.$/.test(summaries.tie), summaries.tie);
     check('tab title has no version', (await fresh.title()) === 'מפת החיסכון');
     const gaps = await fresh.evaluate(() => {
       const tops = ['perfSection', 'historySection', 'simulationTabSection']
@@ -282,7 +282,7 @@ function check(name, ok, detail) {
     const ind = uid => fresh.textContent(`[data-ind-uid="${uid}"]`);
     check('definition shown once under the list heading', (await fresh.textContent('.products-def')) === 'ממוצע = ממוצע קופות באותו סוג מסלול'
       && (await fresh.locator('#detailsRows :text("ממוצע קופות באותו סוג מסלול"):visible').count()) === 0);
-    check('row with fee: yours · average', /^דמי ניהול 0\.50% · ממוצע \d\.\d\d%$/.test((await ind(pick.a.uid)).trim()), await ind(pick.a.uid));
+    check('row with fee: yours · average', /^דמי הניהול שלך 0\.50% · ממוצע \d\.\d\d%$/.test((await ind(pick.a.uid)).trim()), await ind(pick.a.uid));
     check('row without fee: "הזן דמי ניהול" only', (await ind(withFeePeers)).trim() === 'הזן דמי ניהול', await ind(withFeePeers));
     check('row without a comparison group has no extra line', (await ind(noPeers)).trim() === '', await ind(noPeers) + ' / ' + noPeers);
     const pensionRow = await fresh.evaluate(() => {
@@ -295,9 +295,9 @@ function check(name, ok, detail) {
         head: Array.from(div.querySelectorAll('thead th')).map(th => th.textContent),
         layer2: Array.from(div.querySelectorAll('.product-stat:not(.product-yield-row) .product-stat-label')).map(el => el.textContent) };
     });
-    check('pension row names the accumulation fee', /^דמי ניהול מצבירה 0\.15% · ממוצע \d\.\d\d%$/.test(pensionRow.ind), pensionRow.ind);
-    check('pension open product lists both fees separately', JSON.stringify(pensionRow.layer2) === JSON.stringify(['דמי ניהול מצבירה', 'דמי ניהול מהפקדות']), JSON.stringify(pensionRow.layer2));
-    check('pension full comparison lists both fees', pensionRow.rows.includes('דמי ניהול מצבירה') && pensionRow.rows.includes('דמי ניהול מהפקדות'), JSON.stringify(pensionRow.rows));
+    check('pension row names the accumulation fee', /^דמי הניהול שלך מצבירה 0\.15% · ממוצע \d\.\d\d%$/.test(pensionRow.ind), pensionRow.ind);
+    check('pension open product lists both fees separately', JSON.stringify(pensionRow.layer2) === JSON.stringify(['דמי הניהול שלך מצבירה', 'דמי הניהול שלך מהפקדות']), JSON.stringify(pensionRow.layer2));
+    check('pension full comparison lists both fees', pensionRow.rows.includes('דמי הניהול שלך מצבירה') && pensionRow.rows.includes('דמי הניהול שלך מהפקדות'), JSON.stringify(pensionRow.rows));
     check('table header: נתון | שלך | ממוצע קופות באותו סוג מסלול', JSON.stringify(pensionRow.head) === JSON.stringify(['נתון', 'שלך', 'ממוצע קופות באותו סוג מסלול']), JSON.stringify(pensionRow.head));
     const staleText = await fresh.evaluate(() => {
       const r = DATA.find(x => isSelectableFund(x) && withRuntimeFlags(x).is_stale);
@@ -320,7 +320,7 @@ function check(name, ok, detail) {
     await fresh.keyboard.press('Enter');
     const savedFee = await fresh.evaluate(u => JSON.parse(localStorage.getItem(STORAGE_KEY)).find(r => r.uid === u).management_fee, withFeePeers);
     check('fee typed in the table is saved', savedFee === 0.35, String(savedFee));
-    check('row switches to the with-fee state', /^דמי ניהול 0\.35% · ממוצע/.test((await ind(withFeePeers)).trim()), await ind(withFeePeers));
+    check('row switches to the with-fee state', /^דמי הניהול שלך 0\.35% · ממוצע/.test((await ind(withFeePeers)).trim()), await ind(withFeePeers));
     // דמי הניהול המשוקללים מוצגים רק כשהוזנו לכל המוצרים; המוצר השלישי משלים אותם.
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     await fresh.click(`.product[data-product-uid="${noPeers}"] [data-fee-edit][data-fee-field="managementFee"]`);
@@ -361,7 +361,7 @@ function check(name, ok, detail) {
 
     // 15. הסבר למונחים בכרטיסי החשיפה.
     await fresh.click('.exposure-help');
-    check('one link explains the three exposures', await fresh.isVisible('#infoDialog') && /מטבע זר/.test(await fresh.textContent('#infoDialogBody')));
+    check('one link explains the three exposures', await fresh.isVisible('#infoDialog') && /מטבעות זרים/.test(await fresh.textContent('#infoDialogBody')));
     await fresh.keyboard.press('Escape');
     // 15א. פירוט פתוח נשאר ברוחב המסך במובייל.
     await fresh.setViewportSize({ width: 390, height: 844 });
@@ -385,7 +385,7 @@ function check(name, ok, detail) {
     check('secondary text in the list is at least 13px', minFont >= 13, String(minFont));
 
     // 16. באשף: דמי הניהול מקופלים, אלא אם כבר הוזנו.
-    await fresh.click('.total-actions >> text=הוספת מוצר');
+    await fresh.click('.total-actions >> text=הוספת חיסכון');
     await fresh.evaluate(u => wizSet({ step: 'balance', pickUid: u }), pick.n.uid);
     check('wizard fee fields start collapsed', !(await fresh.isVisible('#quickFeeInput')) && await fresh.isVisible('.wiz-fees-toggle'));
     await fresh.click('.wiz-fees-toggle');
@@ -396,6 +396,104 @@ function check(name, ok, detail) {
 
     // 12. מחיקת הכל היא קישור משני מחוץ לסרגל הפעולות.
     check('delete-all is outside the action toolbar', (await fresh.locator('.action-toolbar >> text=איפוס הכל').count()) === 0 && (await fresh.locator('.reset-link').count()) === 1);
+
+    // 17. תווית המסלול: המילה "מניות" בשם אינה הופכת מסלול למנייתי.
+    const cls = await fresh.evaluate(() => {
+      const byUid = uid => DATA.find(r => r.uid === uid);
+      const sel = DATA.filter(isSelectableFund);
+      const namedCap = sel.filter(r => /עד \d+ ?%|ללא מניות/.test(r.fund_name));
+      const equityLabelled = sel.filter(r => trackLabel(r) === 'מסלול מנייתי');
+      const equityChip = sel.filter(r => trackTags(r).includes('equity'));
+      return {
+        harel: trackLabel(byUid('gemelnet:416')), harelCmp: byUid('gemelnet:416')._cmpCategory,
+        harelChips: trackTags(byUid('gemelnet:416')),
+        equity: trackLabel(byUid('gemelnet:763')), general: trackLabel(byUid('gemelnet:154')),
+        sp500: trackLabel(byUid('gemelnet:13502')), indexEq: trackLabel(byUid('gemelnet:15300')),
+        indexBond: trackLabel(byUid('gemelnet:15298')), noStock: trackLabel(byUid('gemelnet:1374')),
+        pensionEq: trackLabel(byUid('pensia:2175')), pensionCap: trackLabel(byUid('pensia:9980')),
+        ira: trackLabel(byUid('gemelnet:1541')),
+        cappedAsEquity: namedCap.filter(r => trackLabel(r) === 'מסלול מנייתי').map(r => r.uid),
+        lowStockEquity: equityLabelled.filter(r => typeof r.stock_pct === 'number' && r.stock_pct < 50).map(r => r.uid),
+        chipLeak: equityChip.filter(r => /עד \d+ ?%|ללא מניות|אג"ח/.test(r.fund_name)).map(r => r.uid)
+      };
+    });
+    check('bond track with up to 25% stocks is not labelled equity', cls.harel === 'מסלול אג״ח · עד 25% מניות', cls.harel);
+    check('no capped / no-stock track is labelled equity', cls.cappedAsEquity.length === 0, cls.cappedAsEquity.join(','));
+    check('every "מסלול מנייתי" reports at least 50% stocks', cls.lowStockEquity.length === 0, cls.lowStockEquity.join(','));
+    check('equity filter chip excludes bond / capped tracks', cls.chipLeak.length === 0 && !cls.harelChips.includes('equity') && cls.harelChips.includes('bond'), cls.chipLeak.join(','));
+    check('labels for equity, general, index and no-stock tracks',
+      cls.equity === 'מסלול מנייתי' && cls.general === 'מסלול כללי' && cls.sp500 === 'מסלול עוקב מדד S&P 500'
+      && cls.indexEq === 'מסלול עוקב מדדי מניות' && cls.indexBond === 'מסלול עוקב מדדי אג״ח' && cls.noStock === 'מסלול ללא מניות'
+      && cls.pensionEq === 'מסלול מנייתי' && cls.pensionCap === 'מסלול אג״ח · עד 25% מניות', JSON.stringify(cls));
+    check('track without a reliable type gets no label', cls.ira === '', cls.ira);
+    check('comparison group is unchanged by the label fix', cls.harelCmp === 'bonds_equity_sleeve', cls.harelCmp);
+
+    // 18. חיסכון עם יתרה בלבד, ושני מסלולים מאותו סוג באותה חברה.
+    await seed(fresh, [
+      { uid: 'gemelnet:416', balance: 84000, updated_at: new Date().toISOString() },
+      { uid: 'gemelnet:154', balance: 126000, management_fee: 0.62, updated_at: new Date().toISOString() }
+    ]);
+    await fresh.reload(); await ready(fresh);
+    await fresh.waitForFunction(() => document.body.classList.contains('dashboard-reached'));
+    const lines = await fresh.evaluate(() => Array.from(document.querySelectorAll('#detailsRows .product')).map(el => ({
+      title: el.querySelector('.product-title').textContent, track: (el.querySelector('.product-track-line') || {}).textContent || '' })));
+    check('twins are told apart by the track name', lines.length === 2 && lines.every(l => l.title === 'קרן השתלמות בהראל')
+      && lines[0].track !== lines[1].track && lines.some(l => /עד 25% מניות/.test(l.track)), JSON.stringify(lines));
+    check('fee not entered shows "לא הוזנו", never 0 or the average', /^לא הוזנו$/.test((await fresh.textContent('#feeSavings')).trim())
+      && /הוזנו ל-1 מתוך 2/.test(await fresh.textContent('#feeSavingsNote')));
+    await fresh.click('[data-toggle-uid="gemelnet:416"]');
+    const card416 = fresh.locator('.product[data-product-uid="gemelnet:416"]');
+    check('open product: missing fee reads "לא הוזנו"', /לא הוזנו/.test(await card416.locator('[data-fee-edit]').first().textContent()));
+    await card416.locator('.product-actions >> text=השוואה מלאה').click();
+    const dlg = await fresh.textContent('#infoDialogBody');
+    check('full table: track return with period, entered fee, and averages kept apart',
+      /תשואת המסלול שלךמצטברת ל־3 שנים, לפני דמי ניהול/.test(dlg) && /דמי הניהול שלךלא הוזנו/.test(dlg)
+      && /דמי ניהול ממוצעים במסלול/.test(dlg) && /קבוצת ההשוואה/.test(dlg) && /אינה תשואה שנתית/.test(dlg), dlg.slice(0, 200));
+    await fresh.keyboard.press('Escape');
+    const pageText = await fresh.evaluate(() => document.body.innerText + buildShareText('full'));
+    check('no blanket "not your personal return" wording', !/לא התשואה האישית שלך|אינה התשואה האישית שלך/.test(pageText));
+    check('performance section has a plain title', (await fresh.textContent('#perfSection summary')).includes('תשואות המסלולים שלך'));
+
+    // 19. חשיפות: הסבר פשוט, והבהרה שאין לחבר את האחוזים.
+    check('exposure overlap note is visible', await fresh.isVisible('.exposure-overlap'));
+    await fresh.click('.exposure-help');
+    const expo = await fresh.textContent('#infoDialogBody');
+    check('exposure dialog: plain first, jargon under "הרחבה"', /אינם מדידה מלאה של רמת הסיכון/.test(expo)
+      && !(await fresh.isVisible('#infoDialogBody .method-details p')));
+    await fresh.keyboard.press('Escape');
+
+    // 20. רוחבי מסך: בלי גלילה אופקית ובלי טקסט זעיר.
+    for (const width of [360, 390, 1280]) {
+      await fresh.setViewportSize({ width, height: 800 });
+      await fresh.click('[data-toggle-uid="gemelnet:416"]');
+      const m = await fresh.evaluate(() => ({ sw: document.documentElement.scrollWidth, w: innerWidth,
+        min: Math.min(...Array.from(document.querySelectorAll('#dashboard *, #detailsSection *')).filter(el => el.offsetParent && el.childNodes.length
+          && Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim())).map(el => parseFloat(getComputedStyle(el).fontSize))) }));
+      check(`${width}px: no horizontal scroll, text ≥ 12px`, m.sw <= m.w && m.min >= 12, JSON.stringify(m));
+      await fresh.click('[data-toggle-uid="gemelnet:416"]');
+    }
+
+    // 21. מסך הפתיחה: הסבר קצר, ו"לא יודע" מעל רשת החברות.
+    const opener = await newPage();
+    await opener.setViewportSize({ width: 360, height: 780 });
+    const op = await opener.evaluate(() => {
+      const top = sel => document.querySelector(sel).getBoundingClientRect().top;
+      return { lead: document.querySelector('.wiz-lead').textContent, sub: document.querySelector('.wiz-sub').textContent,
+        order: top('.wiz-lead') < top('.wiz-title') && top('.wiz-unknown-top') < top('.wiz-company-grid'),
+        unknownInView: document.querySelector('.wiz-unknown-top').getBoundingClientRect().bottom <= innerHeight };
+    });
+    check('opening screen explains, then "don\'t know", then companies', op.order && op.unknownInView
+      && /חשיפה למניות, לחו״ל ולמטבע חוץ/.test(op.lead) && /אפשר להתחיל מחיסכון אחד/.test(op.sub) && /בלי הרשמה/.test(op.sub), JSON.stringify(op));
+    await opener.keyboard.press('Tab');
+    let reached = false;
+    for (let k = 0; k < 6 && !reached; k++) {
+      reached = await opener.evaluate(() => document.activeElement && document.activeElement.classList.contains('wiz-unknown-top'));
+      if (!reached) await opener.keyboard.press('Tab');
+    }
+    const ring = await opener.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
+    check('keyboard reaches "don\'t know" with a visible focus ring', reached && ring !== 'none', ring);
+    await opener.keyboard.press('Enter');
+    check('"don\'t know" opens the help screen', /איפה אפשר למצוא/.test(await opener.textContent('#wizScreen')));
   } catch (error) {
     check('test run completed', false, error.message);
   } finally {

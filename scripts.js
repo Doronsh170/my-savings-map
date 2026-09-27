@@ -195,51 +195,136 @@ function rankTracks(list) {
   });
 }
 
-// תגיות מסלול — משמשות גם לצ'יפים וגם לתיאור בשפה פשוטה בכרטיס.
+/* === סוג המסלול לתצוגה ולסינון ===
+   משמש את תווית המסלול באשף ואת צ'יפי הסינון. אינו משמש לבניית קבוצת
+   ההשוואה — זו נקבעת ב-cmpCategory, בנפרד, ואינה מושפעת מכאן.
+   המקור, לפי סדר העדיפות:
+   1. שיעור מניות מפורש בשם או בתת-ההתמחות ("עד 25% מניות", "ללא מניות").
+   2. בגמל-נט: הסיווג הרשמי (תת-התמחות, ואם אין — התמחות).
+   3. בפנסיה-נט ובביטוח-נט: ביטויים מפורשים בשם המסלול בלבד.
+   הופעת המילה "מניות" בשם אינה מספיקה: "אג״ח עם מניות (עד 25% מניות)" אינו
+   מסלול מנייתי. לבסוף הסוג מאומת מול החשיפה למניות שהמסלול מדווח; סוג
+   שסותר אותה, או מסלול בלי סיווג אמין, מוצג בלי תווית — רק בשמו המקורי. */
+const TRACK_KIND_LABEL = {
+  general: 'מסלול כללי', equity: 'מסלול מנייתי', sp500: 'מסלול עוקב מדד S&P 500',
+  index_equity: 'מסלול עוקב מדדי מניות', index_flex: 'מסלול עוקב מדדים גמיש', index_bond: 'מסלול עוקב מדדי אג״ח',
+  bond: 'מסלול אג״ח', bond_equity: 'מסלול אג״ח עם רכיב מניות', no_stock: 'מסלול ללא מניות',
+  money: 'מסלול כספי', halacha: 'מסלול הלכתי', esg: 'מסלול קיימות', foreign: 'מסלול חו״ל',
+  age50: 'מסלול לפי גיל · עד 50', age5060: 'מסלול לפי גיל · 50 עד 60', age60: 'מסלול לפי גיל · 60 ומעלה',
+  target: 'מסלול יעד לפרישה', guaranteed: 'מסלול מבטיח תשואה',
+  child_low: 'חיסכון לילד · סיכון מועט', child_mid: 'חיסכון לילד · סיכון בינוני', child_high: 'חיסכון לילד · סיכון גבוה'
+};
+// תת-ההתמחות הרשמית בגמל-נט, אחרי normalizeText. ערך שאינו כאן ("מדד",
+// "ישראל", "פאסיבי") אינו מספיק כדי לקבוע סוג.
+const GEMEL_KIND = {
+  'כללי': 'general',
+  'אשראי ואגח': 'bond', 'אגח': 'bond', 'אגח ממשלות': 'bond', 'אגח ממשלתי': 'bond', 'ממשלתי': 'bond',
+  'אגח קונצרניות': 'bond', 'אגח סחיר': 'bond', 'אגח צמוד מדד': 'bond', 'אגח צמוד מדד בינוני': 'bond', 'אגח לא צמוד': 'bond',
+  'משולב מניות': 'bond_equity',
+  'מניות': 'equity', 'מניות סחיר': 'equity', 'מניות ישראל': 'equity',
+  'עוקב מדד s and p 500': 'sp500', 'עוקב מדדי מניות': 'index_equity',
+  'עוקב מדדים גמיש': 'index_flex', 'עוקב מדדי אגח': 'index_bond',
+  'כספי שקלי': 'money', 'שקלי': 'money', 'שקלי טווח קצר': 'money',
+  'הלכה יהודית': 'halacha', 'הלכה איסלאמית': 'halacha',
+  'עד 50': 'age50', '50 60': 'age5060', '60 ומעלה': 'age60',
+  'קיימות': 'esg', 'חול': 'foreign', 'מבטיח תשואה': 'guaranteed',
+  'חיסכון לילד חוסכים המעדיפים סיכון מועט': 'child_low',
+  'חיסכון לילד חוסכים המעדיפים סיכון בינוני': 'child_mid',
+  'חיסכון לילד חוסכים המעדיפים סיכון גבוה': 'child_high'
+};
+// בפנסיה ובביטוח: הכלל הראשון שמתאים לשם קובע.
+const TRACK_NAME_RULES = [
+  ['target', /יעד לפרישה|יעד פרישה/],
+  ['age50', /עד 50|50 ומטה|לבני 50 ומטה|גילאי 50 ומטה|עד גיל 50/],
+  ['age5060', /\b50 60\b|50 עד 60|גילאי 50 עד 60|לבני 50 60/],
+  ['age60', /60 ומעלה|מעל 60|לבני 60|גילאי 60/],
+  ['sp500', /s and p(?![a-z])|sp ?500/],
+  ['index_equity', /עוקב מדדי מניות|מחקה מדד (תל אביב|ת ?א)|ת ?א ?35|נאסדק|msci/],
+  ['index_flex', /עוקב מדדים גמיש/],
+  ['index_bond', /עוקב מדדי אגח|(מחקה|עוקב) מדד.*(ממשלת|אגח|אג ח|שקלי|ריבית)/],
+  ['halacha', /הלכ|שריעה|איסלאמ/],
+  ['bond', /אגח|אג ח|אשראי|ממשלת/],
+  ['money', /כספי|שקלי/],
+  ['equity', /(^|\s)מניות($|\s)|מנייתי/],
+  ['esg', /קיימות/],
+  ['foreign', /(^|\s)חול($|\s)/],
+  ['general', /(^|\s)כללי($|\s)/]
+];
+const BOND_WORDS = /אגח|אג ח|אשראי|ממשלת/;
+const EQUITY_KINDS = { equity: 1, index_equity: 1, sp500: 1 };
+const LOW_EQUITY_KINDS = { bond: 1, index_bond: 1, money: 1 };
+
+function trackStockLevel(rec) {
+  const current = fundMetricValue(rec, 'stock_pct');
+  return current !== null ? current : cmpAvgExposure(rec);
+}
+function classifyTrack(rec) {
+  const name = normalizeText(rec.fund_name);
+  const sub = rec.source === 'gemelnet' ? normalizeText(rec.sub_specialization) : '';
+  const spec = rec.source === 'gemelnet' ? normalizeText(rec.specialization) : '';
+  const text = name + ' ' + sub;
+  let kind = '';
+  let cap = null;
+  const capMatch = text.match(/עד (\d{1,2}) ?(%|אחוז)/);
+  // בניהול אישי / IRA: מדיניות ההשקעה נקבעת בידי העמית, ואין לה סוג אחד.
+  if (/בניהול אישי|בניהול עצמי|\bira\b/.test(name)) kind = '';
+  else if (/ללא מניות/.test(text)) kind = 'no_stock';
+  else if (capMatch && /מני/.test(text)) {
+    cap = Number(capMatch[1]);
+    kind = BOND_WORDS.test(name + ' ' + sub + ' ' + spec) ? 'bond_equity' : 'capped';
+  } else if (rec.source === 'gemelnet') {
+    kind = GEMEL_KIND[sub] || GEMEL_KIND[spec] || '';
+    // שם שמזכיר אג״ח סותר סיווג מנייתי; מסלול כזה מוצג בלי תווית.
+    if (EQUITY_KINDS[kind] && BOND_WORDS.test(name)) kind = '';
+  } else {
+    const rule = TRACK_NAME_RULES.find(([, pattern]) => pattern.test(name));
+    kind = rule ? rule[0] : '';
+    if (kind === 'bond' && /מני/.test(name)) kind = 'bond_equity';
+  }
+  // אימות מול החשיפה המדווחת: תווית "מנייתי" על מסלול עם מעט מניות, או "אג״ח"
+  // על מסלול עם הרבה מניות, מטעה יותר מהיעדר תווית.
+  const stock = trackStockLevel(rec);
+  if (stock !== null) {
+    if (EQUITY_KINDS[kind] && stock < 50) kind = '';
+    else if (LOW_EQUITY_KINDS[kind] && stock > 30) kind = '';
+    else if (kind === 'no_stock' && stock > 10) kind = '';
+    else if (cap !== null && stock > cap + 10) kind = '';
+  }
+  if (!kind) cap = null;
+  const pensioners = /מקבלי קצבה|לפנסיונרים|למקבלי פנסיה/.test(name);
+  return { kind, cap, pensioners };
+}
+function trackKindOf(rec) {
+  if (!rec._trackKind) rec._trackKind = classifyTrack(rec);
+  return rec._trackKind;
+}
+/* התווית שמוצגת ליד שם המסלול. מחרוזת ריקה = אין סיווג אמין. */
+function trackLabel(rec) {
+  const { kind, cap, pensioners } = trackKindOf(rec);
+  let label = '';
+  if (kind === 'bond_equity') label = cap !== null ? `מסלול אג״ח · עד ${cap}% מניות` : TRACK_KIND_LABEL.bond_equity;
+  else if (kind === 'capped') label = `מסלול עד ${cap}% מניות`;
+  else label = TRACK_KIND_LABEL[kind] || '';
+  if (pensioners) label = label ? label + ' · למקבלי קצבה' : 'מסלול למקבלי קצבה';
+  return label;
+}
+
+// צ'יפי הסינון באשף. כל צ'יפ מכיל סוגי מסלול מתוך classifyTrack.
 const TRACK_CHIPS = [
-  { key: 'general', label: 'כללי' },
-  { key: 'age50',   label: 'עד גיל 50' },
-  { key: 'age5060', label: 'גיל 50–60' },
-  { key: 'age60',   label: 'גיל 60 ומעלה' },
-  { key: 'equity',  label: 'מניות' },
-  { key: 'index',   label: 'עוקב מדד' },
-  { key: 'sp500',   label: 'S&P 500' },
-  { key: 'bond',    label: 'אג״ח' },
-  { key: 'money',   label: 'כספי' },
-  { key: 'halacha', label: 'הלכתי' }
+  { key: 'general', label: 'כללי',          kinds: ['general'] },
+  { key: 'age50',   label: 'עד גיל 50',     kinds: ['age50'] },
+  { key: 'age5060', label: 'גיל 50–60',     kinds: ['age5060'] },
+  { key: 'age60',   label: 'גיל 60 ומעלה',  kinds: ['age60'] },
+  { key: 'equity',  label: 'מניות',         kinds: ['equity', 'index_equity'] },
+  { key: 'index',   label: 'עוקב מדד',      kinds: ['sp500', 'index_equity', 'index_flex', 'index_bond'] },
+  { key: 'sp500',   label: 'S&P 500',       kinds: ['sp500'] },
+  { key: 'bond',    label: 'אג״ח',          kinds: ['bond', 'bond_equity', 'index_bond'] },
+  { key: 'money',   label: 'כספי',          kinds: ['money'] },
+  { key: 'halacha', label: 'הלכתי',         kinds: ['halacha'] }
 ];
 function trackTags(rec) {
-  const text = normalizeText([rec.fund_name, rec.specialization, rec.sub_specialization].filter(Boolean).join(' '));
-  const tags = [];
-  if (/s and p|s&p|sp ?500|500/.test(text)) tags.push('sp500');
-  if (/עד 50|לבני 50 ומטה|50 ומטה|גילאי 50 ומטה|עד גיל 50/.test(text)) tags.push('age50');
-  if (/50 60|50 עד 60|גילאי 50 עד 60/.test(text)) tags.push('age5060');
-  if (/60 ומעלה|מעל 60|לבני 60|גילאי 60/.test(text)) tags.push('age60');
-  if (/מדד|עוקב/.test(text)) tags.push('index');
-  if (/מני/.test(text)) tags.push('equity');
-  if (/אגח|אג ח/.test(text)) tags.push('bond');
-  if (/כספי|שקלי/.test(text)) tags.push('money');
-  if (/הלכ|שריעה|מסורת/.test(text)) tags.push('halacha');
-  if (/יעד לפרישה|יעד פרישה/.test(text)) tags.push('target');
-  if (/כללי/.test(text)) tags.push('general');
-  return tags;
-}
-function trackLabel(rec) {
-  const tags = trackTags(rec);
-  const has = key => tags.indexOf(key) > -1;
-  if (has('sp500')) return 'מסלול עוקב מדד S&P 500';
-  if (has('age50')) return 'מסלול לפי גיל · עד 50';
-  if (has('age5060')) return 'מסלול לפי גיל · 50 עד 60';
-  if (has('age60')) return 'מסלול לפי גיל · 60 ומעלה';
-  if (has('index')) return 'מסלול עוקב מדדים';
-  if (has('equity')) return 'מסלול מנייתי';
-  if (has('bond')) return 'מסלול אג״ח';
-  if (has('money')) return 'מסלול כספי';
-  if (has('halacha')) return 'מסלול הלכתי';
-  if (has('target')) return 'מסלול יעד לפרישה';
-  if (has('general')) return 'מסלול כללי';
-  // ברירת מחדל: שם סוג המוצר, ולא הסיווג הרגולטורי ("קרנות חדשות" וכד').
-  return PRODUCT_LABEL[rec._product] || 'מסלול';
+  const { kind } = trackKindOf(rec);
+  return TRACK_CHIPS.filter(chip => chip.kinds.indexOf(kind) > -1).map(chip => chip.key);
 }
 
 // --- אינדקסים שנבנים פעם אחת ---
@@ -265,6 +350,7 @@ function buildWizardIndexes() {
     // בתיק בעבר תמשיך להציג מותג וסוג מוצר; האינדקס עצמו נבנה מהבחירות בלבד.
     rec._brand = brandOf(rec);
     rec._product = productOf(rec);
+    rec._trackKind = classifyTrack(rec);
     rec._searchText = normalizeText([rec.fund_name, rec.fund_id, rec.specialization, rec.sub_specialization, rec.classification].filter(Boolean).join(' '));
     if (!isSelectableFund(rec)) return;
     let entry = map[rec._brand];
@@ -497,7 +583,7 @@ function compareToPeers(rec, userFee, userDepositFee) {
       mine: rec.yield_trailing_3yrs,
       peers: cmpMean(aged.map(r => r.yield_trailing_3yrs)),
       annual: rec.avg_annual_yield_3yrs,
-      note: 'תשואת המסלול ברוטו, לפני דמי ניהול. לא התשואה האישית שלך.'
+      note: 'תשואת המסלול, מצטברת ל־3 שנים, לפני דמי ניהול.'
     });
   }
   if (feePeers.length >= CMP_MIN_PEERS) {
@@ -533,7 +619,7 @@ function renderComparisonMethod(item) {
   const yieldRow = cmp.rows.filter(row => row.key === 'yield')[0];
   const annual = yieldRow && typeof yieldRow.annual === 'number' ? yieldRow.annual : null;
   const fundFees = cmp.rows.filter(row => typeof row.fund === 'number')
-    .map(row => `<li>${escapeHtml(row.label)} — הממוצע שנגבה בפועל בקופה שלך: ${row.fund.toFixed(2)}%</li>`).join('');
+    .map(row => `<li>${escapeHtml(row.label)} — הממוצע שנגבה בפועל מכלל העמיתים במסלול שלך: ${row.fund.toFixed(2)}%</li>`).join('');
   return `
     <div class="cmp-method">
       <p>"${CMP_PEERS_TEXT}" הוא ממוצע של קופות שעומדות בכל התנאים האלה:</p>
@@ -548,8 +634,8 @@ function renderComparisonMethod(item) {
       ${fundFees ? `<ul>${fundFees}</ul>` : ''}
       <p>לא נכללות: קופות שלא דיווחו יותר משלושה חודשים, מסלולים בניהול אישי, וקופה שחשיפתה הממוצעת למניות בשנתיים האחרונות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה.</p>
       ${yieldRow
-        ? '<p>בממוצע התשואה נכללות רק קופות בנות שלוש שנים לפחות. התשואה היא תשואת המסלול ברוטו, לפני דמי ניהול, ואינה התשואה האישית שלך.</p>'
-          + (annual !== null ? `<p>התשואה המוצגת היא מצטברת לשלוש שנים — שווה ערך ל-${annual.toFixed(2)}% בשנה בממוצע.</p>` : '')
+        ? '<p>בממוצע התשואה נכללות רק קופות בנות שלוש שנים לפחות. התשואה היא תשואת המסלול שבו החיסכון מושקע, לפני דמי ניהול.</p>'
+          + (annual !== null ? `<p>התשואה המוצגת מצטברת לכל שלוש השנים יחד, ואינה תשואה שנתית. היא שווה ערך ל-${annual.toFixed(2)}% בשנה בממוצע.</p>` : '')
         : '<p>תשואה ל־3 שנים אינה מוצגת כאן: לקופה או לקבוצת ההשוואה אין ותק מלא של שלוש שנים.</p>'}
       <p>הנתונים מדיווחי גמל־נט, פנסיה־נט וביטוח־נט.</p>
     </div>`;
@@ -576,7 +662,7 @@ function normalizeUserFee(value) {
   return Number.isFinite(num) && num >= 0 ? num : null;
 }
 function fmtUserFee(value) {
-  return Number.isFinite(value) ? value.toFixed(2) + '%' : 'לא הוזן';
+  return Number.isFinite(value) ? value.toFixed(2) + '%' : 'לא הוזנו';
 }
 function saveState() {
   // בתצוגת תיק ששותף שינויים נשארים בזיכרון בלבד, עד "שמירה בדפדפן".
@@ -747,15 +833,24 @@ function weightedUserManagementFee(totalBalance) {
   }
   return covered > 0 ? sum / covered : null;
 }
+/* דמי הניהול המשוקללים מוצגים רק כשהוזנו לכל החסכונות. חסר — "לא הוזנו", ולא
+   אפס ולא ממוצע המסלול; כשהוזנו רק לחלק, שורה קטנה אומרת זאת. */
 function setFeeMetric(value) {
   const el = document.getElementById('feeSavings');
   const pct = document.getElementById('feeSavingsPct');
+  const note = document.getElementById('feeSavingsNote');
   if (Number.isFinite(value)) {
     el.textContent = value.toFixed(2);
     if (pct) pct.style.display = '';
   } else {
-    el.textContent = 'לא הוזן';
+    el.textContent = 'לא הוזנו';
     if (pct) pct.style.display = 'none';
+  }
+  if (note) {
+    const active = userFunds.filter(item => (Number(item.balance) || 0) > 0);
+    const entered = active.filter(item => Number.isFinite(item.managementFee)).length;
+    note.hidden = Number.isFinite(value) || entered === 0;
+    note.textContent = `הוזנו ל-${entered} מתוך ${active.length} חסכונות`;
   }
   el.className = '';
 }
@@ -791,22 +886,20 @@ function fmtRound(value) {
 function isPensionFund(f) {
   return (f._product || productOf(f)) === 'pensia';
 }
-/* שם קצר: סוג המוצר והחברה. כשיש שני מוצרים מאותו סוג באותה חברה, המסלול
-   מופיע בשורה קטנה מתחת לשם, במקום שם הקופה המלא שנשבר לשתי שורות. */
-function productTitleParts(item, activeItems) {
+/* כותרת: סוג החיסכון והחברה. שם המסלול המקורי תמיד בשורת משנה, כדי שאפשר
+   יהיה לזהות את המסלול שנבחר בלי לפתוח חלון — גם כשיש רק מוצר אחד מסוגו. */
+function productTitleParts(item) {
   const f = item.fund;
   const product = PRODUCT_LABEL[f._product || productOf(f)];
   const brand = f._brand || brandOf(f);
-  if (!product || !brand) return { title: f.fund_name || 'המוצר', track: '' };
-  const twins = activeItems.some(other => other !== item
-    && (other.fund._product || productOf(other.fund)) === (f._product || productOf(f))
-    && (other.fund._brand || brandOf(other.fund)) === brand);
-  return { title: `${product} ב${brand}`, track: twins ? trackLabel(f) : '' };
+  if (!product || !brand) return { title: f.fund_name || 'החיסכון', track: '' };
+  return { title: `${product} ב${brand}`, track: f.fund_name || '' };
 }
 function feeRowsFor(item, cmp) {
   const byKey = key => cmp && cmp.rows.find(row => row.key === key);
-  const rows = [{ field: 'managementFee', label: isPensionFund(item.fund) ? 'דמי ניהול מצבירה' : 'דמי ניהול', peer: byKey('fee') }];
-  if (isPensionFund(item.fund)) rows.push({ field: 'depositFee', label: 'דמי ניהול מהפקדות', peer: byKey('deposit_fee') });
+  // "שלך" = מה שהמשתמש הזין. דמי הניהול הממוצעים במסלול ובקבוצת ההשוואה מוצגים בנפרד.
+  const rows = [{ field: 'managementFee', label: isPensionFund(item.fund) ? 'דמי הניהול שלך מצבירה' : 'דמי הניהול שלך', peer: byKey('fee') }];
+  if (isPensionFund(item.fund)) rows.push({ field: 'depositFee', label: 'דמי הניהול שלך מהפקדות', peer: byKey('deposit_fee') });
   return rows;
 }
 function productIndicatorHtml(item, cmp) {
@@ -825,8 +918,8 @@ function feeValueHtml(item, field, label) {
   const value = item[field];
   const uid = escapeHtml(item.fund.uid);
   return Number.isFinite(value)
-    ? `<button type="button" class="stat-value stat-edit" data-fee-edit data-fee-uid="${uid}" data-fee-field="${field}" aria-label="${escapeHtml(label)} שלך: ${value.toFixed(2)}%. לחיצה לשינוי">${value.toFixed(2)}%<span class="stat-edit-icon" aria-hidden="true">✎</span></button>`
-    : `<button type="button" class="stat-value stat-add" data-fee-edit data-fee-uid="${uid}" data-fee-field="${field}" aria-label="הזנת ${escapeHtml(label)} שלך">הזן</button>`;
+    ? `<button type="button" class="stat-value stat-edit" data-fee-edit data-fee-uid="${uid}" data-fee-field="${field}" aria-label="${escapeHtml(label)}: ${value.toFixed(2)}%. לחיצה לשינוי">${value.toFixed(2)}%<span class="stat-edit-icon" aria-hidden="true">✎</span></button>`
+    : `<button type="button" class="stat-value stat-add" data-fee-edit data-fee-uid="${uid}" data-fee-field="${field}" aria-label="${escapeHtml(label)}: לא הוזנו. לחיצה להזנה">לא הוזנו<span class="stat-edit-icon" aria-hidden="true">✎</span></button>`;
 }
 function openFeeEditor(button) {
   const idx = findUserFundIndex(button.getAttribute('data-fee-uid'));
@@ -838,7 +931,7 @@ function openFeeEditor(button) {
   wrap.className = 'stat-value stat-input';
   wrap.innerHTML = `<input type="number" class="product-fee-input" data-fee-uid="${escapeHtml(button.getAttribute('data-fee-uid'))}" data-fee-field="${field}"
       value="${Number.isFinite(value) ? value.toFixed(2) : ''}" placeholder="0.00" min="0" max="10" step="0.01" inputmode="decimal" enterkeyhint="done"
-      aria-label="${escapeHtml(label)} שלך, באחוזים" /><span aria-hidden="true">%</span>`;
+      aria-label="${escapeHtml(label)}, באחוזים" /><span aria-hidden="true">%</span>`;
   button.replaceWith(wrap);
   const input = wrap.querySelector('input');
   input.focus();
@@ -848,17 +941,19 @@ function productDetailHtml(item, cmp) {
   const f = item.fund;
   const uid = escapeHtml(f.uid);
   // אריחים כמו כרטיסי החשיפה בראש הדשבורד: תווית, ערך גדול, וממוצע מתחת.
-  const tile = (label, valueHtml, avg, cls) => `
+  const tile = (label, valueHtml, avg, cls, note) => `
       <div class="product-stat${cls ? ' ' + cls : ''}">
         <span class="product-stat-label">${label}</span>
+        ${note ? `<span class="product-stat-note">${note}</span>` : ''}
         ${valueHtml}
         ${avg ? `<span class="product-stat-avg">ממוצע ${avg}</span>` : ''}
       </div>`;
-  // תשואה 3 שנים מול הממוצע — יחד עם דמי הניהול, שני המספרים שהמשתמש בא לראות.
+  // תשואת המסלול ל־3 שנים מול הממוצע — יחד עם דמי הניהול, שני המספרים שהמשתמש
+  // בא לראות. התקופה ואופן החישוב צמודים לכותרת.
   const yieldRow = cmp && cmp.rows.find(row => row.key === 'yield');
   const yieldValue = yieldRow ? yieldRow.mine : f.yield_trailing_3yrs;
   const yieldHtml = typeof yieldValue === 'number'
-    ? tile('תשואה 3 שנים', `<span class="stat-value">${fmtCmp(yieldValue, 1)}</span>`, yieldRow ? fmtCmp(yieldRow.peers, 1) : '', 'product-yield-row')
+    ? tile(YIELD_LABEL, `<span class="stat-value">${fmtCmp(yieldValue, 1)}</span>`, yieldRow ? fmtCmp(yieldRow.peers, 1) : '', 'product-yield-row', YIELD_PERIOD_NOTE)
     : '';
   const fees = feeRowsFor(item, cmp)
     .map(row => tile(row.label, feeValueHtml(item, row.field, row.label), row.peer ? fmtCmp(row.peer.peers, 2) : ''))
@@ -876,15 +971,19 @@ function productDetailHtml(item, cmp) {
       </div>
       <div class="print-only">${fullComparisonHtml(item, cmp, true)}</div>`;
 }
+/* התשואה היא תשואת המסלול שבו כספי המשתמש מושקעים — לא תשואה "כללית" ולא
+   תשואה אישית שחושבה מתנועות החשבון. התקופה ואופן החישוב תמיד לצידה. */
+const YIELD_LABEL = 'תשואת המסלול שלך';
+const YIELD_PERIOD_NOTE = 'מצטברת ל־3 שנים, לפני דמי ניהול';
 /* שכבה 3: הטבלה המלאה ונתוני המסלול. משמשת את החלון "השוואה מלאה", ובהדפסה
    מודפסת בתוך כל מוצר — הדוח ממשיך להציג את כל המידע. */
 function fullComparisonHtml(item, cmp, forPrint) {
   const f = item.fund;
   const byKey = key => cmp && cmp.rows.find(row => row.key === key);
-  const mineFee = field => Number.isFinite(item[field]) ? item[field].toFixed(2) + '%' : 'לא הוזן';
+  const mineFee = field => Number.isFinite(item[field]) ? item[field].toFixed(2) + '%' : 'לא הוזנו';
   const rows = [];
   const yieldRow = byKey('yield');
-  if (yieldRow) rows.push(['תשואה 3 שנים', fmtCmp(yieldRow.mine, 1), fmtCmp(yieldRow.peers, 1)]);
+  if (yieldRow) rows.push([`${YIELD_LABEL}<span class="cmp-row-note">${YIELD_PERIOD_NOTE}</span>`, fmtCmp(yieldRow.mine, 1), fmtCmp(yieldRow.peers, 1)]);
   feeRowsFor(item, cmp).forEach(row => rows.push([row.label, mineFee(row.field), fmtCmp(row.peer && row.peer.peers, 2)]));
   const stockRow = byKey('stock');
   if (stockRow) rows.push(['חשיפה למניות', fmtCmp(stockRow.mine, 0), fmtCmp(stockRow.peers, 0)]);
@@ -894,19 +993,20 @@ function fullComparisonHtml(item, cmp, forPrint) {
         <tbody>${rows.map(([label, mine, peers]) =>
           `<tr><th scope="row">${label}</th><td class="product-cmp-mine">${mine}</td><td class="product-cmp-peer">${peers}</td></tr>`).join('')}</tbody>
       </table>
-      ${yieldRow ? '<p class="product-note">תשואת המסלול ברוטו, לפני דמי ניהול — לא התשואה האישית שלך.</p>' : ''}`
+      ${yieldRow ? '<p class="product-note">התשואה מצטברת לכל שלוש השנים יחד, ואינה תשואה שנתית. היא מתייחסת לתקופה המוצגת; התוצאה בחיסכון שלך תלויה גם במועד ההצטרפות, בהפקדות ובמשיכות ובדמי הניהול.</p>' : ''}
+      <p class="product-note">דמי הניהול שלך — כפי שהזנת. הממוצע — דמי הניהול הממוצעים בקבוצת ההשוואה. דמי הניהול הממוצעים במסלול עצמו מופיעים בנתוני המסלול.</p>`
     : `<p class="product-note">${f.is_stale ? 'המסלול אינו נכלל בהשוואה, כי נתוניו לא עודכנו.' : CMP_NONE_TEXT + ' למסלול הזה.'}</p>`;
   const fact = (label, value, wide) => `<div class="fund-fact${wide ? ' fund-fact-wide' : ''}"><dt>${label}</dt><dd>${value}</dd></div>`;
   const facts = [
     fact('תשואה חודשית', fmtPct(f.monthly_yield, 2)),
     fact('מתחילת השנה', fmtPct(f.ytd_yield, 2)),
-    yieldRow ? '' : fact('3 שנים מצטבר', fmtPct(f.yield_trailing_3yrs, 2)),
+    yieldRow ? '' : fact('תשואת המסלול, מצטברת ל־3 שנים', fmtPct(f.yield_trailing_3yrs, 2), true),
     stockRow ? '' : fact('מניות', fmtPct(f.stock_pct, 1)),
     fact('חו״ל', fmtPct(f.foreign_pct, 1)),
     fact('מט״ח', fmtPct(f.fx_pct, 1)),
     fact('נכסים סחירים', fmtPct(f.liquid_pct, 1)),
-    fact(isPensionFund(f) ? 'דמי ניהול מצבירה שנגבו בפועל בקופה' : 'דמי ניהול שנגבו בפועל בקופה', fmtPct(f.avg_annual_management_fee, 2), true),
-    isPensionFund(f) ? fact('דמי ניהול מהפקדות שנגבו בפועל בקופה', fmtPct(f.avg_deposit_fee, 2), true) : ''
+    fact(isPensionFund(f) ? 'דמי ניהול ממוצעים במסלול, מצבירה' : 'דמי ניהול ממוצעים במסלול', fmtPct(f.avg_annual_management_fee, 2), true),
+    isPensionFund(f) ? fact('דמי ניהול ממוצעים במסלול, מהפקדות', fmtPct(f.avg_deposit_fee, 2), true) : ''
   ].join('');
   const method = cmp && !forPrint
     ? `<details class="method-details"><summary>איך מחושבת ההשוואה?</summary>${renderComparisonMethod(item)}</details>`
@@ -914,6 +1014,7 @@ function fullComparisonHtml(item, cmp, forPrint) {
   return `
       ${table}
       <h5 class="fund-facts-head">נתוני המסלול</h5>
+      <p class="fund-facts-sub">נתוני הדיווח הציבורי של המסלול כולו. דמי הניהול כאן הם הממוצע שנגבה מכלל העמיתים במסלול.</p>
       <dl class="fund-facts">${facts}</dl>
       ${method}`;
 }
@@ -925,7 +1026,7 @@ function productItemHtml(item, activeItems, totalBalance) {
   const brand = BRAND_BY_NAME[f._brand || brandOf(f)];
   const open = OPEN_PRODUCT_UID === f.uid;
   const panelId = 'product-' + String(f.uid).replace(/[^A-Za-z0-9_-]/g, '-');
-  const { title, track } = productTitleParts(item, activeItems);
+  const { title, track } = productTitleParts(item);
   return `
     <article class="product${open ? ' is-open' : ''}" data-product-uid="${uid}">
       <button type="button" class="product-row" data-toggle-uid="${uid}" aria-expanded="${open}" aria-controls="${panelId}">
@@ -1026,10 +1127,19 @@ document.addEventListener('focusout', event => {
 
 /* הסבר אחד לשלושת כרטיסי החשיפה. בא במקום כפתור "?" בכל כרטיס, שבמובייל שבר
    את התוויות לשתי שורות. */
+/* ההסבר הפשוט קודם; המונחים המקצועיים (נגזרים, גידור, ממוצע משוקלל) בהרחבה.
+   הניסוחים תואמים את שדות המקור: STOCK_MARKET_EXPOSURE, FOREIGN_EXPOSURE
+   ו-FOREIGN_CURRENCY_EXPOSURE — אחוז מנכסי המסלול. */
 const EXPOSURE_TERMS = [
-  ['מניות', 'החלק מהכסף שמושקע במניות, בישראל ובחו״ל, כולל דרך קרנות ונגזרים.'],
-  ['חו״ל', 'החלק מהכסף שמושקע בנכסים מחוץ לישראל — מניות, אג״ח וקרנות.'],
-  ['מט״ח', 'החלק מהכסף שערכו תלוי בשער של מטבע זר, בעיקר הדולר. בדרך כלל הוא נמוך מהחשיפה לחו״ל, כי חלק מההשקעה בחו״ל מגודר לשקל.']
+  ['מניות', 'עד כמה החיסכון חשוף לשינויים בשוק המניות, בישראל ובחו״ל.'],
+  ['חו״ל', 'עד כמה החיסכון חשוף להשקעות מחוץ לישראל — מניות, אג״ח וקרנות.'],
+  ['מט״ח (מטבע חוץ)', 'עד כמה שינויים בשערי מטבעות זרים, בעיקר הדולר, עשויים להשפיע על החיסכון.']
+];
+const EXPOSURE_MORE = [
+  'החשיפה למניות כוללת גם השקעה דרך קרנות ודרך נגזרים — חוזים שערכם נקבע לפי מחירי מניות. לכן היא יכולה לעלות מעט על 100%.',
+  'החשיפה למט״ח נמוכה בדרך כלל מהחשיפה לחו״ל, כי חלק מההשקעות בחו״ל מגודרות — מוגנות מראש מפני שינויים בשער המטבע מול השקל.',
+  'איך מחושב הנתון הכולל: אחוז החשיפה של כל מסלול נספר לפי חלקו ביתרה הכוללת שהוזנה (ממוצע משוקלל). הנתונים לקוחים מהדיווח הציבורי של כל מסלול.',
+  'מסלול שאין לו נתון אינו נספר כאפס: החישוב נעשה רק על החלק בתיק שיש לו נתון, והשורה שמעל הכרטיסים מציינת זאת.'
 ];
 function openInfoDialog(kind, uid) {
   const dialog = document.getElementById('infoDialog');
@@ -1039,7 +1149,10 @@ function openInfoDialog(kind, uid) {
     document.getElementById('infoDialogSub').textContent = '';
     document.getElementById('infoDialogBody').innerHTML = EXPOSURE_TERMS
       .map(([label, text]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(text)}</p>`).join('')
-      + '<p>כל נתון בדשבורד הוא ממוצע משוקלל לפי היתרות שהזנת, מתוך הדיווח הציבורי של כל מסלול.</p>';
+      + '<p>המדדים עשויים לחפוף: השקעה במניות בחו״ל נכללת גם במניות וגם בחו״ל, ולכן אין לחבר את האחוזים.</p>'
+      + '<p>הנתון הכולל מחושב לפי היתרות שהזנת: חיסכון עם יתרה גדולה יותר משפיע יותר על הנתון הכולל.</p>'
+      + '<p>שלושת המדדים מתארים לאן החיסכון חשוף. הם אינם מדידה מלאה של רמת הסיכון בו.</p>'
+      + `<details class="method-details"><summary>הרחבה</summary>${EXPOSURE_MORE.map(text => `<p>${escapeHtml(text)}</p>`).join('')}</details>`;
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else dialog.setAttribute('open', '');
     return;
@@ -1047,10 +1160,9 @@ function openInfoDialog(kind, uid) {
   const idx = findUserFundIndex(uid);
   if (!dialog || idx < 0) return;
   const item = userFunds[idx];
-  const activeItems = userFunds.filter(other => (Number(other.balance) || 0) > 0);
   const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
-  const { title, track } = productTitleParts(item, activeItems);
-  document.getElementById('infoDialogTitle').textContent = title + (track ? ' · ' + track : '');
+  const { title } = productTitleParts(item);
+  document.getElementById('infoDialogTitle').textContent = title;
   document.getElementById('infoDialogSub').textContent = `${item.fund.fund_name || ''} · קופה ${item.fund.fund_id || ''}`;
   document.getElementById('infoDialogBody').innerHTML = fullComparisonHtml(item, cmp, false);
   if (typeof dialog.showModal === 'function') dialog.showModal();
@@ -1181,9 +1293,10 @@ function fmtDate(iso) {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
 
-/* משפט המבנה מעל כרטיסי החשיפה: כמה מוצרים, ואיזה מהם מחזיק את רוב הכסף.
+/* משפט המבנה מעל כרטיסי החשיפה: כמה חסכונות הוזנו, ואיזה מהם הגדול.
    הכרטיסים כבר מציגים את אחוזי החשיפה, ולכן המשפט לא חוזר עליהם.
-   עובדתי בלבד — בלי "ריכוזי", "מפוזר" או כל שיפוט אחר. */
+   עובדתי בלבד — בלי "ריכוזי", "מפוזר" או כל שיפוט אחר. הניסוח מתייחס רק
+   למה שהוזן: האתר אינו יודע על חסכונות שלא הוספת. */
 function portfolioItemLabel(item, activeItems) {
   const fund = item.fund;
   const product = PRODUCT_LABEL[fund._product || productOf(fund)];
@@ -1200,12 +1313,12 @@ function portfolioSummaryText(activeItems, totalBalance) {
   if (!activeItems.length || totalBalance <= 0) return '';
   const sorted = activeItems.slice().sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0));
   const share = item => Math.round((Number(item.balance) || 0) / totalBalance * 100);
-  if (sorted.length === 1) return `כל החיסכון במוצר אחד: ${portfolioItemLabel(sorted[0], activeItems)}.`;
+  if (sorted.length === 1) return `עד עכשיו הוספת חיסכון אחד: ${portfolioItemLabel(sorted[0], activeItems)}.`;
   const [first, second] = sorted;
   if (share(first) === share(second)) {
-    return `${sorted.length} מוצרים. הגדולים שבהם, ${portfolioItemLabel(first, activeItems)} ו${portfolioItemLabel(second, activeItems)}, הם ${share(first)}% מהתיק כל אחד.`;
+    return `עד עכשיו הוספת ${sorted.length} חסכונות. הגדולים שבהם, ${portfolioItemLabel(first, activeItems)} ו${portfolioItemLabel(second, activeItems)}, הם ${share(first)}% מהיתרה שהוזנה כל אחד.`;
   }
-  return `${sorted.length} מוצרים. הגדול שבהם, ${portfolioItemLabel(first, activeItems)}, הוא ${share(first)}% מהתיק.`;
+  return `עד עכשיו הוספת ${sorted.length} חסכונות. הגדול שבהם, ${portfolioItemLabel(first, activeItems)}, הוא ${share(first)}% מהיתרה שהוזנה.`;
 }
 function renderPortfolioSummary(activeItems, totalBalance) {
   const el = document.getElementById('portfolioSummary');
@@ -1488,7 +1601,7 @@ const CHART_COLORS = { pos: '#102743', neg: '#c53637', line: '#102743', spark: '
 /* המדדים הזמינים לגרפי המגמה. הצבעים תואמים את צבעי הישויות בדשבורד
    ועברו בדיקת ניגודיות מול המשטח. */
 const HIST_METRICS = [
-  { id: 'yield', field: 'hist_yield', label: 'תשואה חודשית משוקללת', type: 'column', color: null, digits: 2 },
+  { id: 'yield', field: 'hist_yield', label: 'שקלול תשואות המסלולים, לפי חודש', type: 'column', color: null, digits: 2 },
   { id: 'stock', field: 'hist_stock', label: 'חשיפה למניות של התיק', type: 'line', color: '#102743', digits: 1 },
   { id: 'foreign', field: 'hist_foreign', label: 'חשיפה לחו״ל', type: 'line', color: '#dcaf61', digits: 1 },
   { id: 'fx', field: 'hist_fx', label: 'חשיפה למט״ח', type: 'line', color: '#7488a1', digits: 1 },
@@ -1971,16 +2084,16 @@ function buildShareText(mode) {
     `חשיפה למניות: ${fmtPct(aggStock, 1)}`,
     `חשיפה לחו״ל: ${fmtPct(aggForeign, 1)}`,
     `חשיפה למט״ח: ${fmtPct(aggFx, 1)}`,
-    `תשואה מתחילת שנה לפי מסלולים, משוקללת: ${fmtPct(perfYtd, 2)}`,
-    `תשואה 3 שנים מצטברת לפי מסלולים, משוקללת: ${fmtPct(weightedMetric('yield_trailing_3yrs', totalBalance), 2)}`,
-    ...(withAmounts ? [`דמי ניהול אישיים משוקללים: ${Number.isFinite(feeSavings) ? fmtPct(feeSavings, 2) : 'לא הוזן'}`] : []),
+    `שקלול תשואות המסלולים, מתחילת השנה: ${fmtPct(perfYtd, 2)}`,
+    `שקלול תשואות המסלולים, מצטברת ל־3 שנים, לפני דמי ניהול: ${fmtPct(weightedMetric('yield_trailing_3yrs', totalBalance), 2)}`,
+    ...(withAmounts ? [`דמי הניהול שהוזנו, משוקללים: ${Number.isFinite(feeSavings) ? fmtPct(feeSavings, 2) : 'לא הוזנו'}`] : []),
     `נתוני המסלולים נכונים לדיווח של ${fmtPeriodHebrew(DATASET_MAX_PERIOD)}`
   ];
   // הקישור לפני פירוט המוצרים: כשהטקסט ארוך מדי לווטסאפ מקצרים את הפירוט,
   // והקישור, שמשחזר את התיק המלא, חייב לשרוד.
   const shareUrl = mode === 'link' ? buildShareUrl() : '';
   if (shareUrl) lines.push('', `לפתיחת התיק המלא בדשבורד (הקישור כולל את היתרות ודמי הניהול): ${shareUrl}`);
-  lines.push('', 'פירוט מוצרים:');
+  lines.push('', 'פירוט החסכונות:');
   const sorted = userFunds.slice().sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0));
   for (const item of sorted) {
     const balance = Number(item.balance) || 0;
@@ -1990,13 +2103,13 @@ function buildShareText(mode) {
     const parts = [SOURCE_LABEL[f.source], f.fund_name];
     if (withAmounts) parts.push(fmtCurrency(balance));
     parts.push(`משקל ${weight.toFixed(1)}%`, `מניות ${fmtPct(f.stock_pct, 1)}`, `חו״ל ${fmtPct(f.foreign_pct, 1)}`, `מט״ח ${fmtPct(f.fx_pct, 1)}`);
-    if (withAmounts) parts.push(`דמי ניהול ${fmtUserFee(item.managementFee)}`);
+    if (withAmounts) parts.push(Number.isFinite(item.managementFee) ? `דמי הניהול שהוזנו ${fmtUserFee(item.managementFee)}` : 'דמי ניהול: לא הוזנו');
     lines.push('- ' + parts.join(' | '));
   }
   lines.push('');
   lines.push(withAmounts
-    ? 'הבהרה: הנתונים מבוססים על נתונים ציבוריים ויתרות שהוזנו ידנית. זה אינו ייעוץ או המלצה.'
-    : 'הבהרה: הנתונים מבוססים על נתונים ציבוריים, משוקללים לפי יתרות שאינן מוצגות כאן. זה אינו ייעוץ או המלצה.');
+    ? 'הבהרה: הנתונים מבוססים על נתונים ציבוריים של המסלולים ויתרות שהוזנו ידנית. התשואות הן של המסלולים, לפני דמי ניהול. זה אינו ייעוץ או המלצה.'
+    : 'הבהרה: הנתונים מבוססים על נתונים ציבוריים של המסלולים, משוקללים לפי יתרות שאינן מוצגות כאן. התשואות הן של המסלולים, לפני דמי ניהול. זה אינו ייעוץ או המלצה.');
   return lines.join('\n');
 }
 // Remembers which collapsible sections were open before printing, so the
@@ -2071,8 +2184,8 @@ function fitShareTextForUrl(text) {
     }
   }
   if (trimmed > 0) {
-    const marker = lines.indexOf('פירוט מוצרים:');
-    const note = `(הפירוט קוצר ב-${trimmed} מוצרים כדי שהקישור יישלח במלואו — הפירוט המלא בדשבורד)`;
+    const marker = lines.indexOf('פירוט החסכונות:');
+    const note = `(הפירוט קוצר ב-${trimmed} חסכונות כדי שהקישור יישלח במלואו — הפירוט המלא בדשבורד)`;
     if (marker >= 0) lines.splice(marker + 1, 0, note);
     else lines.push(note);
   }
@@ -2532,9 +2645,20 @@ function wizScreenCompany() {
   const intro = wizard.product
     ? `מי מנהל את ה${escapeHtml(PRODUCT_LABEL[wizard.product] || 'חיסכון')}?`
     : 'מי מנהל את החיסכון שלך?';
+  // מסך הפתיחה של מבקר חדש: משפט אחד על מה מקבלים ומה להכין, ו"לא יודע"
+  // מעל רשת החברות — כדי שיימצא בטלפון בלי לגלול דרך כל החברות.
+  const firstVisit = !wizard.product && !hasReportData();
+  const lead = firstVisit
+    ? `<p class="wiz-lead">מוסיפים את החסכונות שלך ומקבלים תמונה מרוכזת של הסכומים ושל החשיפה למניות, לחו״ל ולמטבע חוץ.</p>`
+    : '';
+  const sub = firstVisit
+    ? 'כדאי להכין את שם המסלול והיתרה מהדוח או מהאזור האישי. אפשר להתחיל מחיסכון אחד. בלי הרשמה, בלי חיבור לחשבון.'
+    : 'השם מופיע בדוח השנתי או באזור האישי. בלי הרשמה, בלי חיבור לחשבון.';
   return `
+    ${lead}
     <h2 class="wiz-title">${intro}</h2>
-    <p class="wiz-sub">השם מופיע בדוח השנתי או באזור האישי. בלי הרשמה, בלי חיבור לחשבון.</p>
+    <p class="wiz-sub">${sub}</p>
+    <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
     <div class="wiz-company-grid">
       ${top.map(entry => `
         <button type="button" class="wiz-company" data-wiz="company" data-value="${escapeHtml(entry.name)}">
@@ -2552,7 +2676,6 @@ function wizScreenCompany() {
       </div>` : ''}
     <div class="wiz-links">
       <button type="button" class="wiz-link" data-wiz="allCompanies">חברה אחרת</button>
-      <button type="button" class="wiz-link" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
     </div>`;
 }
 
@@ -2634,7 +2757,7 @@ function wizResultRow(rec) {
     <button type="button" class="wiz-result${chosen ? ' is-chosen' : ''}" data-wiz="pick" data-value="${escapeHtml(rec.uid)}">
       <span class="wiz-result-body">
         <span class="wiz-result-name">${escapeHtml(rec.fund_name)}</span>
-        <span class="wiz-result-meta">${escapeHtml(trackLabel(rec))} · קופה ${escapeHtml(rec.fund_id || '')}</span>
+        <span class="wiz-result-meta">${escapeHtml([trackLabel(rec), 'קופה ' + (rec.fund_id || '')].filter(Boolean).join(' · '))}</span>
       </span>
       ${chosen ? '<span class="wiz-result-flag">בתיק</span>' : ''}
       <span class="wiz-chevron" aria-hidden="true"></span>
@@ -2721,7 +2844,7 @@ function wizScreenBalance() {
       ${brand ? wizLogo(brand, 'lg') : ''}
       <div class="wiz-picked-text">
         <div class="wiz-picked-name">${escapeHtml(rec.fund_name)}</div>
-        <div class="wiz-picked-meta">${escapeHtml(trackLabel(rec))} · קופה ${escapeHtml(rec.fund_id || '')}</div>
+        <div class="wiz-picked-meta">${escapeHtml([trackLabel(rec), 'קופה ' + (rec.fund_id || '')].filter(Boolean).join(' · '))}</div>
       </div>
       <div class="wiz-spark" id="quickEditorSpark" dir="ltr"></div>
     </div>
@@ -2764,11 +2887,11 @@ function wizScreenDone() {
   return `
     <div class="wiz-done-mark" aria-hidden="true"></div>
     <h2 class="wiz-title">${rec ? escapeHtml(rec.fund_name) : 'המוצר'} נוסף לתיק</h2>
-    <p class="wiz-sub">${count} ${count === 1 ? 'מוצר' : 'מוצרים'} בתיק · ${fmtCurrency(total)} סה״כ</p>
+    <p class="wiz-sub">${count === 1 ? 'חיסכון אחד' : count + ' חסכונות'} בתיק · ${fmtCurrency(total)} יתרה כוללת שהוזנה</p>
     <div class="wiz-done-actions">
       <button type="button" class="wiz-done-btn" data-wiz="dashboard">הצג את התמונה המלאה</button>
-      ${wizard.company ? `<button type="button" class="wiz-done-btn" data-wiz="anotherSameCompany">עוד מוצר ב${escapeHtml(wizard.company)}</button>` : ''}
-      <button type="button" class="wiz-done-btn" data-wiz="reset">מוצר בחברה אחרת</button>
+      ${wizard.company ? `<button type="button" class="wiz-done-btn" data-wiz="anotherSameCompany">עוד חיסכון ב${escapeHtml(wizard.company)}</button>` : ''}
+      <button type="button" class="wiz-done-btn" data-wiz="reset">חיסכון בחברה אחרת</button>
     </div>`;
 }
 
@@ -3056,7 +3179,7 @@ if (document.readyState === 'loading') {
   if (!cubes.length || !tooltip) return;
 
   const tips = {
-    exposure: '<strong>חשיפה למניות ולמט״ח</strong>חשיפה למניות = החלק מההשקעה שלך המושקע במניות (חשוף לתנודות שוק, פוטנציאל תשואה וסיכון גבוהים יותר). חשיפה למט״ח = החלק מההשקעה הצמוד למטבעות זרים (בעיקר דולר). שני המדדים האלה מאפשרים לך להבין במבט אחד את רמת הסיכון בחיסכון שלך.',
+    exposure: '<strong>חשיפה למניות ולמט״ח</strong>חשיפה למניות = החלק מההשקעה שלך המושקע במניות (חשוף לתנודות שוק, פוטנציאל תשואה וסיכון גבוהים יותר). חשיפה למט״ח = החלק מההשקעה שערכו מושפע משערי מטבעות זרים (בעיקר דולר). המדדים מתארים חשיפה, ואינם מדידה מלאה של רמת הסיכון.',
     privacy: '<strong>הנתונים שלך נשארים אצלך</strong>היתרות ודמי הניהול שהזנת נשמרים בדפדפן שלך. הם אינם נשמרים בשרת, ואינם משויכים לפרטים אישיים.',
     workflow: '<strong>איך עובדים עם הכלי</strong>1. חפש את שם החברה שמנהלת את הקופה שלך (אפשר למצוא בדוח השנתי שמגיע בדואר/מייל). 2. לחץ "עדכן" על הקופה הרצויה. 3. הזן יתרה ודמי ניהול בפועל. 4. לחץ "עדכן בדשבורד" כדי לראות את החשיפה הכוללת של כל החסכונות יחד.',
     source: '<strong>מקור הנתונים</strong>הנתונים מבוססים על קובצי המידע הציבוריים של רשות שוק ההון, הביטוח והחיסכון, מתוך מאגרי גמל נט, פנסיה נט וביטוח נט, כפי שפורסמו ב-data.gov.il. הדשבורד אינו מושך נתונים אישיים ממסלקה פנסיונית, אלא משתמש ביתרות ודמי ניהול שהמשתמש מזין ידנית.'
