@@ -933,6 +933,65 @@ function setFeeMetric(value) {
   }
   el.className = '';
 }
+/* "ממוצע בקבוצה" לכרטיסי התשואה ודמי הניהול של התיק: לכל מוצר — ממוצע
+   קבוצת ההשוואה שלו (אותן קבוצות כמו בשורת המוצר), משוקלל לפי היתרות כמו
+   הנתון שלך. נספרים רק המוצרים שנכללים בנתון שלך: בתשואה — מסלולים שדיווחו
+   על החודש העדכני; בדמי ניהול — דמי הניהול שהזנת (בפנסיה: מצבירה). מוצר
+   בלי קבוצה מתאימה אינו נספר, ואז מצוין על איזה חלק מהתיק הממוצע מחושב. */
+function groupYieldAverage(fund, key) {
+  if (key === 'yield_trailing_3yrs') {
+    const cmp = compareToPeers(fund, null, null);
+    const row = cmp && cmp.rows.find(r => r.key === 'yield');
+    return row ? row.peers : null;
+  }
+  if (!cmpIsFresh(fund)) return null;
+  const values = (cmpPolicyPeers(fund) || []).map(r => fundMetricValue(r, key)).filter(v => v !== null);
+  return values.length >= CMP_MIN_PEERS ? cmpMean(values) : null;
+}
+function portfolioGroupAverage(key, activeItems) {
+  let base = 0;
+  let covered = 0;
+  let sum = 0;
+  let mine = 0;
+  for (const item of activeItems) {
+    const balance = Number(item.balance) || 0;
+    let avg;
+    let value;
+    if (key === 'fee') {
+      if (!Number.isFinite(item.managementFee)) return null;   // הנתון שלך מוצג רק כשהוזנו לכולם
+      const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
+      const row = cmp && cmp.rows.find(r => r.key === 'fee');
+      avg = row ? row.peers : null;
+      value = item.managementFee;
+    } else {
+      value = fundMetricValue(item.fund, key);
+      if (!isCurrentPeriod(item.fund) || value === null) continue;
+      avg = groupYieldAverage(item.fund, key);
+    }
+    base += balance;
+    if (!Number.isFinite(avg)) continue;
+    covered += balance;
+    sum += balance * avg;
+    mine += balance * value;
+  }
+  return covered > 0 ? { value: sum / covered, mine: mine / covered, coveredPct: covered / base * 100 } : null;
+}
+function setGroupAverage(id, info, digits) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.hidden = !info;
+  if (!info) return;
+  // ממוצע שחושב רק על חלק מהתיק מוצג מול הנתון שלך באותו חלק — לא מול הנתון
+  // הגדול שבכרטיס, שמחושב על כל התיק.
+  el.textContent = `ממוצע בקבוצה ${info.value.toFixed(digits)}%`
+    + (info.coveredPct < 99.95 ? ` · לפי ${info.coveredPct.toFixed(0)}% מהתיק, שבהם שלך ${info.mine.toFixed(digits)}%` : '');
+}
+function renderGroupAverages(activeItems) {
+  setGroupAverage('perfMonthAvg', portfolioGroupAverage('monthly_yield', activeItems), 2);
+  setGroupAverage('perfYtdAvg', portfolioGroupAverage('ytd_yield', activeItems), 2);
+  setGroupAverage('perf3yAvg', portfolioGroupAverage('yield_trailing_3yrs', activeItems), 2);
+  setGroupAverage('feeSavingsAvg', portfolioGroupAverage('fee', activeItems), 2);
+}
 function setMetric(id, value, digits = 1) {
   const el = document.getElementById(id);
   el.textContent = Number.isFinite(value) ? value.toFixed(digits) : '-';
@@ -1172,6 +1231,7 @@ function commitProductFee(input) {
     if (print) print.innerHTML = fullComparisonHtml(item, cmp, true);
   }
   setFeeMetric(weightedUserManagementFee(getTotalBalance()));
+  renderGroupAverages(userFunds.filter(i => (Number(i.balance) || 0) > 0));
   refreshSimulationDefaults();
 }
 function closeFeeEditor(input, save) {
@@ -1331,6 +1391,7 @@ function renderDashboard() {
   setMetric('perfYtd', perfYtd, 2);
   setMetric('perf3y', perf3y, 2);
   setFeeMetric(feeSavings);
+  renderGroupAverages(activeItems);
 
   const barPairs = [
     ['aggStockBar', aggStock],
