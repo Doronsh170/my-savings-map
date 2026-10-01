@@ -525,6 +525,14 @@ function check(name, ok, detail) {
 
     // 19. חשיפות: הסבר פשוט, והבהרה שאין לחבר את האחוזים.
     check('exposure overlap note is visible', await fresh.isVisible('.exposure-overlap'));
+    const tipClosed = await fresh.evaluate(() => Array.from(document.querySelectorAll('.metric-tip-text')).every(el => !el.offsetParent));
+    await fresh.click('.metric-tip');
+    const tipOpen = await fresh.isVisible('#tipStock');
+    await fresh.click('.metric-tip');
+    await fresh.mouse.move(0, 0);   // במחשב הטולטיפ פתוח גם כל עוד העכבר על הכרטיס
+    check('exposure explanation is a tooltip: no text under the number, "?" toggles it',
+      (await fresh.locator('.metric-explain').count()) === 0 && !(await fresh.isVisible('.exposure-explain')) && tipClosed && tipOpen && !(await fresh.isVisible('#tipStock'))
+      && /שוק המניות/.test(await fresh.textContent('#tipStock')));
     await fresh.click('.exposure-help');
     const expo = await fresh.textContent('#infoDialogBody');
     check('exposure dialog: plain first, jargon under "הרחבה"', /אינם מדידה מלאה של רמת הסיכון/.test(expo)

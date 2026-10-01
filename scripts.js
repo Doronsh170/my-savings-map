@@ -1214,6 +1214,31 @@ document.addEventListener('focusout', event => {
   }
 });
 
+/* טולטיפ ההסבר בכרטיסי החשיפה: הקשה על "?" פותחת וסוגרת (בטלפון אין
+   מעבר עכבר); הקשה במקום אחר או Escape סוגרים. */
+function setMetricTip(card, open) {
+  card.classList.toggle('is-tip-open', open);
+  const btn = card.querySelector('.metric-tip');
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+}
+document.addEventListener('click', event => {
+  const btn = event.target.closest('.metric-tip');
+  document.querySelectorAll('.metric-card.is-tip-open').forEach(card => {
+    if (!btn || card !== btn.closest('.metric-card')) setMetricTip(card, false);
+  });
+  if (!btn) return;
+  const card = btn.closest('.metric-card');
+  const open = !card.classList.contains('is-tip-open');
+  setMetricTip(card, open);
+  if (!open) btn.blur();
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  document.querySelectorAll('.metric-card.is-tip-open').forEach(card => setMetricTip(card, false));
+  const btn = document.activeElement;
+  if (btn && btn.classList && btn.classList.contains('metric-tip')) btn.blur();
+});
+
 /* הסבר אחד לשלושת כרטיסי החשיפה. בא במקום כפתור "?" בכל כרטיס, שבמובייל שבר
    את התוויות לשתי שורות. */
 /* ההסבר הפשוט קודם; המונחים המקצועיים (נגזרים, גידור, ממוצע משוקלל) בהרחבה.
