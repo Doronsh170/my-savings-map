@@ -8499,9 +8499,11 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 #detailsRows .product-cmp tbody th .cmp-row-note, .info-dialog-body .product-cmp tbody th .cmp-row-note { font-size: 13px !important; font-weight: 400; color: var(--ink-muted); }
 .stat-add { font-size: 15px !important; }
 .metric-note { margin-top: 4px; font-size: 13px; color: var(--ink-muted); }
+.metric-avg { margin-top: 4px; font-size: 13px; color: var(--ink-muted); }
+.metric-avg[hidden] { display: none; }
 .fund-facts-sub { margin: -2px 0 8px; font-size: 13px; line-height: 1.45; color: var(--ink-muted); }
 @media print {
-  .product-stat-note, .cmp-row-note, .fund-facts-sub, .metric-note { font-size: 8.5px !important; }
+  .product-stat-note, .cmp-row-note, .fund-facts-sub, .metric-note, .metric-avg { font-size: 8.5px !important; }
   #detailsRows .product-cmp tbody th .cmp-row-note { font-size: 8px !important; }
 }
 

@@ -328,6 +328,21 @@ function check(name, ok, detail) {
     await fresh.keyboard.press('Enter');
     const expectedFee = ((300000 * 0.5 + 200000 * 0.35 + 100000 * 0.2) / 600000).toFixed(2);
     check('portfolio fee metric updates once every product has a fee', (await fresh.textContent('#feeSavings')) === expectedFee, await fresh.textContent('#feeSavings'));
+    // "ממוצע בקבוצה" בכרטיסי התשואה: ממוצע הקבוצה של כל מוצר, משוקלל לפי היתרות,
+    // על המוצרים שנכללים בנתון שלך; דמי ניהול — מול הקבוצה של דמי הניהול.
+    const avgCheck = await fresh.evaluate(() => {
+      const items = userFunds.filter(i => (Number(i.balance) || 0) > 0 && isCurrentPeriod(i.fund) && i.fund.ytd_yield != null);
+      let w = 0, sum = 0;
+      for (const i of items) {
+        const peers = (cmpPolicyPeers(i.fund) || []).map(r => r.ytd_yield).filter(v => typeof v === 'number');
+        if (peers.length < CMP_MIN_PEERS) continue;
+        w += i.balance; sum += i.balance * peers.reduce((a, v) => a + v, 0) / peers.length;
+      }
+      return { expected: w ? (sum / w).toFixed(2) : null, shown: document.getElementById('perfYtdAvg').textContent,
+        fee: document.getElementById('feeSavingsAvg').textContent };
+    });
+    check('YTD card shows the group average, weighted by balance', avgCheck.expected && avgCheck.shown.startsWith(`ממוצע בקבוצה ${avgCheck.expected}%`), JSON.stringify(avgCheck));
+    check('fee card shows the group average once every fee is entered', /^ממוצע בקבוצה \d\.\d\d%/.test(avgCheck.fee), avgCheck.fee);
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     check('fee edit keeps the balance age', /עודכנה? היום|עודכנו היום/.test(await fresh.textContent('#balanceAge')));
 
