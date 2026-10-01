@@ -995,7 +995,7 @@ function productIndicatorHtml(item, cmp) {
   const fee = feeRowsFor(item, cmp)[0];
   if (!fee.peer) return '';
   if (Number.isFinite(item.managementFee)) {
-    return `<span class="product-ind"><span class="nowrap">${fee.label} <b>${fmtCmp(item.managementFee, 2)}</b></span> <span class="nowrap">· ממוצע ${fmtCmp(fee.peer.peers, 2)}</span></span>`;
+    return `<span class="product-ind"><span class="nowrap">${fee.label} <b>${fmtCmp(item.managementFee, 2)}</b></span> <span class="nowrap">· ממוצע בקבוצה ${fmtCmp(fee.peer.peers, 2)}</span></span>`;
   }
   return '<span class="product-ind"><span class="product-ask" data-ask-fee>הזן דמי ניהול</span></span>';
 }
@@ -1033,7 +1033,7 @@ function productDetailHtml(item, cmp) {
         <span class="product-stat-label">${label}</span>
         ${note ? `<span class="product-stat-note">${note}</span>` : ''}
         ${valueHtml}
-        ${avg ? `<span class="product-stat-avg">ממוצע ${avg}</span>` : ''}
+        ${avg ? `<span class="product-stat-avg">ממוצע בקבוצה ${avg}</span>` : ''}
       </div>`;
   // תשואת המסלול ל־3 שנים מול הממוצע — יחד עם דמי הניהול, שני המספרים שהמשתמש
   // בא לראות. התקופה ואופן החישוב צמודים לכותרת.
@@ -2734,8 +2734,8 @@ function wizScreenCompany() {
   const intro = wizard.product
     ? `מי מנהל את ה${escapeHtml(PRODUCT_LABEL[wizard.product] || 'חיסכון')}?`
     : 'מי מנהל את החיסכון שלך?';
-  // מסך הפתיחה של מבקר חדש: משפט אחד על מה מקבלים ומה להכין, ו"לא יודע"
-  // מעל רשת החברות — כדי שיימצא בטלפון בלי לגלול דרך כל החברות.
+  // מסך הפתיחה של מבקר חדש: משפט אחד על מה מקבלים ומה להכין. "לא יודע"
+  // מתחת לרשת החברות.
   const firstVisit = !wizard.product && !hasReportData();
   const lead = firstVisit
     ? `<p class="wiz-lead">מוסיפים את החסכונות שלך ומקבלים תמונה מרוכזת של הסכומים ושל החשיפה למניות, לחו״ל ולמטבע חוץ.</p>`
@@ -2747,13 +2747,13 @@ function wizScreenCompany() {
     ${lead}
     <h2 class="wiz-title">${intro}</h2>
     <p class="wiz-sub">${sub}</p>
-    <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
     <div class="wiz-company-grid">
       ${top.map(entry => `
         <button type="button" class="wiz-company" data-wiz="company" data-value="${escapeHtml(entry.name)}">
           ${wizLogo(entry, 'lg')}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
         </button>`).join('')}
     </div>
+    <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
     ${pinned.length ? `
       <div class="wiz-group">
         <div class="wiz-group-label">קרנות מגזריות</div>

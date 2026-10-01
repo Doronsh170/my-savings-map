@@ -8431,16 +8431,16 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 .stat-input input { width: 72px; font-size: 16px; padding: 3px 4px; }
 
 /* === הנגשה לקהל רחב: מסך פתיחה, הסבר חשיפות, תשואות ודמי ניהול ======== */
-/* מסך הפתיחה: משפט אחד על מה מקבלים, ו"לא יודע" מעל רשת החברות. */
+/* מסך הפתיחה: משפט אחד על מה מקבלים, ו"לא יודע" מתחת לרשת החברות, סימן השאלה משמאל. */
 .wiz-lead { margin: 0 0 10px; font-size: 15px; font-weight: 600; line-height: 1.5; color: var(--ink); }
 .wiz-unknown-top {
   display: flex !important; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; min-height: 48px; margin: 0 0 14px; padding: 12px 14px !important;
+  width: 100%; min-height: 48px; margin: 14px 0 0; padding: 12px 14px !important;
   border: 1px solid var(--accent-soft-2) !important; border-radius: 12px !important;
   background: var(--accent-soft) !important; color: var(--accent-dark, var(--accent)) !important;
   font-size: 14.5px !important; font-weight: 700 !important; text-decoration: none !important;
 }
-.wiz-unknown-top::before {
+.wiz-unknown-top::after {
   content: "?" !important; flex: 0 0 auto; width: 21px; height: 21px; border-radius: 50%;
   background: var(--accent); color: #fff; font-size: 13px; font-weight: 900;
   display: flex !important; align-items: center; justify-content: center;

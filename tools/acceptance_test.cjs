@@ -98,7 +98,7 @@ function check(name, ok, detail) {
       && (await card.locator('.product-actions button').count()) === 2
       && (await card.locator('.product-detail:visible >> text=איך מחושבת ההשוואה?').count()) === 0);
     const yieldLine = (await card.locator('.product-yield-row').textContent()).replace(/\s+/g, ' ').trim();
-    check('open product shows the track return with its period vs. the average', /^תשואת המסלול שלך מצטברת ל־3 שנים, לפני דמי ניהול -?\d+\.\d% ממוצע -?\d+\.\d%$/.test(yieldLine), yieldLine);
+    check('open product shows the track return with its period vs. the average', /^תשואת המסלול שלך מצטברת ל־3 שנים, לפני דמי ניהול -?\d+\.\d% ממוצע בקבוצה -?\d+\.\d%$/.test(yieldLine), yieldLine);
     check('every row has an open/close arrow', (await page.locator('#detailsRows .product-row .product-chev').count()) === (await page.locator('#detailsRows .product').count()));
     // שכבה 3: "השוואה מלאה" — טבלה, נתוני מסלול, ו"איך מחושבת ההשוואה?" בפנים.
     await card.locator('.product-actions >> text=השוואה מלאה').click();
@@ -280,9 +280,9 @@ function check(name, ok, detail) {
     const rowUids = await fresh.evaluate(() => Array.from(document.querySelectorAll('#detailsRows .product')).map(el => el.dataset.productUid));
     check('one row per product, largest first', JSON.stringify(rowUids) === JSON.stringify([pick.a.uid, withFeePeers, noPeers]));
     const ind = uid => fresh.textContent(`[data-ind-uid="${uid}"]`);
-    check('definition shown once under the list heading', (await fresh.textContent('.products-def')) === 'ממוצע = ממוצע קופות באותו סוג מסלול'
+    check('definition shown once under the list heading', (await fresh.textContent('.products-def')) === 'ממוצע בקבוצה = ממוצע קופות באותו סוג מסלול'
       && (await fresh.locator('#detailsRows :text("ממוצע קופות באותו סוג מסלול"):visible').count()) === 0);
-    check('row with fee: yours · average', /^דמי הניהול שלך 0\.50% · ממוצע \d\.\d\d%$/.test((await ind(pick.a.uid)).trim()), await ind(pick.a.uid));
+    check('row with fee: yours · average', /^דמי הניהול שלך 0\.50% · ממוצע בקבוצה \d\.\d\d%$/.test((await ind(pick.a.uid)).trim()), await ind(pick.a.uid));
     check('row without fee: "הזן דמי ניהול" only', (await ind(withFeePeers)).trim() === 'הזן דמי ניהול', await ind(withFeePeers));
     check('row without a comparison group has no extra line', (await ind(noPeers)).trim() === '', await ind(noPeers) + ' / ' + noPeers);
     const pensionRow = await fresh.evaluate(() => {
@@ -295,7 +295,7 @@ function check(name, ok, detail) {
         head: Array.from(div.querySelectorAll('thead th')).map(th => th.textContent),
         layer2: Array.from(div.querySelectorAll('.product-stat:not(.product-yield-row) .product-stat-label')).map(el => el.textContent) };
     });
-    check('pension row names the accumulation fee', /^דמי הניהול שלך מצבירה 0\.15% · ממוצע \d\.\d\d%$/.test(pensionRow.ind), pensionRow.ind);
+    check('pension row names the accumulation fee', /^דמי הניהול שלך מצבירה 0\.15% · ממוצע בקבוצה \d\.\d\d%$/.test(pensionRow.ind), pensionRow.ind);
     check('pension open product lists both fees separately', JSON.stringify(pensionRow.layer2) === JSON.stringify(['דמי הניהול שלך מצבירה', 'דמי הניהול שלך מהפקדות']), JSON.stringify(pensionRow.layer2));
     check('pension full comparison lists both fees', pensionRow.rows.includes('דמי הניהול שלך מצבירה') && pensionRow.rows.includes('דמי הניהול שלך מהפקדות'), JSON.stringify(pensionRow.rows));
     check('table header: נתון | שלך | ממוצע קופות באותו סוג מסלול', JSON.stringify(pensionRow.head) === JSON.stringify(['נתון', 'שלך', 'ממוצע קופות באותו סוג מסלול']), JSON.stringify(pensionRow.head));
@@ -320,7 +320,7 @@ function check(name, ok, detail) {
     await fresh.keyboard.press('Enter');
     const savedFee = await fresh.evaluate(u => JSON.parse(localStorage.getItem(STORAGE_KEY)).find(r => r.uid === u).management_fee, withFeePeers);
     check('fee typed in the table is saved', savedFee === 0.35, String(savedFee));
-    check('row switches to the with-fee state', /^דמי הניהול שלך 0\.35% · ממוצע/.test((await ind(withFeePeers)).trim()), await ind(withFeePeers));
+    check('row switches to the with-fee state', /^דמי הניהול שלך 0\.35% · ממוצע בקבוצה/.test((await ind(withFeePeers)).trim()), await ind(withFeePeers));
     // דמי הניהול המשוקללים מוצגים רק כשהוזנו לכל המוצרים; המוצר השלישי משלים אותם.
     await fresh.click(`[data-toggle-uid="${noPeers}"]`);
     await fresh.click(`.product[data-product-uid="${noPeers}"] [data-fee-edit][data-fee-field="managementFee"]`);
@@ -542,20 +542,21 @@ function check(name, ok, detail) {
       await fresh.click('[data-toggle-uid="gemelnet:416"]');
     }
 
-    // 21. מסך הפתיחה: הסבר קצר, ו"לא יודע" מעל רשת החברות.
+    // 21. מסך הפתיחה: הסבר קצר, החברות, ו"לא יודע" מתחת להן — סימן השאלה משמאל.
     const opener = await newPage();
     await opener.setViewportSize({ width: 360, height: 780 });
     const op = await opener.evaluate(() => {
       const top = sel => document.querySelector(sel).getBoundingClientRect().top;
       return { lead: document.querySelector('.wiz-lead').textContent, sub: document.querySelector('.wiz-sub').textContent,
-        order: top('.wiz-lead') < top('.wiz-title') && top('.wiz-unknown-top') < top('.wiz-company-grid'),
-        unknownInView: document.querySelector('.wiz-unknown-top').getBoundingClientRect().bottom <= innerHeight };
+        order: top('.wiz-lead') < top('.wiz-title') && top('.wiz-company-grid') < top('.wiz-unknown-top'),
+        markLeft: getComputedStyle(document.querySelector('.wiz-unknown-top'), '::after').content === '"?"'
+          && getComputedStyle(document.querySelector('.wiz-unknown-top'), '::before').content === 'none' };
     });
-    check('opening screen explains, then "don\'t know", then companies', op.order && op.unknownInView
+    check('opening screen explains, then companies, then "don\'t know" with the mark on the left', op.order && op.markLeft
       && /חשיפה למניות, לחו״ל ולמטבע חוץ/.test(op.lead) && /אפשר להתחיל מחיסכון אחד/.test(op.sub) && /בלי הרשמה/.test(op.sub), JSON.stringify(op));
     await opener.keyboard.press('Tab');
     let reached = false;
-    for (let k = 0; k < 6 && !reached; k++) {
+    for (let k = 0; k < 20 && !reached; k++) {
       reached = await opener.evaluate(() => document.activeElement && document.activeElement.classList.contains('wiz-unknown-top'));
       if (!reached) await opener.keyboard.press('Tab');
     }
