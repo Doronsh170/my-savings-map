@@ -8431,16 +8431,16 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 .stat-input input { width: 72px; font-size: 16px; padding: 3px 4px; }
 
 /* === הנגשה לקהל רחב: מסך פתיחה, הסבר חשיפות, תשואות ודמי ניהול ======== */
-/* מסך הפתיחה: משפט אחד על מה מקבלים, ו"לא יודע" מעל רשת החברות. */
+/* מסך הפתיחה: משפט אחד על מה מקבלים, ו"לא יודע" מתחת לרשת החברות, סימן השאלה משמאל. */
 .wiz-lead { margin: 0 0 10px; font-size: 15px; font-weight: 600; line-height: 1.5; color: var(--ink); }
 .wiz-unknown-top {
   display: flex !important; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; min-height: 48px; margin: 0 0 14px; padding: 12px 14px !important;
+  width: 100%; min-height: 48px; margin: 14px 0 0; padding: 12px 14px !important;
   border: 1px solid var(--accent-soft-2) !important; border-radius: 12px !important;
   background: var(--accent-soft) !important; color: var(--accent-dark, var(--accent)) !important;
   font-size: 14.5px !important; font-weight: 700 !important; text-decoration: none !important;
 }
-.wiz-unknown-top::before {
+.wiz-unknown-top::after {
   content: "?" !important; flex: 0 0 auto; width: 21px; height: 21px; border-radius: 50%;
   background: var(--accent); color: #fff; font-size: 13px; font-weight: 900;
   display: flex !important; align-items: center; justify-content: center;
@@ -8457,18 +8457,37 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 
 /* הסבר פשוט לכל מדד חשיפה: בתוך הכרטיס במסך רחב, ורשימה מתחת לכרטיסים
    בטלפון — שלושה כרטיסים צרים אינם מקום לשורת הסבר. */
-.metric-explain { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ink-muted); }
 .exposure-explain { display: none; margin: 12px 2px 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-muted); }
 .exposure-explain div { margin: 0 0 3px; }
 .exposure-explain dt { display: inline; font-weight: 700; color: var(--ink); }
 .exposure-explain dd { display: inline; margin: 0 4px 0 0; }
 .exposure-overlap { margin: 10px 2px 0; font-size: 13.5px; line-height: 1.5; color: var(--ink); }
-@media (max-width: 600px) {
-  .metric-explain { display: none; }
-  .exposure-explain { display: block; }
+/* ההסבר של כל מדד חשיפה — בטולטיפ: סימן "?" ליד הכותרת, נפתח במעבר עכבר,
+   במיקוד מהמקלדת או בהקשה בטלפון (is-tip-open, ב-scripts.js). הרשימה
+   exposure-explain מוצגת רק בהדפסה, שם אין טולטיפ. */
+.exposure-grid .metric-card { position: relative; }
+.exposure-grid .metric-card:hover, .exposure-grid .metric-card:focus-within, .exposure-grid .metric-card.is-tip-open { z-index: 5; }
+.exposure-grid .metric-label { display: flex; align-items: center; gap: 4px; }
+.metric-tip {
+  flex: 0 0 auto; width: 18px; height: 18px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--bg-soft, #f5f7fa); color: var(--ink-muted);
+  font: inherit; font-size: 12px !important; font-weight: 800; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; position: relative;
 }
+.metric-tip::before { content: ""; position: absolute; inset: -12px; }   /* אזור הקשה של 44px */
+.metric-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.metric-tip-text {
+  display: none; position: absolute; top: 38px; right: 8px; z-index: 6;
+  width: max-content; max-width: min(230px, 80vw); padding: 9px 11px; border-radius: 10px;
+  background: var(--ink); color: #fff; font-size: 13px; font-weight: 500; line-height: 1.45;
+  box-shadow: 0 6px 18px rgba(12, 26, 43, 0.18); text-align: right;
+}
+.exposure-grid .metric-card:nth-child(2) .metric-tip-text { right: 50%; transform: translateX(50%); }
+.exposure-grid .metric-card:nth-child(3) .metric-tip-text { right: auto; left: 8px; }
+.metric-card:focus-within .metric-tip-text, .metric-card.is-tip-open .metric-tip-text { display: block; }
+@media (hover: hover) { .metric-card:hover .metric-tip-text { display: block; } }
 @media print {
-  .metric-explain { display: none !important; }
+  .metric-tip, .metric-tip-text { display: none !important; }
   .exposure-explain { display: block !important; font-size: 9px !important; margin-top: 4px !important; color: #0b1c2c !important; }
   .exposure-overlap { font-size: 9px !important; margin-top: 3px !important; color: #0b1c2c !important; }
 }

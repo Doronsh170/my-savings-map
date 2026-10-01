@@ -995,7 +995,7 @@ function productIndicatorHtml(item, cmp) {
   const fee = feeRowsFor(item, cmp)[0];
   if (!fee.peer) return '';
   if (Number.isFinite(item.managementFee)) {
-    return `<span class="product-ind"><span class="nowrap">${fee.label} <b>${fmtCmp(item.managementFee, 2)}</b></span> <span class="nowrap">· ממוצע ${fmtCmp(fee.peer.peers, 2)}</span></span>`;
+    return `<span class="product-ind"><span class="nowrap">${fee.label} <b>${fmtCmp(item.managementFee, 2)}</b></span> <span class="nowrap">· ממוצע בקבוצה ${fmtCmp(fee.peer.peers, 2)}</span></span>`;
   }
   return '<span class="product-ind"><span class="product-ask" data-ask-fee>הזן דמי ניהול</span></span>';
 }
@@ -1033,7 +1033,7 @@ function productDetailHtml(item, cmp) {
         <span class="product-stat-label">${label}</span>
         ${note ? `<span class="product-stat-note">${note}</span>` : ''}
         ${valueHtml}
-        ${avg ? `<span class="product-stat-avg">ממוצע ${avg}</span>` : ''}
+        ${avg ? `<span class="product-stat-avg">ממוצע בקבוצה ${avg}</span>` : ''}
       </div>`;
   // תשואת המסלול ל־3 שנים מול הממוצע — יחד עם דמי הניהול, שני המספרים שהמשתמש
   // בא לראות. התקופה ואופן החישוב צמודים לכותרת.
@@ -1212,6 +1212,31 @@ document.addEventListener('focusout', event => {
   if (input.classList && input.classList.contains('product-fee-input') && !input.dataset.closing && input.closest('.stat-input')) {
     closeFeeEditor(input, true);
   }
+});
+
+/* טולטיפ ההסבר בכרטיסי החשיפה: הקשה על "?" פותחת וסוגרת (בטלפון אין
+   מעבר עכבר); הקשה במקום אחר או Escape סוגרים. */
+function setMetricTip(card, open) {
+  card.classList.toggle('is-tip-open', open);
+  const btn = card.querySelector('.metric-tip');
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+}
+document.addEventListener('click', event => {
+  const btn = event.target.closest('.metric-tip');
+  document.querySelectorAll('.metric-card.is-tip-open').forEach(card => {
+    if (!btn || card !== btn.closest('.metric-card')) setMetricTip(card, false);
+  });
+  if (!btn) return;
+  const card = btn.closest('.metric-card');
+  const open = !card.classList.contains('is-tip-open');
+  setMetricTip(card, open);
+  if (!open) btn.blur();
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  document.querySelectorAll('.metric-card.is-tip-open').forEach(card => setMetricTip(card, false));
+  const btn = document.activeElement;
+  if (btn && btn.classList && btn.classList.contains('metric-tip')) btn.blur();
 });
 
 /* הסבר אחד לשלושת כרטיסי החשיפה. בא במקום כפתור "?" בכל כרטיס, שבמובייל שבר
@@ -2734,8 +2759,8 @@ function wizScreenCompany() {
   const intro = wizard.product
     ? `מי מנהל את ה${escapeHtml(PRODUCT_LABEL[wizard.product] || 'חיסכון')}?`
     : 'מי מנהל את החיסכון שלך?';
-  // מסך הפתיחה של מבקר חדש: משפט אחד על מה מקבלים ומה להכין, ו"לא יודע"
-  // מעל רשת החברות — כדי שיימצא בטלפון בלי לגלול דרך כל החברות.
+  // מסך הפתיחה של מבקר חדש: משפט אחד על מה מקבלים ומה להכין. "לא יודע"
+  // מתחת לרשת החברות.
   const firstVisit = !wizard.product && !hasReportData();
   const lead = firstVisit
     ? `<p class="wiz-lead">מוסיפים את החסכונות שלך ומקבלים תמונה מרוכזת של הסכומים ושל החשיפה למניות, לחו״ל ולמטבע חוץ.</p>`
@@ -2747,13 +2772,13 @@ function wizScreenCompany() {
     ${lead}
     <h2 class="wiz-title">${intro}</h2>
     <p class="wiz-sub">${sub}</p>
-    <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
     <div class="wiz-company-grid">
       ${top.map(entry => `
         <button type="button" class="wiz-company" data-wiz="company" data-value="${escapeHtml(entry.name)}">
           ${wizLogo(entry, 'lg')}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
         </button>`).join('')}
     </div>
+    <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
     ${pinned.length ? `
       <div class="wiz-group">
         <div class="wiz-group-label">קרנות מגזריות</div>
