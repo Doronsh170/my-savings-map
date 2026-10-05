@@ -888,22 +888,33 @@ const COVERAGE_LABELS = [
 function renderCoverageNote(activeItems, totalBalance) {
   const el = document.getElementById('coverageNote');
   if (!el) return;
-  const lines = [`נתוני המסלולים נכונים לדיווח של ${fmtPeriodHebrew(DATASET_MAX_PERIOD)}.`];
-  const laggingBalance = activeItems.filter(item => !isCurrentPeriod(item.fund))
-    .reduce((sum, item) => sum + (Number(item.balance) || 0), 0);
-  if (laggingBalance > 0) {
-    lines.push(`${(laggingBalance / totalBalance * 100).toFixed(0)}% מהתיק במסלולים שעוד לא דיווחו על ${fmtPeriodHebrew(DATASET_MAX_PERIOD)}. הם נכללים בחשיפות, אך לא בתשואות, כדי לא לערבב תקופות.`);
-  }
-  const partial = COVERAGE_LABELS
-    .map(([key, label]) => [label, weightedMetricInfo(key).coveredPct])
+  const lagging = activeItems.filter(item => !isCurrentPeriod(item.fund));
+  const partial = COVERAGE_LABELS.map(([key, label]) => [label, weightedMetricInfo(key).coveredPct])
     .filter(([, pct]) => pct < 99.95);
-  if (partial.length) {
-    lines.push('חישוב על חלק מהתיק בלבד, כי למסלולים האחרים אין נתון תקף: '
-      + partial.map(([label, pct]) => `${label} — ${pct.toFixed(0)}% מהתיק`).join(' · ') + '.');
-  }
-  el.innerHTML = lines.map(line => `<span>${escapeHtml(line)}</span>`).join(' ');
-  el.classList.toggle('coverage-warn', lines.length > 1);
+  const open = !!el.querySelector('details[open]');
+  if (!lagging.length && !partial.length) { el.innerHTML = ''; el.hidden = true; return; }
+  el.hidden = false;
+  const heading = lagging.length ? 'לחלק מהחסכונות יש נתונים היסטוריים' : 'לחלק מהחסכונות חסרים נתונים';
+  const historical = lagging.length ? `<p>המסלולים הבאים לא דיווחו על ${escapeHtml(fmtPeriodHebrew(DATASET_MAX_PERIOD))}. הנתונים ההיסטוריים שלהם נכללים בחשיפות כשיש נתון, אך אינם נכללים בתשואות התיק, כדי לא לערבב תקופות.</p>
+    <ul>${lagging.map(item => `<li>${escapeHtml(item.fund.fund_name)} · דיווח ${escapeHtml(fmtPeriod(item.fund.report_period))}</li>`).join('')}</ul>` : '';
+  const coverage = partial.length ? `<p>חישוב על חלק מהתיק בלבד, כי למסלולים האחרים אין נתון תקף:</p><ul>${partial.map(([label, pct]) => `<li>${label} — ${pct.toFixed(0)}% מהתיק</li>`).join('')}</ul>` : '';
+  el.innerHTML = `<details class="data-status"${open ? ' open' : ''}><summary><span>${heading}</span> <span class="data-status-action">· ${open ? 'הסתר פרטים' : 'הצג פרטים'}</span></summary><div class="data-status-body">${historical}${coverage}</div></details>`;
+  el.classList.toggle('coverage-warn', true);
 }
+function renderMetricCoverage() {
+  [['Stock', 'stock_pct'], ['Foreign', 'foreign_pct'], ['Fx', 'fx_pct']].forEach(([id, key]) => {
+    const el = document.getElementById('agg' + id + 'Coverage');
+    const pct = weightedMetricInfo(key).coveredPct;
+    if (!el) return;
+    el.hidden = pct >= 99.95;
+    el.textContent = pct > 0 ? `לפי ${pct.toFixed(0)}% מהתיק` : 'אין נתון זמין';
+  });
+}
+document.addEventListener('toggle', event => {
+  if (event.target.classList?.contains('data-status')) {
+    event.target.querySelector('.data-status-action').textContent = event.target.open ? '· הסתר פרטים' : '· הצג פרטים';
+  }
+}, true);
 function weightedUserManagementFee(totalBalance) {
   let sum = 0;
   let covered = 0;
@@ -987,7 +998,7 @@ function setGroupAverage(id, info, digits) {
   if (!info) return;
   // ממוצע שחושב רק על חלק מהתיק מוצג מול הנתון שלך באותו חלק — לא מול הנתון
   // הגדול שבכרטיס, שמחושב על כל התיק.
-  el.textContent = `ממוצע בקבוצה ${info.value.toFixed(digits)}%`
+  el.textContent = `ממוצע קבוצת ההשוואה ${info.value.toFixed(digits)}%`
     + (info.coveredPct < 99.95 ? ` · לפי ${info.coveredPct.toFixed(0)}% מהתיק, שבהם שלך ${info.mine.toFixed(digits)}%` : '');
 }
 function renderGroupAverages(activeItems) {
@@ -1013,7 +1024,7 @@ let OPEN_PRODUCT_UID = null;
 /* הניסוח מתאר את קבוצת ההשוואה בפועל: אותו סוג מוצר ואותה קטגוריית מסלול
    השקעה (ראו compareToPeers) — לא "מסלולים דומים" כללי. בשורות עצמן כתוב
    רק "ממוצע", וההגדרה מופיעה פעם אחת מתחת לכותרת הרשימה. */
-const CMP_PEERS_TEXT = 'ממוצע קופות באותו סוג מסלול';
+const CMP_PEERS_TEXT = 'ממוצע קבוצת ההשוואה';
 const CMP_NONE_TEXT = 'אין כרגע ממוצע מתאים להשוואה';
 /* הערה אחת כשחסר ממוצע לתשואה או לחשיפה. בלי השוואה כלל — הנוסח המלא. */
 function cmpMissingNote(f, cmp) {
@@ -1052,16 +1063,8 @@ function feeRowsFor(item, cmp) {
   if (isPensionFund(item.fund)) rows.push({ field: 'depositFee', label: 'דמי הניהול שלך מהפקדות', peer: byKey('deposit_fee') });
   return rows;
 }
-function productIndicatorHtml(item, cmp) {
-  const f = item.fund;
-  if (f.is_stale) return `<span class="product-ind">נתוני המסלול לא עודכנו מאז ${escapeHtml(fmtPeriod(f.report_period))}</span>`;
-  const fee = feeRowsFor(item, cmp)[0];
-  if (!fee.peer) return '';
-  if (Number.isFinite(item.managementFee)) {
-    return `<span class="product-ind"><span class="nowrap">${fee.label} <b>${fmtCmp(item.managementFee, 2)}</b></span> <span class="nowrap">· ממוצע בקבוצה ${fmtCmp(fee.peer.peers, 2)}</span></span>`;
-  }
-  return '<span class="product-ind"><span class="product-ask" data-ask-fee>הזן דמי ניהול</span></span>';
-}
+// השורה הסגורה מציגה רק זיהוי, יתרה ומשקל; הפרטים נמצאים בפתיחה.
+function productIndicatorHtml() { return ''; }
 /* דמי ניהול בשכבה 2 מוצגים כערך — לא כשדה טופס. לחיצה הופכת את הערך לשדה
    הזנה במקום; Enter או יציאה מהשדה שומרים, Escape מבטל. */
 function feeValueHtml(item, field, label) {
@@ -1076,7 +1079,7 @@ function openFeeEditor(button) {
   if (idx < 0) return;
   const field = button.getAttribute('data-fee-field') === 'depositFee' ? 'depositFee' : 'managementFee';
   const value = userFunds[idx][field];
-  const label = button.closest('.product-stat').querySelector('.product-stat-label').textContent;
+  const label = button.closest('[data-fee-label]')?.dataset.feeLabel || button.closest('.product-stat').querySelector('.product-stat-label').textContent;
   const wrap = document.createElement('span');
   wrap.className = 'stat-value stat-input';
   wrap.innerHTML = `<input type="number" class="product-fee-input" data-fee-uid="${escapeHtml(button.getAttribute('data-fee-uid'))}" data-fee-field="${field}"
@@ -1087,6 +1090,23 @@ function openFeeEditor(button) {
   input.focus();
   input.select();
 }
+/* תשואה מצטברת של 12 חודשי דיווח רצופים, עד חודש הדיווח של המסלול.
+   חודש חסר אינו אפס, ואין להשתמש בתשואה מתחילת השנה במקום שנה אחרונה. */
+function trailingYearYield(fund) {
+  const validPeriod = period => /^\d{6}$/.test(String(period)) && Number(String(period).slice(4)) >= 1 && Number(String(period).slice(4)) <= 12;
+  if (!fund || !validPeriod(fund.hist_start) || !validPeriod(fund.report_period) || !Array.isArray(fund.hist_yield)) return null;
+  const end = monthDiff(fund.hist_start, fund.report_period);
+  if (!Number.isInteger(end) || end < 11 || end >= fund.hist_yield.length) return null;
+  const months = fund.hist_yield.slice(end - 11, end + 1);
+  if (months.length !== 12 || months.some(value => typeof value !== 'number' || !Number.isFinite(value) || value < -100)) return null;
+  return (months.reduce((factor, value) => factor * (1 + value / 100), 1) - 1) * 100;
+}
+function trailingYearComparison(fund) {
+  const mine = trailingYearYield(fund);
+  const values = Number.isFinite(mine) && cmpIsFresh(fund)
+    ? (cmpPolicyPeers(fund) || []).map(trailingYearYield).filter(Number.isFinite) : [];
+  return { mine, peers: values.length >= CMP_MIN_PEERS ? cmpMean(values) : null, count: values.length };
+}
 function productDetailHtml(item, cmp) {
   const f = item.fund;
   const uid = escapeHtml(f.uid);
@@ -1096,23 +1116,23 @@ function productDetailHtml(item, cmp) {
         <span class="product-stat-label">${label}</span>
         ${note ? `<span class="product-stat-note">${note}</span>` : ''}
         ${valueHtml}
-        ${avg ? `<span class="product-stat-avg">ממוצע בקבוצה ${avg}</span>` : ''}
+        ${avg ? `<span class="product-stat-avg">ממוצע קבוצת ההשוואה ${avg}</span>` : ''}
       </div>`;
-  // תשואת המסלול ל־3 שנים מול הממוצע — יחד עם דמי הניהול, שני המספרים שהמשתמש
-  // בא לראות. התקופה ואופן החישוב צמודים לכותרת.
+  const annual = trailingYearComparison(f);
+  const annualHtml = tile('תשואה בשנה האחרונה', `<span class="stat-value">${fmtCmp(annual.mine, 1)}</span>`, Number.isFinite(annual.peers) ? fmtCmp(annual.peers, 1) : '', 'product-year-row', Number.isFinite(annual.mine) ? '12 חודשים · לפני דמי ניהול' : 'אין נתונים ל־12 חודשים מלאים');
   const yieldRow = cmp && cmp.rows.find(row => row.key === 'yield');
   const yieldValue = yieldRow ? yieldRow.mine : f.yield_trailing_3yrs;
-  const yieldHtml = typeof yieldValue === 'number'
-    ? tile(YIELD_LABEL, `<span class="stat-value">${fmtCmp(yieldValue, 1)}</span>`, yieldRow ? fmtCmp(yieldRow.peers, 1) : '', 'product-yield-row', YIELD_PERIOD_NOTE)
-    : '';
-  const fees = feeRowsFor(item, cmp)
-    .map(row => tile(row.label, feeValueHtml(item, row.field, row.label), row.peer ? fmtCmp(row.peer.peers, 2) : ''))
-    .join('');
+  const yieldHtml = tile('תשואה ל־3 שנים', `<span class="stat-value">${fmtCmp(yieldValue, 1)}</span>`, yieldRow ? fmtCmp(yieldRow.peers, 1) : '', 'product-yield-row', 'מצטברת · לפני דמי ניהול');
+  const fees = `<div class="product-stat product-fee-card"><span class="product-stat-label">דמי הניהול שלך</span>${feeRowsFor(item, cmp).map(row => `<div class="product-fee-entry" data-fee-label="${escapeHtml(row.label)}">
+    <span class="product-stat-note">${row.field === 'depositFee' ? 'מהפקדות' : 'שנתיים · מצבירה'}</span>
+    ${feeValueHtml(item, row.field, row.label)}
+    ${row.peer ? `<span class="product-stat-avg">ממוצע קבוצת ההשוואה ${fmtCmp(row.peer.peers, 2)}</span>` : ''}
+  </div>`).join('')}</div>`;
   const note = f.is_stale
     ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה לקופות באותו סוג מסלול.</p>`
     : (cmpMissingNote(f, cmp) ? `<p class="product-note">${cmpMissingNote(f, cmp)}</p>` : '');
   return `
-      <div class="product-fees product-stats">${yieldHtml}${fees}</div>
+      <div class="product-fees product-stats product-three-stats">${annualHtml}${yieldHtml}${fees}</div>
       ${note}
       <p class="product-expo">מניות <b>${fmtRound(f.stock_pct)}</b> · חו״ל <b>${fmtRound(f.foreign_pct)}</b> · מט״ח <b>${fmtRound(f.fx_pct)}</b></p>
       <div class="product-actions">
@@ -1132,17 +1152,23 @@ function fullComparisonHtml(item, cmp, forPrint) {
   const byKey = key => cmp && cmp.rows.find(row => row.key === key);
   const mineFee = field => Number.isFinite(item[field]) ? item[field].toFixed(2) + '%' : 'לא הוזנו';
   const rows = [];
+  const fees = [];
   const yieldRow = byKey('yield');
+  const annual = trailingYearComparison(f);
+  if (Number.isFinite(annual.mine)) rows.push(['תשואה בשנה האחרונה<span class="cmp-row-note">12 חודשים, לפני דמי ניהול</span>', fmtCmp(annual.mine, 1), fmtCmp(annual.peers, 1)]);
   if (yieldRow) rows.push([`${YIELD_LABEL}<span class="cmp-row-note">${YIELD_PERIOD_NOTE}</span>`, fmtCmp(yieldRow.mine, 1), fmtCmp(yieldRow.peers, 1)]);
-  feeRowsFor(item, cmp).forEach(row => rows.push([row.label, mineFee(row.field), fmtCmp(row.peer && row.peer.peers, 2)]));
+  feeRowsFor(item, cmp).forEach(row => fees.push([row.label, mineFee(row.field), fmtCmp(row.peer && row.peer.peers, 2)]));
   const stockRow = byKey('stock');
   if (stockRow) rows.push(['חשיפה למניות', fmtCmp(stockRow.mine, 0), fmtCmp(stockRow.peers, 0)]);
   const table = cmp ? `
       <table class="product-cmp">
-        <thead><tr><th scope="col">נתון</th><th scope="col">שלך</th><th scope="col">${CMP_PEERS_TEXT}</th></tr></thead>
+        <thead><tr><th scope="col">נתון</th><th scope="col">המסלול שלך</th><th scope="col">${CMP_PEERS_TEXT}</th></tr></thead>
         <tbody>${rows.map(([label, mine, peers]) =>
           `<tr><th scope="row">${label}</th><td class="product-cmp-mine">${mine}</td><td class="product-cmp-peer">${peers}</td></tr>`).join('')}</tbody>
       </table>
+      <h5 class="fund-facts-head">דמי ניהול</h5>
+      <table class="product-cmp"><thead><tr><th scope="col">נתון</th><th scope="col">דמי הניהול שלך</th><th scope="col">${CMP_PEERS_TEXT}</th></tr></thead>
+      <tbody>${fees.map(([label, mine, peers]) => `<tr><th scope="row">${label}</th><td class="product-cmp-mine">${mine}</td><td class="product-cmp-peer">${peers}</td></tr>`).join('')}</tbody></table>
       ${cmpMissingNote(f, cmp) ? `<p class="product-note">${cmpMissingNote(f, cmp)}</p>` : ''}
       ${yieldRow ? '<p class="product-note">התשואה מצטברת לכל שלוש השנים יחד, ואינה תשואה שנתית. היא מתייחסת לתקופה המוצגת; התוצאה בחיסכון שלך תלויה גם במועד ההצטרפות, בהפקדות ובמשיכות ובדמי הניהול.</p>' : ''}
       <p class="product-note">דמי הניהול שלך — כפי שהזנת. הממוצע — דמי הניהול הממוצעים בקבוצת ההשוואה. דמי הניהול הממוצעים במסלול עצמו מופיעים בנתוני המסלול.</p>`
@@ -1151,6 +1177,7 @@ function fullComparisonHtml(item, cmp, forPrint) {
   const facts = [
     fact('תשואה חודשית', fmtPct(f.monthly_yield, 2)),
     fact('מתחילת השנה', fmtPct(f.ytd_yield, 2)),
+    !cmp ? fact('תשואה בשנה האחרונה · 12 חודשים', fmtPct(annual.mine, 1), true) : '',
     yieldRow ? '' : fact('תשואת המסלול, מצטברת ל־3 שנים', fmtPct(f.yield_trailing_3yrs, 2), true),
     stockRow ? '' : fact('מניות', fmtPct(f.stock_pct, 1)),
     fact('חו״ל', fmtPct(f.foreign_pct, 1)),
@@ -1182,11 +1209,11 @@ function productItemHtml(item, activeItems, totalBalance) {
   return `
     <article class="product${open ? ' is-open' : ''}" data-product-uid="${uid}">
       <button type="button" class="product-row" data-toggle-uid="${uid}" aria-expanded="${open}" aria-controls="${panelId}">
-        ${brand ? wizLogo(brand) : '<span class="wiz-logo" aria-hidden="true"></span>'}
+        
         <span class="product-mid">
           <span class="product-title">${escapeHtml(title)}</span>
           ${track ? `<span class="product-track-line">${escapeHtml(track)}</span>` : ''}
-          <span class="product-inds" data-ind-uid="${uid}">${productIndicatorHtml(item, cmp)}</span>
+          <span class="product-inds" data-ind-uid="${uid}" hidden>${productIndicatorHtml(item, cmp)}</span>
         </span>
         <span class="product-amt">
           <b>${fmtCurrency(balance)}</b>
@@ -1236,6 +1263,7 @@ function commitProductFee(input) {
   }
   setFeeMetric(weightedUserManagementFee(getTotalBalance()));
   renderGroupAverages(userFunds.filter(i => (Number(i.balance) || 0) > 0));
+  renderFeeRows(userFunds.filter(i => (Number(i.balance) || 0) > 0));
   refreshSimulationDefaults();
 }
 function closeFeeEditor(input, save) {
@@ -1246,7 +1274,7 @@ function closeFeeEditor(input, save) {
   const wrap = input.closest('.stat-input');
   if (idx < 0 || !wrap) return;
   const field = input.getAttribute('data-fee-field') === 'depositFee' ? 'depositFee' : 'managementFee';
-  const label = wrap.closest('.product-stat').querySelector('.product-stat-label').textContent;
+  const label = wrap.closest('[data-fee-label]')?.dataset.feeLabel || wrap.closest('.product-stat').querySelector('.product-stat-label').textContent;
   const holder = document.createElement('span');
   holder.innerHTML = feeValueHtml(userFunds[idx], field, label);
   const button = holder.firstElementChild;
@@ -1317,7 +1345,8 @@ const EXPOSURE_MORE = [
   'החשיפה למניות כוללת גם השקעה דרך קרנות ודרך נגזרים — חוזים שערכם נקבע לפי מחירי מניות. לכן היא יכולה לעלות מעט על 100%.',
   'החשיפה למט״ח נמוכה בדרך כלל מהחשיפה לחו״ל, כי חלק מההשקעות בחו״ל מגודרות — מוגנות מראש מפני שינויים בשער המטבע מול השקל.',
   'איך מחושב הנתון הכולל: אחוז החשיפה של כל מסלול נספר לפי חלקו ביתרה הכוללת שהוזנה (ממוצע משוקלל). הנתונים לקוחים מהדיווח הציבורי של כל מסלול.',
-  'מסלול שאין לו נתון אינו נספר כאפס: החישוב נעשה רק על החלק בתיק שיש לו נתון, והשורה שמעל הכרטיסים מציינת זאת.'
+  'מסלול שאין לו נתון אינו נספר כאפס: החישוב נעשה רק על החלק בתיק שיש לו נתון, והכיסוי מצוין ליד המדד. פירוט נמצא בהודעה שמעל הכרטיסים.',
+  'המדדים עשויים לחפוף: אותה השקעה יכולה להיכלל ביותר ממדד אחד, ולכן אין לחבר את האחוזים.'
 ];
 function openInfoDialog(kind, uid) {
   const dialog = document.getElementById('infoDialog');
@@ -1367,6 +1396,9 @@ function renderDashboard() {
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('detailsSection').style.display = 'none';
     document.getElementById('perfSection').style.display = 'none';
+    document.getElementById('feesSection').style.display = 'none';
+    document.getElementById('simulationEntrySection').style.display = 'none';
+    document.body.classList.remove('simulation-view');
     const historySection = document.getElementById('historySection');
     if (historySection) historySection.style.display = 'none';
     const bottomActions = document.getElementById('bottomActions');
@@ -1388,6 +1420,8 @@ function renderDashboard() {
   renderBalanceAge(activeItems);
   renderPortfolioSummary(activeItems, totalBalance);
   renderCoverageNote(activeItems, totalBalance);
+  renderMetricCoverage();
+  renderFeeRows(activeItems);
   setMetric('aggStock', aggStock, 1);
   setMetric('aggForeign', aggForeign, 1);
   setMetric('aggFx', aggFx, 1);
@@ -1416,17 +1450,19 @@ function renderDashboard() {
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('detailsSection').style.display = 'block';
   document.getElementById('perfSection').style.display = 'block';
+  document.getElementById('feesSection').style.display = 'block';
   renderHistorySection(activeItems);
   // v3.87: when the dashboard is shown, all dashboard accordion tabs start closed by default
   const perfToggle = document.querySelector('.perf-toggle-section');
-  const simulationToggle = document.getElementById('simulationDetails');
-  [perfToggle, simulationToggle].forEach(section => {
+  const feeToggle = document.querySelector('.fees-toggle-section');
+  [perfToggle, feeToggle].forEach(section => {
     if (section) section.open = false;
   });
   const simulationResults = document.getElementById('simResultsBlock');
   if (simulationResults) simulationResults.hidden = true;
   const simulationTabSection = document.getElementById('simulationTabSection');
-  if (simulationTabSection) simulationTabSection.style.display = SIMULATION_ENABLED ? 'block' : 'none';
+  if (simulationTabSection) simulationTabSection.style.display = document.body.classList.contains('simulation-view') ? 'block' : 'none';
+  document.getElementById('simulationEntrySection').style.display = SIMULATION_ENABLED ? 'block' : 'none';
   const bottomActions = document.getElementById('bottomActions');
   if (bottomActions) bottomActions.style.display = 'block';
   refreshSimulationDefaults();
@@ -1489,15 +1525,7 @@ function portfolioItemLabel(item, activeItems) {
   return twins.length ? (fund.fund_name || label) : label;
 }
 function portfolioSummaryText(activeItems, totalBalance) {
-  if (!activeItems.length || totalBalance <= 0) return '';
-  const sorted = activeItems.slice().sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0));
-  const share = item => Math.round((Number(item.balance) || 0) / totalBalance * 100);
-  if (sorted.length === 1) return `עד עכשיו הוספת חיסכון אחד: ${portfolioItemLabel(sorted[0], activeItems)}.`;
-  const [first, second] = sorted;
-  if (share(first) === share(second)) {
-    return `עד עכשיו הוספת ${sorted.length} חסכונות. הגדולים שבהם, ${portfolioItemLabel(first, activeItems)} ו${portfolioItemLabel(second, activeItems)}, הם ${share(first)}% מהיתרה שהוזנה כל אחד.`;
-  }
-  return `עד עכשיו הוספת ${sorted.length} חסכונות. הגדול שבהם, ${portfolioItemLabel(first, activeItems)}, הוא ${share(first)}% מהיתרה שהוזנה.`;
+  return totalBalance > 0 ? (activeItems.length === 1 ? 'חיסכון אחד' : `${activeItems.length} חסכונות`) : '';
 }
 function renderPortfolioSummary(activeItems, totalBalance) {
   const el = document.getElementById('portfolioSummary');
@@ -1763,11 +1791,10 @@ function initSimulationCalculator() {
     runBtn.addEventListener('click', runHistoricalSimulation);
     runBtn.dataset.bound = '1';
   }
-  const details = document.getElementById('simulationDetails');
-  if (details && !details.dataset.bound) {
-    details.addEventListener('toggle', () => { if (details.open) refreshSimulationDefaults(); });
-    details.dataset.bound = '1';
-  }
+  ['simFeeInput', 'simInflationInput'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', renderSimulationAssumptions);
+  });
+  renderSimulationAssumptions();
   refreshSimulationDefaults();
 }
 
@@ -2461,6 +2488,8 @@ function goToDashboard() {
     alert('כדי לעבור לדשבורד צריך להוסיף לפחות מוצר אחד ולהזין יתרה.');
     return;
   }
+  document.body.classList.remove('simulation-view');
+  document.getElementById('simulationTabSection').style.display = 'none';
   renderDashboard();
   if (typeof window.enterDashboardView === 'function') {
     window.enterDashboardView();
@@ -3427,4 +3456,60 @@ if (document.readyState === 'loading') {
   const returnBtn = document.getElementById('returnLandingBtn');
   if (returnBtn) returnBtn.addEventListener('click', returnToLanding);
 })();
+
+
+
+
+/* תצוגת דמי ניהול נפרדת וניווט לסימולציה; החישובים נשארים ללא שינוי. */
+function renderFeeRows(activeItems) {
+  const wrap = document.getElementById('feeRows');
+  if (!wrap) return;
+  wrap.innerHTML = activeItems.slice().sort((a, b) => b.balance - a.balance).map(item => {
+    const cmp = compareToPeers(item.fund, item.managementFee, item.depositFee);
+    const { title, track } = productTitleParts(item);
+    return `<article class="fee-row"><div class="fee-row-head"><div><h4>${escapeHtml(title)}</h4><p>${escapeHtml(track)}</p></div><button type="button" class="dashboard-secondary fee-edit-btn" data-fee-open-uid="${escapeHtml(item.fund.uid)}">עדכון</button></div>
+      <dl class="fee-comparisons">${feeRowsFor(item, cmp).map(row => `<div><dt>${isPensionFund(item.fund) ? (row.field === 'depositFee' ? 'מהפקדות' : 'מצבירה') : 'מצבירה'}</dt><dd><span>דמי הניהול שלך <b>${fmtUserFee(item[row.field])}</b></span><span>ממוצע קבוצת ההשוואה <b>${fmtCmp(row.peer && row.peer.peers, 2)}</b></span></dd></div>`).join('')}</dl></article>`;
+  }).join('');
+}
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-fee-open-uid]');
+  if (!button) return;
+  const uid = button.dataset.feeOpenUid;
+  setProductOpen(uid, true);
+  document.querySelector(`#detailsRows .product[data-product-uid="${CSS.escape(uid)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+function renderSimulationAssumptions() {
+  const el = document.getElementById('simAdvancedSummary');
+  const fee = readSimFeePct(weightedUserManagementFee(getTotalBalance()));
+  if (el) el.textContent = `דמי ניהול ${fee.toFixed(2)}% · אינפלציה ${readSimInflationPct().toFixed(1)}%`;
+}
+let simulationReturnScroll = 0;
+function showSimulationView() {
+  document.body.classList.add('simulation-view');
+  document.getElementById('simulationTabSection').style.display = 'block';
+  refreshSimulationDefaults();
+  renderSimulationAssumptions();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  document.getElementById('simulationTitle').focus({ preventScroll: true });
+}
+function openSimulationView() {
+  if (!SIMULATION_ENABLED || !hasReportData()) return;
+  simulationReturnScroll = window.scrollY;
+  history.pushState({ ...history.state, savingsView: 'simulation' }, '');
+  showSimulationView();
+}
+function restorePortfolioView() {
+  document.body.classList.remove('simulation-view');
+  document.getElementById('simulationTabSection').style.display = 'none';
+  window.scrollTo({ top: simulationReturnScroll, behavior: 'auto' });
+  document.getElementById('openSimulationBtn').focus({ preventScroll: true });
+}
+function closeSimulationView() {
+  if (history.state?.savingsView === 'simulation') history.back();
+  else restorePortfolioView();
+}
+window.addEventListener('popstate', event => {
+  if (event.state?.savingsView === 'simulation') showSimulationView();
+  else if (document.body.classList.contains('simulation-view')) restorePortfolioView();
+});
 

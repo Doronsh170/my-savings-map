@@ -72,42 +72,42 @@
         <button type="button" class="action-btn" onclick="closeSharedPortfolio()">סגירה וחזרה לתיק שלי</button>
       </div>
     </div>
-    <h2>התיק שלך</h2>
+    <div class="dashboard-heading"><h2>התיק שלך</h2><span class="dashboard-kicker">תמונה אחת של החסכונות שהוספת</span></div>
 
     <div class="total-row">
       <div>
         <div class="total" id="totalBalance">-</div>
         <div class="total-label">יתרה כוללת שהוזנה</div>
-        <div class="balance-age" id="balanceAge" hidden></div>
+        <div class="portfolio-meta"><span id="portfolioSummary"></span><span class="balance-age" id="balanceAge" hidden></span></div>
+        <div class="dataset-date" id="dataUpdateMeta"></div>
         <div class="total-actions">
-          <button type="button" class="info-link" onclick="openBalancesDialog()">עדכון יתרות</button>
-          <span class="total-actions-sep" aria-hidden="true">·</span>
-          <button type="button" class="info-link" onclick="prepareAnotherFund()">+ הוספת חיסכון</button>
+          <button type="button" class="dashboard-primary" onclick="prepareAnotherFund()"><span aria-hidden="true">+</span> הוספת חיסכון</button>
+          <button type="button" class="dashboard-secondary" onclick="openBalancesDialog()">עדכון יתרות</button>
         </div>
       </div>
     </div>
 
-    <p class="portfolio-summary" id="portfolioSummary"></p>
     <div class="perf-note coverage-note" id="coverageNote"></div>
 
+    <div class="section-heading"><h3>החשיפות בתיק</h3><button type="button" class="info-link exposure-help" data-info="term" data-info-uid="exposure" aria-haspopup="dialog">איך לקרוא את החשיפות?</button></div>
     <div class="metric-grid exposure-grid">
       <div class="metric-card">
-        <div class="metric-label">חשיפה למניות<button type="button" class="metric-tip" aria-label="מה זה חשיפה למניות?" aria-describedby="tipStock" aria-expanded="false">?</button></div>
-        <span class="metric-tip-text" id="tipStock" role="tooltip">עד כמה החיסכון חשוף לשינויים בשוק המניות.</span>
+        <div class="metric-label">חשיפה למניות</div>
         <div class="metric-value"><span id="aggStock">0</span><span class="pct">%</span></div>
         <div class="metric-bar"><div class="metric-bar-fill stock-fill" id="aggStockBar"></div></div>
+        <div class="metric-coverage" id="aggStockCoverage" hidden></div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">חשיפה לחו״ל<button type="button" class="metric-tip" aria-label="מה זה חשיפה לחו״ל?" aria-describedby="tipForeign" aria-expanded="false">?</button></div>
-        <span class="metric-tip-text" id="tipForeign" role="tooltip">עד כמה החיסכון חשוף להשקעות מחוץ לישראל.</span>
+        <div class="metric-label">חשיפה לחו״ל</div>
         <div class="metric-value"><span id="aggForeign">0</span><span class="pct">%</span></div>
         <div class="metric-bar"><div class="metric-bar-fill foreign-fill" id="aggForeignBar"></div></div>
+        <div class="metric-coverage" id="aggForeignCoverage" hidden></div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">חשיפה למט״ח<button type="button" class="metric-tip" aria-label="מה זה חשיפה למט״ח?" aria-describedby="tipFx" aria-expanded="false">?</button></div>
-        <span class="metric-tip-text" id="tipFx" role="tooltip">עד כמה שינויים בשערי מטבעות זרים עשויים להשפיע על החיסכון.</span>
+        <div class="metric-label">חשיפה למט״ח</div>
         <div class="metric-value"><span id="aggFx">0</span><span class="pct">%</span></div>
         <div class="metric-bar"><div class="metric-bar-fill fx-fill" id="aggFxBar"></div></div>
+        <div class="metric-coverage" id="aggFxCoverage" hidden></div>
       </div>
     </div>
     <dl class="exposure-explain">
@@ -116,7 +116,7 @@
       <div><dt>מט״ח:</dt><dd>עד כמה שינויים בשערי מטבעות זרים עשויים להשפיע על החיסכון.</dd></div>
     </dl>
     <p class="exposure-overlap">המדדים עשויים לחפוף: אותה השקעה יכולה להיכלל ביותר ממדד אחד, ולכן אין לחבר את האחוזים.</p>
-    <button type="button" class="info-link exposure-help" data-info="term" data-info-uid="exposure" aria-haspopup="dialog">מה ההבדל בין מניות, חו״ל ומט״ח?</button>
+
 
   </div>
 </section>
@@ -126,7 +126,7 @@
     <div class="products-head">
       <h3>החסכונות שלך</h3>
     </div>
-    <p class="products-def">ממוצע בקבוצה = ממוצע קופות באותו סוג מסלול</p>
+    <p class="products-def">לחיצה על חיסכון פותחת את הנתונים וההשוואות שלו.</p>
     <div class="product-list" id="detailsRows"></div>
   </div>
 </section>
@@ -135,8 +135,8 @@
   <div class="container">
     <details class="dashboard-toggle-section perf-toggle-section">
       <summary class="dashboard-toggle-summary">
-        <span>תשואות המסלולים שלך</span>
-        <span class="dashboard-toggle-hint">פתח / סגור</span>
+        <span>ממוצע התשואות של הקופות שהוספת</span>
+        
       </summary>
       <div class="perf-wrap dashboard-toggle-content">
         <div class="perf-note perf-report-period" id="perfReportPeriod">נתוני התשואה מוצגים לפי הדיווח האחרון הזמין במאגר.</div>
@@ -156,13 +156,26 @@
             <div class="metric-value"><span id="perf3y">-</span><span class="pct">%</span></div>
             <div class="metric-avg" id="perf3yAvg" hidden></div>
           </div>
-          <div class="metric-card">
-            <div class="metric-label">דמי הניהול שלך, משוקלל</div>
+
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="details" id="feesSection" style="display:none;">
+  <div class="container">
+    <details class="dashboard-toggle-section fees-toggle-section">
+      <summary class="dashboard-toggle-summary"><span>ממוצע דמי הניהול של הקופות שהוספת</span></summary>
+      <div class="dashboard-toggle-content fees-content">
+        <p class="perf-note">הנתונים שלך הם דמי הניהול שהזנת. ההשוואה היא לממוצע בקבוצת ההשוואה של כל מסלול.</p>
+          <div class="metric-card fee-summary-card">
+            <div class="metric-label">דמי ניהול שנתיים מצבירה · משוקלל</div>
             <div class="metric-value"><span id="feeSavings">לא הוזנו</span><span class="pct" id="feeSavingsPct" style="display:none">%</span></div>
             <div class="metric-avg" id="feeSavingsAvg" hidden></div>
             <div class="metric-note" id="feeSavingsNote" hidden></div>
           </div>
-        </div>
+        <div id="feeRows" class="fee-rows"></div>
       </div>
     </details>
   </div>
@@ -173,7 +186,7 @@
     <details class="dashboard-toggle-section history-toggle-section" id="historyDetails">
       <summary class="dashboard-toggle-summary">
         <span>מגמה חודשית של התיק</span>
-        <span class="dashboard-toggle-hint">פתח / סגור</span>
+        
       </summary>
       <div class="dashboard-toggle-content history-wrap">
         <div class="perf-note">לפי נתוני המסלולים שלך בחודשים שבהם יש דיווח במאגר, ולפי היתרות שהזנת היום: חיסכון עם יתרה גדולה יותר משפיע יותר. ההיסטוריה מצטברת עם עדכוני המאגר החודשיים.</div>
@@ -186,13 +199,20 @@
 
 
 
-<section class="details simulation-tab-section" id="simulationTabSection">
+<section class="details" id="simulationEntrySection" style="display:none;">
   <div class="container">
-    <details class="dashboard-toggle-section simulation-toggle-section" id="simulationDetails">
-      <summary class="dashboard-toggle-summary">
-        <span>סימולציה לפי תשואות עבר</span>
-        <span class="dashboard-toggle-hint">פתח / סגור</span>
-      </summary>
+    <button type="button" class="simulation-entry" id="openSimulationBtn" onclick="openSimulationView()">
+      <span><strong>סימולציה לפי תשואות עבר</strong><span class="simulation-entry-note">בדיקת תרחיש עם הפקדות ותקופת חיסכון לבחירתך</span></span>
+      <span class="entry-arrow" aria-hidden="true">←</span>
+    </button>
+  </div>
+</section>
+
+<section class="details simulation-tab-section" id="simulationTabSection" style="display:none;">
+  <div class="container">
+    <button type="button" class="simulation-back dashboard-secondary" id="simulationBackBtn" onclick="closeSimulationView()">→ חזרה לתיק שלך</button>
+    <div class="simulation-heading"><h2 id="simulationTitle" tabindex="-1">סימולציה לפי תשואות עבר</h2><p>בחר הפקדה חודשית ותקופה כדי לבדוק תרחיש.</p></div>
+    <div class="simulation-toggle-section" id="simulationDetails">
       <div class="dashboard-toggle-content simulation-calculator-content">
         <p class="perf-note simulation-note">איך היתרה הייתה מתפתחת לפי תשואות 1995–2024, בהתאם לחשיפה למניות של התיק.</p>
 
@@ -216,6 +236,10 @@
             <span>מספר שנים</span>
             <input id="simYearsInput" type="number" min="1" max="30" step="1" inputmode="numeric" placeholder="10" />
           </label>
+        </div>
+        <details class="sim-advanced" id="simAdvanced">
+          <summary>אפשרויות נוספות <span id="simAdvancedSummary"></span></summary>
+          <div class="sim-form-grid sim-advanced-fields">
           <label class="sim-field">
             <span>דמי ניהול שנתיים לחישוב</span>
             <input id="simFeeInput" type="number" min="0" max="5" step="0.01" inputmode="decimal" placeholder="0" />
@@ -224,6 +248,9 @@
             <span>אינפלציה שנתית מוערכת</span>
             <input id="simInflationInput" type="number" min="0" max="20" step="0.1" inputmode="decimal" placeholder="2" />
           </label>
+          </div>
+        </details>
+        <div class="sim-run-row">
           <button type="button" class="sim-run-btn" id="simRunBtn">הרץ סימולציה</button>
         </div>
 
@@ -266,18 +293,23 @@
           </div>
         </div>
       </div>
-    </details>
+    </div>
   </div>
 </section>
 
 <section class="bottom-actions" id="bottomActions" aria-label="פעולות דוח" style="display:none;">
   <div class="container">
 
-    <div class="action-toolbar" aria-label="פעולות דוח">
-      <button type="button" class="action-btn" onclick="saveAsPDF()">שמירה / הדפסה ל-PDF</button>
-      <button type="button" class="action-btn" onclick="shareWhatsApp()">שליחה לווטסאפ</button>
+    <h3 class="actions-heading">שמירה ושיתוף</h3>
+    <div class="action-toolbar" aria-label="שמירה ושיתוף">
+      <button type="button" class="action-btn" onclick="saveAsPDF()"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 3H6v18h12V7zM14 3v5h4M9 12h6M9 16h6"/></svg>שמירה / הדפסה ל־PDF</button>
+      <button type="button" class="action-btn" onclick="shareWhatsApp()"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 12 16 7M8 12l8 5"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/></svg>שיתוף בווטסאפ</button>
     </div>
-    <button type="button" class="reset-link" onclick="resetAllData()">מחיקת כל הנתונים מהדפדפן</button>
+    <details class="portfolio-management">
+      <summary>ניהול התיק</summary>
+      <p>הנתונים נשמרים בדפדפן הזה.</p>
+      <button type="button" class="reset-link" onclick="resetAllData()">מחיקת כל הנתונים מהדפדפן</button>
+    </details>
   </div>
 </section>
 
@@ -417,3 +449,4 @@
 <script src="scripts.js"></script>
 </body>
 </html>
+
