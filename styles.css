@@ -8536,3 +8536,41 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 .wiz-company-unavailable { font-size: 12px; line-height: 1.4; color: var(--ink-muted); }
 .wiz-company:disabled { opacity: .55; cursor: default; }
 .wiz-company:disabled:hover { transform: none; box-shadow: none; }
+
+/* Refined product-first savings flow. Scoped to the search wizard. */
+#searchSection { background: #f3f5f5; padding-block: 36px; }
+#searchSection .savings-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); overflow: hidden; border-radius: 22px; border: 1px solid #dce5e9; background: #fff; max-width: 940px; margin-inline: auto; }
+#searchSection .savings-aside { display: flex; flex-direction: column; padding: 40px 28px; background: #132e3c; color: #edf6f5; }
+#searchSection .savings-aside h2 { font-size: 34px; font-weight: 500; line-height: 1.3; letter-spacing: -1px; margin: 0; }
+#searchSection .savings-aside p { font-size: 13px; line-height: 1.8; color: #c0d7d9; margin-top: auto; padding-top: 34px; }
+#searchSection .savings-orbit { width: 150px; height: 150px; border: 1px solid #739295; border-radius: 50%; margin: 44px auto; position: relative; opacity: .6; }
+#searchSection .savings-orbit::before { content: ''; position: absolute; inset: 23px; border: 1px solid #739295; border-radius: 50%; }
+#searchSection .savings-orbit::after { content: ''; position: absolute; inset: 49px; border-radius: 50%; background: #82c5b1; }
+#searchSection #wizard { width: 100%; min-width: 0; margin: 0 !important; padding: 32px !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: #fff !important; }
+#searchSection .wiz-title { font-size: 30px !important; font-weight: 500 !important; color: #142e3b !important; line-height: 1.35 !important; margin-bottom: 24px !important; }
+#searchSection .wiz-bar { padding: 0 0 24px !important; background: transparent !important; border: 0 !important; }
+#searchSection .wiz-progress { height: 4px !important; background: #dce5e9 !important; border-radius: 3px; }
+#searchSection .wiz-progress-fill { background: #176e65 !important; }
+#searchSection .wiz-bar-title { color: #176e65 !important; font-weight: 500 !important; font-size: 13px !important; }
+#searchSection .wiz-crumbs { margin-bottom: 20px !important; }
+#searchSection .wiz-crumb { color: #607783 !important; background: transparent !important; border: 0 !important; }
+#searchSection .wiz-choices { gap: 10px !important; }
+#searchSection .wiz-choice { padding: 20px !important; min-height: 68px !important; border: 1px solid #dce5e9 !important; border-radius: 14px !important; background: #fff !important; box-shadow: none !important; }
+#searchSection .wiz-choice-title { color: #142e3b !important; font-size: 17px !important; font-weight: 500 !important; }
+#searchSection .wiz-choice:hover, #searchSection .wiz-choice:focus-visible, #searchSection .wiz-company:hover, #searchSection .wiz-company:focus-visible { background: #ecf6f3 !important; border-color: #176e65 !important; }
+#searchSection .wiz-company-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+#searchSection .wiz-company { min-height: 62px !important; padding: 16px 10px !important; border: 1px solid #dce5e9 !important; border-radius: 14px !important; background: #fff !important; }
+#searchSection .wiz-company-name { font-size: 15px !important; font-weight: 500 !important; color: #142e3b !important; }
+#searchSection .wiz-link { color: #607783 !important; font-size: 13px !important; }
+#searchSection .wiz-input { border-radius: 12px !important; }
+#searchSection .wiz-cta { background: #176e65 !important; border-color: #176e65 !important; border-radius: 12px !important; }
+@media (max-width: 700px) {
+  #searchSection { padding-block: 20px; }
+  #searchSection .savings-layout { grid-template-columns: minmax(0, 1fr); border-radius: 18px; }
+  #searchSection .savings-aside { display: none; }
+  #searchSection #wizard { padding: 24px 20px !important; }
+  #searchSection .wiz-title { font-size: 26px !important; }
+}
+
+#searchSection > .container { max-width: 1000px !important; width: 100%; }
+#searchSection .wiz-choices { display: grid !important; grid-template-columns: minmax(0, 1fr); }
