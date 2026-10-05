@@ -390,7 +390,7 @@ function buildWizardIndexes() {
 
 const CMP_MIN_PEERS = 5;
 const CMP_TENURE_MONTHS = 36;   // ותק נדרש כדי להיכלל בממוצע התשואה
-const CMP_EXPOSURE_GAP = 20;    // נק׳ אחוז מחציון הקבוצה — מוציא מההשוואה
+const CMP_EXPOSURE_GAP = 20;    // נק׳ אחוז מחשיפת המסלול הנבדק, באפיקים הגמישים בלבד
 const CMP_EXPOSURE_MIN_MONTHS = 18;
 
 // סוגי מוצר שלעולם אינם מתערבבים זה בזה.
@@ -595,13 +595,19 @@ function cmpMean(values) {
   return nums.length ? nums.reduce((sum, v) => sum + v, 0) / nums.length : null;
 }
 
-/* מסלול שחשיפתו הממוצעת רחוקה מהקבוצה סווג לאותה קטגוריה אך מתנהג אחרת,
-   ולכן אינו משתתף בממוצעים. */
-function cmpFilterByExposure(members) {
-  const exposures = members.map(r => r._cmpExposure).filter(v => typeof v === 'number');
-  const median = cmpMedian(exposures);
-  if (median === null) return members;
-  return members.filter(r => typeof r._cmpExposure !== 'number' || Math.abs(r._cmpExposure - median) <= CMP_EXPOSURE_GAP);
+/* רק משולב סחיר ועוקב מדדים גמיש דורשים חשיפה דומה למניות.
+   משווים לחשיפת המסלול הנבדק, ולא לחציון של אפיק שהרכבו אינו אחיד. */
+function cmpNeedsExposureMatch(rec) {
+  const { kind } = trackKindOf(rec);
+  return kind === 'mixed_tradable' || kind === 'index_flex';
+}
+function cmpExposurePeers(rec, members) {
+  if (!cmpNeedsExposureMatch(rec)) return members;
+  if (!Number.isFinite(rec._cmpExposure)) return [];
+  const kind = trackKindOf(rec).kind;
+  return members.filter(r => trackKindOf(r).kind === kind &&
+    Number.isFinite(r._cmpExposure) &&
+    Math.abs(r._cmpExposure - rec._cmpExposure) <= CMP_EXPOSURE_GAP);
 }
 
 function cmpGroupLabel(rec, withPopulation) {
@@ -613,19 +619,16 @@ function cmpGroupLabel(rec, withPopulation) {
   return label;
 }
 
-/* העמיתים לממוצע התשואה והחשיפה: אותה קבוצת מדיניות, אותו חודש דיווח (אותה
-   תקופה בדיוק), ובדיקת התאמת החשיפה הקיימת (CMP_EXPOSURE_GAP מחציון הקבוצה) —
-   גם על המסלול הנבחן. בלי 18 חודשי היסטוריית חשיפה אין התאמה, לא למסלול
-   ולא לעמית. null = אין ממוצע מתאים. */
+/* אותה מדיניות ואותו חודש דיווח. התאמת אחוז המניות חלה רק
+   במשולב סחיר ובעוקב מדדים גמיש, ודורשת לפחות 18 חודשי חשיפה. */
 function cmpPolicyPeers(rec) {
   if (!rec._cmpPolicy) return null;
   const period = Number(rec.report_period);
-  const members = (CMP_POLICY_GROUPS[rec._cmpPolicy] || []).filter(r => Number(r.report_period) === period);
-  const median = cmpMedian(members.map(r => r._cmpExposure).filter(v => typeof v === 'number'));
-  const fits = r => typeof r._cmpExposure === 'number' && Math.abs(r._cmpExposure - median) <= CMP_EXPOSURE_GAP;
-  if (median === null || !fits(rec)) return null;
-  return members.filter(r => r.uid !== rec.uid && fits(r));
+  const members = (CMP_POLICY_GROUPS[rec._cmpPolicy] || [])
+    .filter(r => Number(r.report_period) === period && r.uid !== rec.uid);
+  return cmpExposurePeers(rec, members);
 }
+
 function cmpPolicyLabel(rec) {
   const { kind } = trackKindOf(rec);
   const label = trackLabel(rec) || CMP_POLICY_KIND_LABEL[kind] || 'מסלול';
@@ -642,7 +645,7 @@ function compareToPeers(rec, userFee, userDepositFee) {
   const self = uid => uid !== rec.uid;
   const yieldPeers = cmpPolicyPeers(rec) || [];
   const feePeers = cmpIsComparable(rec)
-    ? cmpFilterByExposure(CMP_FEE_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory + '|' + rec._cmpPopulation] || [])
+    ? cmpExposurePeers(rec, CMP_FEE_GROUPS[rec._cmpProduct + '|' + rec._cmpCategory + '|' + rec._cmpPopulation] || [])
       .filter(r => self(r.uid))
     : [];
   if (yieldPeers.length < CMP_MIN_PEERS && feePeers.length < CMP_MIN_PEERS) return null;
@@ -704,14 +707,15 @@ function renderComparisonMethod(item) {
       <p>"${CMP_PEERS_TEXT}" הוא ממוצע של קופות שעומדות בכל התנאים האלה:</p>
       <ul>
         <li>אותו סוג מוצר — ${escapeHtml(CMP_PRODUCT_LABEL[f._cmpProduct] || '')}.</li>
-        <li>בתשואה ובחשיפה: אותה מדיניות השקעה — ${escapeHtml(cmp.yieldGroup)} — ואותו חודש דיווח. החשיפה הממוצעת למניות בשנתיים האחרונות, של הקופה שלך ושל כל קופה בקבוצה, קרובה עד 20 נקודות אחוז לחציון הקבוצה; קופה בלי 18 חודשי נתונים אינה נכללת.</li>
+        <li>בתשואה ובחשיפה: אותה מדיניות השקעה — ${escapeHtml(cmp.yieldGroup)} — ואותו חודש דיווח.</li>
+        <li>התאמת אחוז מניות נדרשת רק במשולב סחיר ובעוקב מדדים גמיש: החשיפה הממוצעת של כל עמית לאורך עד 24 חודשי נתונים צריכה להיות בטווח של ${CMP_EXPOSURE_GAP} נקודות אחוז מהחשיפה הממוצעת של המסלול שלך. נדרשים לפחות ${CMP_EXPOSURE_MIN_MONTHS} חודשי חשיפה לשני המסלולים. בשאר האפיקים אין סינון לפי חשיפה למניות.</li>
         <li>בדמי ניהול: אותה קטגוריית מסלול — ${escapeHtml(CMP_CATEGORY_LABEL[f._cmpCategory] || 'מסלול')} — ואותה אוכלוסיית יעד — ${escapeHtml(CMP_POPULATION_LABEL[f._cmpPopulation] || '')}. הסכם קבוצתי משפיע על המחיר.</li>
         <li>ממוצע פשוט: כל קופה נספרת פעם אחת, בלי שקלול לפי גודל.</li>
         <li>לפחות ${CMP_MIN_PEERS} קופות בקבוצה. אם יש פחות, לא מוצגת השוואה.</li>
       </ul>
       <p>בקבוצה של הקופה שלך: ${cmp.yieldCount} קופות בתשואה ובחשיפה, ${cmp.feeCount} קופות בדמי ניהול. הקופה שלך עצמה אינה נספרת.</p>
       ${fundFees ? `<ul>${fundFees}</ul>` : ''}
-      <p>לא נכללות: קופות שלא דיווחו יותר משלושה חודשים ומסלולים בניהול אישי; בדמי ניהול — גם קופה שחשיפתה הממוצעת למניות רחוקה ביותר מ-20 נקודות אחוז מהקבוצה.</p>
+      <p>לא נכללות: קופות שלא דיווחו יותר משלושה חודשים ומסלולים בניהול אישי. באפיקים הגמישים בלבד — גם קופה ללא היסטוריית חשיפה מספקת או שאחוז המניות שלה אינו בטווח ההשוואה.</p>
       ${yieldRow
         ? '<p>בממוצע התשואה נכללות רק קופות בנות שלוש שנים לפחות. התשואה היא תשואת המסלול שבו החיסכון מושקע, לפני דמי ניהול.</p>'
           + (annual !== null ? `<p>התשואה המוצגת מצטברת לכל שלוש השנים יחד, ואינה תשואה שנתית. היא שווה ערך ל-${annual.toFixed(2)}% בשנה בממוצע.</p>` : '')
