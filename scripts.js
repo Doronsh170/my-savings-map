@@ -2801,37 +2801,21 @@ function wizLogo(entry, size) {
 
 /* --- מסך 1: מי מנהל את החיסכון --- */
 function wizScreenCompany() {
-  const top = MAIN_COMPANIES.map(name => {
-    const entry = BRAND_BY_NAME[name];
-    return { name, available: !!(entry && (!wizard.product || entry.products[wizard.product])) };
-  });
-  const intro = wizard.product
-    ? `מי מנהל את ה${escapeHtml(PRODUCT_LABEL[wizard.product] || 'חיסכון')}?`
-    : 'מי מנהל את החיסכון שלך?';
-  // מסך הפתיחה של מבקר חדש: משפט אחד על מה מקבלים ומה להכין. "לא יודע"
-  // מתחת לרשת החברות.
-  const firstVisit = !wizard.product && !hasReportData();
-  const lead = firstVisit
-    ? `<p class="wiz-lead">מוסיפים את החסכונות שלך ומקבלים תמונה מרוכזת של הסכומים ושל החשיפה למניות, לחו״ל ולמטבע חוץ.</p>`
-    : '';
-  const sub = firstVisit
-    ? 'כדאי להכין את שם המסלול והיתרה מהדוח או מהאזור האישי. אפשר להתחיל מחיסכון אחד. בלי הרשמה, בלי חיבור לחשבון.'
-    : 'השם מופיע בדוח השנתי או באזור האישי. בלי הרשמה, בלי חיבור לחשבון.';
+  const top = MAIN_COMPANIES
+    .map(name => BRAND_BY_NAME[name])
+    .filter(entry => entry && (!wizard.product || entry.products[wizard.product]));
   return `
-    ${lead}
-    <h2 class="wiz-title">${intro}</h2>
-    <p class="wiz-sub">${sub}</p>
+    <h2 class="wiz-title">באיזו חברה?</h2>
     <div class="wiz-company-grid">
       ${top.map(entry => `
-        <button type="button" class="wiz-company" data-wiz="company" data-value="${escapeHtml(entry.name)}"${entry.available ? '' : ' disabled'}>
+        <button type="button" class="wiz-company" data-wiz="company" data-value="${escapeHtml(entry.name)}">
           <span class="wiz-company-name">${escapeHtml(entry.name)}</span>
-          ${entry.available ? '' : '<span class="wiz-company-unavailable">אין מסלולים במאגר לסוג שנבחר</span>'}
         </button>`).join('')}
     </div>
-    <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
     <div class="wiz-links">
       <button type="button" class="wiz-link" data-wiz="allCompanies">חברה אחרת</button>
-    </div>`;
+    </div>
+    <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>`;
 }
 
 /* --- מסך 2: כל החברות --- */
@@ -2877,32 +2861,17 @@ function wizProductButton(key) {
     <button type="button" class="wiz-choice" data-wiz="product" data-value="${escapeHtml(item.key)}">
       <span class="wiz-choice-text">
         <span class="wiz-choice-title">${escapeHtml(item.label)}</span>
-        <span class="wiz-choice-hint">${escapeHtml(item.hint)}</span>
+        
       </span>
       <span class="wiz-chevron" aria-hidden="true"></span>
     </button>`;
 }
 function wizScreenProduct() {
-  const keys = wizard.company ? productsForBrand(wizard.company) : PRODUCT_ORDER.slice();
-  const primary = keys.slice(0, PRIMARY_PRODUCTS_SHOWN);
-  const extra = keys.slice(PRIMARY_PRODUCTS_SHOWN);
-  const sub = wizard.company
-    ? `אלה סוגי החיסכון שמנוהלים ב${escapeHtml(wizard.company)}.`
-    : 'אם יש לך כמה סוגים, נתחיל מאחד ונוסיף את השאר אחר כך.';
+  const keys = (wizard.company ? productsForBrand(wizard.company) : PRODUCT_ORDER)
+    .filter(key => PRODUCT_ORDER.slice(0, PRIMARY_PRODUCTS_SHOWN).includes(key));
   return `
-    <h2 class="wiz-title">איזה סוג חיסכון?</h2>
-    <p class="wiz-sub">${sub}</p>
-    <div class="wiz-choices">
-      ${primary.map(wizProductButton).join('')}
-      ${extra.length ? `
-        <button type="button" class="wiz-choice wiz-choice-more" data-wiz="moreProducts">
-          <span class="wiz-choice-text"><span class="wiz-choice-title">סוג אחר</span></span>
-          <span class="wiz-chevron${wizard.showExtraProducts ? ' is-open' : ''}" aria-hidden="true"></span>
-        </button>
-        <div class="wiz-choices wiz-choices-extra" id="wizExtraProducts" ${wizard.showExtraProducts ? '' : 'hidden'}>
-          ${extra.map(wizProductButton).join('')}
-        </div>` : ''}
-    </div>`;
+    <h2 class="wiz-title">איזה חיסכון להוסיף?</h2>
+    <div class="wiz-choices">${keys.map(wizProductButton).join('')}</div>`;
 }
 
 /* --- מסך 5: מסלולים --- */
