@@ -146,8 +146,8 @@ function brandOf(rec) {
 // סוגי החיסכון כפי שהמשתמש מכיר אותם. הסדר הוא סדר התצוגה.
 const PRODUCT_TYPES = [
   { key: 'pensia',      label: 'קרן פנסיה',        hint: 'ההפקדה שיורדת מהשכר כל חודש, כולל כיסוי לנכות ולשארים' },
-  { key: 'hishtalmut',  label: 'קרן השתלמות',      hint: 'נפתחת דרך המעסיק, וניתנת למשיכה אחרי שש שנים' },
   { key: 'gemel',       label: 'קופת גמל',         hint: 'חיסכון פנסיוני שאינו קרן פנסיה, נמשך בדרך כלל כקצבה' },
+  { key: 'hishtalmut',  label: 'קרן השתלמות',      hint: 'נפתחת דרך המעסיק, וניתנת למשיכה אחרי שש שנים' },
   { key: 'invest',      label: 'גמל להשקעה',       hint: 'חיסכון פרטי שאפשר למשוך בכל עת' },
   { key: 'insurance',   label: 'פוליסת חיסכון',    hint: 'חיסכון פיננסי בחברת ביטוח, שנפתח לרוב דרך סוכן' },
   { key: 'child',       label: 'חיסכון לכל ילד',   hint: 'החיסכון שנפתח לילד עם קצבת הילדים' },
@@ -156,8 +156,8 @@ const PRODUCT_TYPES = [
 const PRODUCT_LABEL = {};
 PRODUCT_TYPES.forEach(item => { PRODUCT_LABEL[item.key] = item.label; });
 const PRODUCT_ORDER = PRODUCT_TYPES.map(item => item.key);
-// עד שישה אריחים גלויים; השאר מתקפלים תחת "סוג אחר".
-const PRIMARY_PRODUCTS_SHOWN = 6;
+// חמשת סוגי החיסכון הראשיים גלויים; השאר מתקפלים תחת "סוג אחר".
+const PRIMARY_PRODUCTS_SHOWN = 5;
 
 function productOf(rec) {
   const cls = String(rec.classification || '');
@@ -2675,28 +2675,23 @@ window.handleFeeInput = handleFeeInput;
 
 /* === v5.0: אשף איתור הקופה ===
    כל מצב האשף יושב באובייקט אחד. שדה החיפוש הוא קלט, לא מצב.
-   חברה ← סוג חיסכון ← מסלול ← יתרה, כל שלב מסך מלא אחד.
+   סוג חיסכון ← חברה ← מסלול ← יתרה, כל שלב מסך מלא אחד.
    כל שלב דוחף רשומה להיסטוריית הדפדפן, כך שכפתור "אחורה" של המכשיר
    מחזיר שלב אחורה במקום לצאת מהאתר. */
 
 const RESULTS_PAGE = 6;
-// כמה חברות מוצגות במסך הראשון. השאר נגישות דרך "כל החברות".
-const MAIN_COMPANIES_SHOWN = 10;
-// קרנות מגזריות: דלות נכסים ולכן נופלות מדירוג ה-AUM, אך עתירות עמיתים
-// (מורים, איש קבע, עובדי רשויות). מוצמדות לסוף הרשת כדי שקהל היעד
-// המרכזי של הכלי לא ייאלץ להקליד. הדירוג עצמו נשאר לפי נכסים.
-const PINNED_COMPANIES = [
-  'קרנות השתלמות למורים ולגננות',
-  'קרן החסכון לצבא הקבע',
-  'גל לעובדי הוראה'
+// עשר החברות המרכזיות, בסדר התצוגה הקבוע.
+const MAIN_COMPANIES = [
+  'מנורה מבטחים', 'הפניקס', 'הראל', 'מגדל', 'כלל', 'מיטב',
+  'אלטשולר שחם', 'מור', 'אנליסט', 'ילין לפידות'
 ];
 
 const WIZ_STEP_META = {
-  company:      { title: 'בחירת חברה',   progress: 1 },
-  allCompanies: { title: 'חיפוש חברה',   progress: 1 },
-  unknown:      { title: 'איתור החיסכון', progress: 1 },
+  company:      { title: 'בחירת חברה',   progress: 2 },
+  allCompanies: { title: 'חיפוש חברה',   progress: 2 },
+  unknown:      { title: 'איתור החיסכון', progress: 2 },
   typeFirst:    { title: 'סוג החיסכון',  progress: 1 },
-  product:      { title: 'סוג החיסכון',  progress: 2 },
+  product:      { title: 'סוג החיסכון',  progress: 1 },
   results:      { title: 'בחירת מסלול',  progress: 3 },
   balance:      { title: 'הזנת יתרה',    progress: 4 },
   done:         { title: 'נוסף לתיק',    progress: 4 }
@@ -2704,7 +2699,7 @@ const WIZ_STEP_META = {
 const WIZ_TOTAL_STEPS = 4;
 
 const wizard = {
-  step: 'company',      // company | allCompanies | unknown | typeFirst | product | results | balance | done
+  step: 'typeFirst',    // company | allCompanies | unknown | typeFirst | product | results | balance | done
   company: '',
   product: '',
   chip: '',
@@ -2769,7 +2764,7 @@ function wizSet(patch) {
 function wizReset() {
   const before = wizSnapshot();
   Object.assign(wizard, {
-    step: 'company', company: '', product: '', chip: '', query: '', companyQuery: '',
+    step: 'typeFirst', company: '', product: '', chip: '', query: '', companyQuery: '',
     pickUid: '', showExtraProducts: false, limit: RESULTS_PAGE, globalSearch: false
   });
   wizPushHistory(before);
@@ -2782,16 +2777,13 @@ function wizBackTarget() {
     case 'allCompanies':
     case 'unknown':
       return { step: 'company', companyQuery: '' };
+    case 'company':
+      return { step: 'typeFirst', company: '', product: '' };
     case 'typeFirst':
-      return { step: 'unknown' };
     case 'product':
-      return { step: 'company', product: '', showExtraProducts: false };
+      return null;
     case 'results':
-      if (wizard.globalSearch) return { step: 'results', globalSearch: false, query: '', limit: RESULTS_PAGE };
-      if (!wizard.company) return { step: 'typeFirst' };
-      return productsForBrand(wizard.company).length > 1
-        ? { step: 'product', product: '', chip: '', query: '' }
-        : { step: 'company', product: '', chip: '', query: '' };
+      return { step: 'company', company: '', chip: '', query: '', globalSearch: false };
     case 'balance':
       return { step: 'results', pickUid: '' };
     default:
@@ -2809,14 +2801,10 @@ function wizLogo(entry, size) {
 
 /* --- מסך 1: מי מנהל את החיסכון --- */
 function wizScreenCompany() {
-  const list = brandsForProduct(wizard.product);
-  const top = list.slice(0, MAIN_COMPANIES_SHOWN);
-  const shown = {};
-  top.forEach(entry => { shown[entry.name] = 1; });
-  const pinned = PINNED_COMPANIES
-    .filter(name => !shown[name])
-    .map(name => list.filter(item => item.name === name)[0])
-    .filter(Boolean);
+  const top = MAIN_COMPANIES.map(name => {
+    const entry = BRAND_BY_NAME[name];
+    return { name, available: !!(entry && (!wizard.product || entry.products[wizard.product])) };
+  });
   const intro = wizard.product
     ? `מי מנהל את ה${escapeHtml(PRODUCT_LABEL[wizard.product] || 'חיסכון')}?`
     : 'מי מנהל את החיסכון שלך?';
@@ -2835,20 +2823,12 @@ function wizScreenCompany() {
     <p class="wiz-sub">${sub}</p>
     <div class="wiz-company-grid">
       ${top.map(entry => `
-        <button type="button" class="wiz-company" data-wiz="company" data-value="${escapeHtml(entry.name)}">
-          ${wizLogo(entry, 'lg')}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
+        <button type="button" class="wiz-company" data-wiz="company" data-value="${escapeHtml(entry.name)}"${entry.available ? '' : ' disabled'}>
+          <span class="wiz-company-name">${escapeHtml(entry.name)}</span>
+          ${entry.available ? '' : '<span class="wiz-company-unavailable">אין מסלולים במאגר לסוג שנבחר</span>'}
         </button>`).join('')}
     </div>
     <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
-    ${pinned.length ? `
-      <div class="wiz-group">
-        <div class="wiz-group-label">קרנות מגזריות</div>
-        ${pinned.map(entry => `
-          <button type="button" class="wiz-company-row" data-wiz="company" data-value="${escapeHtml(entry.name)}">
-            ${wizLogo(entry)}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
-            <span class="wiz-chevron" aria-hidden="true"></span>
-          </button>`).join('')}
-      </div>` : ''}
     <div class="wiz-links">
       <button type="button" class="wiz-link" data-wiz="allCompanies">חברה אחרת</button>
     </div>`;
@@ -2862,7 +2842,7 @@ function wizScreenAllCompanies() {
   const rows = list.length
     ? list.map(entry => `
         <button type="button" class="wiz-company-row" data-wiz="company" data-value="${escapeHtml(entry.name)}">
-          ${wizLogo(entry)}<span class="wiz-company-name">${escapeHtml(entry.name)}</span>
+          <span class="wiz-company-name">${escapeHtml(entry.name)}</span>
         </button>`).join('')
     : `<p class="wiz-empty-note">לא מצאנו חברה בשם הזה. אפשר לנסות חלק מהשם, או לחזור ולבחור מהחברות המרכזיות.</p>`;
   return `
@@ -3067,7 +3047,7 @@ function wizScreenDone() {
     <div class="wiz-done-actions">
       <button type="button" class="wiz-done-btn" data-wiz="dashboard">הצג את התמונה המלאה</button>
       ${wizard.company ? `<button type="button" class="wiz-done-btn" data-wiz="anotherSameCompany">עוד חיסכון ב${escapeHtml(wizard.company)}</button>` : ''}
-      <button type="button" class="wiz-done-btn" data-wiz="reset">חיסכון בחברה אחרת</button>
+      <button type="button" class="wiz-done-btn" data-wiz="reset">הוספת חיסכון נוסף</button>
     </div>`;
 }
 
@@ -3093,7 +3073,7 @@ function wizRenderBar() {
    לתיק, ו"התחל מחדש" נקרא כמו מחיקתו. */
 function wizExitButton() {
   if (hasReportData()) return '<button type="button" class="wiz-bar-reset" data-wiz="dashboard">חזרה לתיק</button>';
-  if (wizard.step === 'company') return '<span class="wiz-back-placeholder" aria-hidden="true"></span>';
+  if (wizard.step === 'typeFirst') return '<span class="wiz-back-placeholder" aria-hidden="true"></span>';
   return '<button type="button" class="wiz-bar-reset" data-wiz="reset">התחל מחדש</button>';
 }
 
@@ -3103,11 +3083,11 @@ function wizRenderCrumbs() {
   if (!wrap) return;
   const parts = [];
   if (wizard.step === 'done') { wrap.innerHTML = ''; wrap.hidden = true; return; }
-  if (wizard.company && wizard.step !== 'company') {
-    parts.push(`<button type="button" class="wiz-crumb" data-wiz="crumbCompany">${escapeHtml(wizard.company)}</button>`);
-  }
-  if (wizard.product && (wizard.step === 'results' || wizard.step === 'balance')) {
+  if (wizard.product && wizard.step !== 'typeFirst' && wizard.step !== 'product') {
     parts.push(`<button type="button" class="wiz-crumb" data-wiz="crumbProduct">${escapeHtml(PRODUCT_LABEL[wizard.product] || '')}</button>`);
+  }
+  if (wizard.company && (wizard.step === 'results' || wizard.step === 'balance')) {
+    parts.push(`<button type="button" class="wiz-crumb" data-wiz="crumbCompany">${escapeHtml(wizard.company)}</button>`);
   }
   wrap.innerHTML = parts.join('<span class="wiz-crumb-sep" aria-hidden="true">·</span>');
   wrap.hidden = !parts.length;
@@ -3225,6 +3205,8 @@ function wizHandle(action, value) {
   }
   if (action === 'company') {
     if (wizard.product) {
+      const entry = BRAND_BY_NAME[value];
+      if (!entry || !entry.products[wizard.product]) return;
       wizSet({ company: value, step: 'results', chip: '', query: '', limit: RESULTS_PAGE, globalSearch: false });
       return;
     }
@@ -3236,7 +3218,7 @@ function wizHandle(action, value) {
   if (action === 'typeFirst') { wizSet({ step: 'typeFirst', company: '', product: '' }); return; }
   if (action === 'moreProducts') { wizSet({ showExtraProducts: !wizard.showExtraProducts }); return; }
   if (action === 'product') {
-    if (wizard.step === 'typeFirst') { wizSet({ product: value, step: 'company' }); return; }
+    if (wizard.step === 'typeFirst' || !wizard.company) { wizSet({ product: value, company: '', step: 'company', chip: '', query: '', globalSearch: false }); return; }
     wizSet({ product: value, step: 'results', chip: '', query: '', limit: RESULTS_PAGE, globalSearch: false });
     return;
   }
@@ -3244,8 +3226,8 @@ function wizHandle(action, value) {
   if (action === 'more') { wizSet({ limit: wizard.limit + RESULTS_PAGE }); return; }
   if (action === 'clearFilters') { WIZ_FOCUS_FIELD = ''; wizSet({ chip: '', query: '', limit: RESULTS_PAGE }); return; }
   if (action === 'globalSearch') { WIZ_FOCUS_FIELD = 'wizTrackSearch'; wizSet({ globalSearch: true, limit: RESULTS_PAGE }); return; }
-  if (action === 'crumbCompany') { wizSet({ step: 'company', product: '', chip: '', query: '', globalSearch: false }); return; }
-  if (action === 'crumbProduct') { wizSet({ step: 'product', chip: '', query: '', globalSearch: false }); return; }
+  if (action === 'crumbCompany') { wizSet({ step: 'company', company: '', chip: '', query: '', globalSearch: false }); return; }
+  if (action === 'crumbProduct') { wizSet({ step: 'typeFirst', company: '', product: '', chip: '', query: '', globalSearch: false }); return; }
   if (action === 'reset') { WIZ_FOCUS_FIELD = ''; wizReset(); wizScrollIntoView(); return; }
   if (action === 'pick') { WIZ_FOCUS_FIELD = ''; wizSet({ step: 'balance', pickUid: value }); wizScrollIntoView(); return; }
   if (action === 'commit') { wizCommitBalance(); return; }
