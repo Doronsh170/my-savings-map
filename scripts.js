@@ -2812,10 +2812,10 @@ function wizScreenCompany() {
           <span class="wiz-company-name">${escapeHtml(entry.name)}</span>
         </button>`).join('')}
     </div>
-    <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>
     <div class="wiz-links">
       <button type="button" class="wiz-link" data-wiz="allCompanies">חברה אחרת</button>
-    </div>`;
+    </div>
+    <button type="button" class="wiz-link wiz-unknown-top" data-wiz="unknown">לא יודע איפה החיסכון מנוהל</button>`;
 }
 
 /* --- מסך 2: כל החברות --- */
