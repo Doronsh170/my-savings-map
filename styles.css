@@ -8786,3 +8786,24 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
   #dashboard .total-row .total-actions { grid-column: 2; grid-row: 1 / span 4; align-self: center; margin: 0 !important; }
 }
 
+/* Three equal product tiles: trailing year, cumulative three years, entered fees. */
+@media screen {
+  #detailsRows .product-three-stats { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 12px !important; max-width: none !important; }
+  #detailsRows .product-three-stats > .product-stat { grid-column: auto !important; min-width: 0; aspect-ratio: 1; padding: 18px 14px !important; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+  #detailsRows .product-three-stats .product-stat-label { font-size: 15px !important; font-weight: 600 !important; }
+  #detailsRows .product-three-stats .product-stat-note { font-size: 12px !important; }
+  #detailsRows .product-three-stats .stat-value { font-size: 30px !important; line-height: 1.2; margin: 5px 0; align-self: center; }
+  #detailsRows .product-three-stats .product-stat-avg { font-size: 13px !important; }
+  #detailsRows .product-three-stats .product-fee-entry { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; }
+  #detailsRows .product-three-stats .product-fee-entry + .product-fee-entry { padding-top: 8px; border-top: 1px solid #e0e6ed; }
+  #detailsRows .product-three-stats .product-fee-entry .stat-value { min-height: 36px; }
+  #detailsRows .product-three-stats .product-fee-entry .stat-add { font-size: 18px !important; }
+  #detailsRows .product-three-stats .product-fee-entry:has(+ .product-fee-entry) .stat-value,
+  #detailsRows .product-three-stats .product-fee-entry + .product-fee-entry .stat-value { font-size: 23px !important; margin: 0; }
+}
+@media screen and (max-width: 900px) {
+  #detailsRows .product-three-stats { grid-template-columns: minmax(0, 1fr) !important; }
+  #detailsRows .product-three-stats > .product-stat { width: 100%; max-width: 280px; justify-self: center; }
+}
+
+

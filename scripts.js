@@ -1079,7 +1079,7 @@ function openFeeEditor(button) {
   if (idx < 0) return;
   const field = button.getAttribute('data-fee-field') === 'depositFee' ? 'depositFee' : 'managementFee';
   const value = userFunds[idx][field];
-  const label = button.closest('.product-stat').querySelector('.product-stat-label').textContent;
+  const label = button.closest('[data-fee-label]')?.dataset.feeLabel || button.closest('.product-stat').querySelector('.product-stat-label').textContent;
   const wrap = document.createElement('span');
   wrap.className = 'stat-value stat-input';
   wrap.innerHTML = `<input type="number" class="product-fee-input" data-fee-uid="${escapeHtml(button.getAttribute('data-fee-uid'))}" data-fee-field="${field}"
@@ -1089,6 +1089,23 @@ function openFeeEditor(button) {
   const input = wrap.querySelector('input');
   input.focus();
   input.select();
+}
+/* תשואה מצטברת של 12 חודשי דיווח רצופים, עד חודש הדיווח של המסלול.
+   חודש חסר אינו אפס, ואין להשתמש בתשואה מתחילת השנה במקום שנה אחרונה. */
+function trailingYearYield(fund) {
+  const validPeriod = period => /^\d{6}$/.test(String(period)) && Number(String(period).slice(4)) >= 1 && Number(String(period).slice(4)) <= 12;
+  if (!fund || !validPeriod(fund.hist_start) || !validPeriod(fund.report_period) || !Array.isArray(fund.hist_yield)) return null;
+  const end = monthDiff(fund.hist_start, fund.report_period);
+  if (!Number.isInteger(end) || end < 11 || end >= fund.hist_yield.length) return null;
+  const months = fund.hist_yield.slice(end - 11, end + 1);
+  if (months.length !== 12 || months.some(value => typeof value !== 'number' || !Number.isFinite(value) || value < -100)) return null;
+  return (months.reduce((factor, value) => factor * (1 + value / 100), 1) - 1) * 100;
+}
+function trailingYearComparison(fund) {
+  const mine = trailingYearYield(fund);
+  const values = Number.isFinite(mine) && cmpIsFresh(fund)
+    ? (cmpPolicyPeers(fund) || []).map(trailingYearYield).filter(Number.isFinite) : [];
+  return { mine, peers: values.length >= CMP_MIN_PEERS ? cmpMean(values) : null, count: values.length };
 }
 function productDetailHtml(item, cmp) {
   const f = item.fund;
@@ -1101,21 +1118,21 @@ function productDetailHtml(item, cmp) {
         ${valueHtml}
         ${avg ? `<span class="product-stat-avg">ממוצע קבוצת ההשוואה ${avg}</span>` : ''}
       </div>`;
-  // תשואת המסלול ל־3 שנים מול הממוצע — יחד עם דמי הניהול, שני המספרים שהמשתמש
-  // בא לראות. התקופה ואופן החישוב צמודים לכותרת.
+  const annual = trailingYearComparison(f);
+  const annualHtml = tile('תשואה בשנה האחרונה', `<span class="stat-value">${fmtCmp(annual.mine, 1)}</span>`, Number.isFinite(annual.peers) ? fmtCmp(annual.peers, 1) : '', 'product-year-row', Number.isFinite(annual.mine) ? '12 חודשים · לפני דמי ניהול' : 'אין נתונים ל־12 חודשים מלאים');
   const yieldRow = cmp && cmp.rows.find(row => row.key === 'yield');
   const yieldValue = yieldRow ? yieldRow.mine : f.yield_trailing_3yrs;
-  const yieldHtml = typeof yieldValue === 'number'
-    ? tile(YIELD_LABEL, `<span class="stat-value">${fmtCmp(yieldValue, 1)}</span>`, yieldRow ? fmtCmp(yieldRow.peers, 1) : '', 'product-yield-row', YIELD_PERIOD_NOTE)
-    : '';
-  const fees = feeRowsFor(item, cmp)
-    .map(row => tile(row.label, feeValueHtml(item, row.field, row.label), row.peer ? fmtCmp(row.peer.peers, 2) : ''))
-    .join('');
+  const yieldHtml = tile('תשואה ל־3 שנים', `<span class="stat-value">${fmtCmp(yieldValue, 1)}</span>`, yieldRow ? fmtCmp(yieldRow.peers, 1) : '', 'product-yield-row', 'מצטברת · לפני דמי ניהול');
+  const fees = `<div class="product-stat product-fee-card"><span class="product-stat-label">דמי הניהול שלך</span>${feeRowsFor(item, cmp).map(row => `<div class="product-fee-entry" data-fee-label="${escapeHtml(row.label)}">
+    <span class="product-stat-note">${row.field === 'depositFee' ? 'מהפקדות' : 'שנתיים · מצבירה'}</span>
+    ${feeValueHtml(item, row.field, row.label)}
+    ${row.peer ? `<span class="product-stat-avg">ממוצע קבוצת ההשוואה ${fmtCmp(row.peer.peers, 2)}</span>` : ''}
+  </div>`).join('')}</div>`;
   const note = f.is_stale
     ? `<p class="product-note">הנתונים למסלול זה עודכנו לאחרונה ב-${escapeHtml(fmtPeriod(f.report_period))}, ולכן הוא אינו נכלל בהשוואה לקופות באותו סוג מסלול.</p>`
     : (cmpMissingNote(f, cmp) ? `<p class="product-note">${cmpMissingNote(f, cmp)}</p>` : '');
   return `
-      <div class="product-fees product-stats">${yieldHtml}${fees}</div>
+      <div class="product-fees product-stats product-three-stats">${annualHtml}${yieldHtml}${fees}</div>
       ${note}
       <p class="product-expo">מניות <b>${fmtRound(f.stock_pct)}</b> · חו״ל <b>${fmtRound(f.foreign_pct)}</b> · מט״ח <b>${fmtRound(f.fx_pct)}</b></p>
       <div class="product-actions">
@@ -1137,6 +1154,8 @@ function fullComparisonHtml(item, cmp, forPrint) {
   const rows = [];
   const fees = [];
   const yieldRow = byKey('yield');
+  const annual = trailingYearComparison(f);
+  if (Number.isFinite(annual.mine)) rows.push(['תשואה בשנה האחרונה<span class="cmp-row-note">12 חודשים, לפני דמי ניהול</span>', fmtCmp(annual.mine, 1), fmtCmp(annual.peers, 1)]);
   if (yieldRow) rows.push([`${YIELD_LABEL}<span class="cmp-row-note">${YIELD_PERIOD_NOTE}</span>`, fmtCmp(yieldRow.mine, 1), fmtCmp(yieldRow.peers, 1)]);
   feeRowsFor(item, cmp).forEach(row => fees.push([row.label, mineFee(row.field), fmtCmp(row.peer && row.peer.peers, 2)]));
   const stockRow = byKey('stock');
@@ -1158,6 +1177,7 @@ function fullComparisonHtml(item, cmp, forPrint) {
   const facts = [
     fact('תשואה חודשית', fmtPct(f.monthly_yield, 2)),
     fact('מתחילת השנה', fmtPct(f.ytd_yield, 2)),
+    !cmp ? fact('תשואה בשנה האחרונה · 12 חודשים', fmtPct(annual.mine, 1), true) : '',
     yieldRow ? '' : fact('תשואת המסלול, מצטברת ל־3 שנים', fmtPct(f.yield_trailing_3yrs, 2), true),
     stockRow ? '' : fact('מניות', fmtPct(f.stock_pct, 1)),
     fact('חו״ל', fmtPct(f.foreign_pct, 1)),
@@ -1254,7 +1274,7 @@ function closeFeeEditor(input, save) {
   const wrap = input.closest('.stat-input');
   if (idx < 0 || !wrap) return;
   const field = input.getAttribute('data-fee-field') === 'depositFee' ? 'depositFee' : 'managementFee';
-  const label = wrap.closest('.product-stat').querySelector('.product-stat-label').textContent;
+  const label = wrap.closest('[data-fee-label]')?.dataset.feeLabel || wrap.closest('.product-stat').querySelector('.product-stat-label').textContent;
   const holder = document.createElement('span');
   holder.innerHTML = feeValueHtml(userFunds[idx], field, label);
   const button = holder.firstElementChild;
@@ -3492,3 +3512,4 @@ window.addEventListener('popstate', event => {
   if (event.state?.savingsView === 'simulation') showSimulationView();
   else if (document.body.classList.contains('simulation-view')) restorePortfolioView();
 });
+
