@@ -8808,7 +8808,7 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 
 
 
-/* Fee information is shown in each fund; omit the duplicate overview tab. */
+/* Returns and fees are shown in each fund; omit duplicate overview tabs. */
 @media screen {
-  #feesSection { display: none !important; }
+  #feesSection, #perfSection { display: none !important; }
 }
