@@ -8807,3 +8807,8 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 }
 
 
+
+/* Returns and fees are shown in each fund; omit duplicate overview tabs. */
+@media screen {
+  #feesSection, #perfSection { display: none !important; }
+}
