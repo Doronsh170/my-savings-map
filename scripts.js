@@ -3486,10 +3486,11 @@ function renderSimulationAssumptions() {
 let simulationReturnScroll = 0;
 function showSimulationView() {
   document.body.classList.add('simulation-view');
-  document.getElementById('simulationTabSection').style.display = 'block';
+  const simulationSection = document.getElementById('simulationTabSection');
+  simulationSection.style.display = 'block';
   refreshSimulationDefaults();
   renderSimulationAssumptions();
-  window.scrollTo({ top: 0, behavior: 'auto' });
+  simulationSection.scrollIntoView({ behavior: 'instant', block: 'start' });
   document.getElementById('simulationTitle').focus({ preventScroll: true });
 }
 function openSimulationView() {
