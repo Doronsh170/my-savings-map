@@ -181,21 +181,7 @@
   </div>
 </section>
 
-<section class="details" id="historySection" style="display:none;">
-  <div class="container">
-    <details class="dashboard-toggle-section history-toggle-section" id="historyDetails">
-      <summary class="dashboard-toggle-summary">
-        <span>מגמה חודשית של התיק</span>
-        
-      </summary>
-      <div class="dashboard-toggle-content history-wrap">
-        <div class="perf-note">לפי נתוני המסלולים שלך בחודשים שבהם יש דיווח במאגר, ולפי היתרות שהזנת היום: חיסכון עם יתרה גדולה יותר משפיע יותר. ההיסטוריה מצטברת עם עדכוני המאגר החודשיים.</div>
-        <div class="history-options" id="historyOptions" role="group" aria-label="בחירת הגרפים המוצגים"></div>
-        <div class="history-grid" id="historyGrid"></div>
-      </div>
-    </details>
-  </div>
-</section>
+
 
 
 
@@ -309,6 +295,22 @@
       <summary>ניהול התיק</summary>
       <p>הנתונים נשמרים בדפדפן הזה.</p>
       <button type="button" class="reset-link" onclick="resetAllData()">מחיקת כל הנתונים מהדפדפן</button>
+    </details>
+  </div>
+</section>
+
+<section class="details" id="historySection" style="display:none;">
+  <div class="container">
+    <details class="dashboard-toggle-section history-toggle-section" id="historyDetails">
+      <summary class="dashboard-toggle-summary">
+        <span>הצג נתוני עבר של התיק</span>
+        
+      </summary>
+      <div class="dashboard-toggle-content history-wrap">
+        <div class="perf-note">לפי נתוני המסלולים שלך בחודשים שבהם יש דיווח במאגר, ולפי היתרות שהזנת היום: חיסכון עם יתרה גדולה יותר משפיע יותר. ההיסטוריה מצטברת עם עדכוני המאגר החודשיים.</div>
+        <div class="history-options" id="historyOptions" role="group" aria-label="בחירת הגרפים המוצגים"></div>
+        <div class="history-grid" id="historyGrid"></div>
+      </div>
     </details>
   </div>
 </section>
@@ -449,4 +451,5 @@
 <script src="scripts.js"></script>
 </body>
 </html>
+
 
