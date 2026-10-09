@@ -1017,8 +1017,8 @@ function setMetric(id, value, digits = 1) {
    1. שורה סגורה: שם, יתרה, משקל בתיק ושורת השוואה אחת קטנה — דמי הניהול שלך
       מול הממוצע, "הזן דמי ניהול", או כלום כשאין קבוצת השוואה.
    2. מוצר פתוח: דמי ניהול מול הממוצע (עם שדה הזנה), חשיפות בשורה אחת,
-      "השוואה מלאה" ו"עריכה". ההסרה נמצאת בתוך "עריכה".
-   3. חלון "השוואה מלאה": הטבלה, נתוני המסלול ו"איך מחושבת ההשוואה?".
+      "השוואה מקיפה" ו"עריכה". ההסרה נמצאת בתוך "עריכה".
+   3. חלון "השוואה מקיפה": הטבלה, נתוני המסלול ו"איך מחושבת ההשוואה?".
    בלי צבע ובלי "מעל" או "מתחת": המספר שלך מול הממוצע, בלי שיפוט. */
 let OPEN_PRODUCT_UID = null;
 /* הניסוח מתאר את קבוצת ההשוואה בפועל: אותו סוג מוצר ואותה קטגוריית מסלול
@@ -1136,7 +1136,7 @@ function productDetailHtml(item, cmp) {
       ${note}
       <p class="product-expo">מניות <b>${fmtRound(f.stock_pct)}</b> · חו״ל <b>${fmtRound(f.foreign_pct)}</b> · מט״ח <b>${fmtRound(f.fx_pct)}</b></p>
       <div class="product-actions">
-        <button type="button" class="product-action product-action-main" data-info="full" data-info-uid="${uid}" aria-haspopup="dialog">${cmp ? 'השוואה מלאה' : 'פרטי המסלול'} <span aria-hidden="true">›</span></button>
+        <button type="button" class="product-action product-action-main" data-info="full" data-info-uid="${uid}" aria-haspopup="dialog">${cmp ? 'השוואה מקיפה' : 'פרטי המסלול'} <span aria-hidden="true">›</span></button>
         <button type="button" class="product-action" data-edit-uid="${uid}" aria-label="עריכת ${escapeHtml(f.fund_name || 'המוצר')}">עריכה</button>
       </div>
       <div class="print-only">${fullComparisonHtml(item, cmp, true)}</div>`;
@@ -1145,7 +1145,7 @@ function productDetailHtml(item, cmp) {
    תשואה אישית שחושבה מתנועות החשבון. התקופה ואופן החישוב תמיד לצידה. */
 const YIELD_LABEL = 'תשואת המסלול שלך';
 const YIELD_PERIOD_NOTE = 'מצטברת ל־3 שנים, לפני דמי ניהול';
-/* שכבה 3: הטבלה המלאה ונתוני המסלול. משמשת את החלון "השוואה מלאה", ובהדפסה
+/* שכבה 3: הטבלה המלאה ונתוני המסלול. משמשת את החלון "השוואה מקיפה", ובהדפסה
    מודפסת בתוך כל מוצר — הדוח ממשיך להציג את כל המידע. */
 function fullComparisonHtml(item, cmp, forPrint) {
   const f = item.fund;
@@ -1221,7 +1221,7 @@ function productItemHtml(item, activeItems, totalBalance) {
         </span>
         <span class="product-chev" aria-hidden="true"></span>
       </button>
-      <div class="product-detail" id="${panelId}"${open ? '' : ' hidden'}>${productDetailHtml(item, cmp)}</div>
+      <div class="product-detail" id="${panelId}"${open ? '' : ' hidden'}>${productDetailHtml(item, cmp)}${productSimulationHtml(item)}</div>
     </article>`;
 }
 function setProductOpen(uid, focusFee) {
@@ -1231,6 +1231,7 @@ function setProductOpen(uid, focusFee) {
     el.classList.toggle('is-open', isOpen);
     el.querySelector('.product-row').setAttribute('aria-expanded', String(isOpen));
     el.querySelector('.product-detail').hidden = !isOpen;
+    if (isOpen) updateProductSimulation(el.querySelector('.product-simulation'));
   });
   if (focusFee && OPEN_PRODUCT_UID) {
     const button = document.querySelector(`#detailsRows [data-fee-edit][data-fee-uid="${CSS.escape(uid)}"]`);
@@ -1265,6 +1266,7 @@ function commitProductFee(input) {
   renderGroupAverages(userFunds.filter(i => (Number(i.balance) || 0) > 0));
   renderFeeRows(userFunds.filter(i => (Number(i.balance) || 0) > 0));
   refreshSimulationDefaults();
+  if (product) updateProductSimulation(product.querySelector('.product-simulation'));
 }
 function closeFeeEditor(input, save) {
   if (input.dataset.closing) return null;
@@ -1446,6 +1448,7 @@ function renderDashboard() {
     .map(item => productItemHtml(item, activeItems, totalBalance))
     .join('');
   document.getElementById('detailsRows').innerHTML = rows;
+  document.querySelectorAll('#detailsRows .product.is-open .product-simulation').forEach(updateProductSimulation);
   if (OPEN_PRODUCT_UID && !activeItems.some(item => item.fund.uid === OPEN_PRODUCT_UID)) OPEN_PRODUCT_UID = null;
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('detailsSection').style.display = 'block';
@@ -1462,7 +1465,7 @@ function renderDashboard() {
   if (simulationResults) simulationResults.hidden = true;
   const simulationTabSection = document.getElementById('simulationTabSection');
   if (simulationTabSection) simulationTabSection.style.display = document.body.classList.contains('simulation-view') ? 'block' : 'none';
-  document.getElementById('simulationEntrySection').style.display = SIMULATION_ENABLED ? 'block' : 'none';
+  document.getElementById('simulationEntrySection').style.display = 'none';
   const bottomActions = document.getElementById('bottomActions');
   if (bottomActions) bottomActions.style.display = 'block';
   refreshSimulationDefaults();
@@ -3514,3 +3517,56 @@ window.addEventListener('popstate', event => {
   else if (document.body.classList.contains('simulation-view')) restorePortfolioView();
 });
 
+
+
+/* Inline simulation keeps each product's balance, exposure and fees separate. */
+const PRODUCT_SIMULATION_INPUTS = new Map();
+function productSimulationHtml(item) {
+  const uid = item.fund.uid;
+  const id = 'sim-' + String(uid).replace(/[^A-Za-z0-9_-]/g, '-');
+  const saved = PRODUCT_SIMULATION_INPUTS.get(uid) || { monthly: '', years: '' };
+  return `<section class="product-simulation" data-sim-uid="${escapeHtml(uid)}" aria-label="סימולציה לחיסכון">
+    <h4>רוצה לראות איך החיסכון שלך עשוי להתפתח?</h4>
+    <div class="product-sim-fields">
+      <label for="${id}-monthly">הפקדה חודשית (₪)<input id="${id}-monthly" data-product-sim="monthly" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" value="${escapeHtml(saved.monthly)}"></label>
+      <label for="${id}-years">לכמה שנים?<input id="${id}-years" data-product-sim="years" type="number" min="1" max="30" step="1" inputmode="numeric" placeholder="10" value="${escapeHtml(saved.years)}"></label>
+    </div>
+    <div class="product-sim-result" aria-live="polite"></div>
+    <p class="product-sim-note">מבוסס על תשואות עבר (1995–2024), אינו תחזית לעתיד.<br><strong>הסימולציה אינה הבטחה לתשואה או לסכום עתידי.</strong></p>
+  </section>`;
+}
+function calculateProductSimulation(item, monthly, years) {
+  if (!Number.isFinite(item.fund.stock_pct)) return null;
+  const initial = Number(item.balance) || 0;
+  const fee = Number.isFinite(item.managementFee) ? item.managementFee : 0;
+  let amount = initial;
+  for (let y = 0; y < years; y++) {
+    const growth = Math.pow(1 + simAnnualYield(y, item.fund.stock_pct) / 100, 1 / 12);
+    for (let m = 0; m < 12; m++) amount = amount * growth * (1 - fee / 1200) + monthly;
+  }
+  const contributions = monthly * 12 * years;
+  return { amount, realAmount: amount / Math.pow(1 + SIM_DEFAULT_INFLATION / 100, years), contributions, gain: amount - initial - contributions };
+}
+function updateProductSimulation(section) {
+  if (!section) return;
+  const item = userFunds.find(i => i.fund.uid === section.dataset.simUid);
+  if (!item) return;
+  const monthlyInput = section.querySelector('[data-product-sim="monthly"]');
+  const yearsInput = section.querySelector('[data-product-sim="years"]');
+  const result = section.querySelector('.product-sim-result');
+  const monthly = monthlyInput.value === '' ? 0 : Number(monthlyInput.value);
+  const years = yearsInput.value === '' ? 10 : Number(yearsInput.value);
+  PRODUCT_SIMULATION_INPUTS.set(item.fund.uid, { monthly: monthlyInput.value, years: yearsInput.value });
+  if (!monthlyInput.validity.valid || !yearsInput.validity.valid || !Number.isFinite(monthly) || !Number.isInteger(years) || monthly < 0 || years < 1 || years > 30) {
+    result.textContent = 'יש להזין הפקדה של 0 ₪ ומעלה ותקופה של 1–30 שנים שלמות.';
+    return;
+  }
+  const simulation = calculateProductSimulation(item, monthly, years);
+  if (!simulation) { result.textContent = 'הסימולציה אינה זמינה לחיסכון הזה: חסר נתון חשיפה למניות.'; return; }
+  result.innerHTML = `<p class="product-sim-heading">הסכום הצפוי בחיסכון בעוד ${years} שנים, לפי הסימולציה</p>
+    <div class="product-sim-amount">כ־${fmtSimCurrency(simulation.amount)}</div>
+    ${Number.isFinite(item.managementFee) ? '' : '<p class="product-sim-note">דמי הניהול לא הוזנו ולכן חושבו כ־0%.</p>'}`;
+}
+document.addEventListener('input', event => {
+  if (event.target.matches('[data-product-sim]')) updateProductSimulation(event.target.closest('.product-simulation'));
+});
