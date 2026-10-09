@@ -3565,8 +3565,6 @@ function updateProductSimulation(section) {
   if (!simulation) { result.textContent = 'הסימולציה אינה זמינה לחיסכון הזה: חסר נתון חשיפה למניות.'; return; }
   result.innerHTML = `<p class="product-sim-heading">הסכום בחיסכון בעוד ${years} שנים, לפי הסימולציה</p>
     <div class="product-sim-amount">כ־${fmtSimCurrency(simulation.amount)}</div>
-    <p class="product-sim-today">אחרי עליית המחירים, זה יהיה שווה בערך<br><strong>כמו ${fmtSimCurrency(simulation.realAmount)} היום</strong></p>
-    <p class="product-sim-assumption">בהנחה שהמחירים יעלו ב־${SIM_DEFAULT_INFLATION}% בשנה.</p>
     ${Number.isFinite(item.managementFee) ? '' : '<p class="product-sim-note">דמי הניהול לא הוזנו ולכן חושבו כ־0%.</p>'}`;
 }
 document.addEventListener('input', event => {

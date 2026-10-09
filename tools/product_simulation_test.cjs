@@ -23,10 +23,8 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   await a.locator('[data-product-sim="years"]').fill('10');
   await page.evaluate(()=>setProductOpen('b'));const b=page.locator('[data-sim-uid="b"]');assert.equal(await b.locator('[data-product-sim="monthly"]').inputValue(),'');
   await page.evaluate(()=>setProductOpen('a'));assert.equal(await a.locator('[data-product-sim="monthly"]').inputValue(),'1000');
-  const realExpected=await page.evaluate(()=>fmtSimCurrency(calculateProductSimulation(userFunds[0],1000,10).amount/Math.pow(1.02,10)));
-  assert.ok((await a.locator('.product-sim-today').innerText()).includes(realExpected));
-  assert.match(await a.innerText(),/המחירים יעלו ב־2%/);
-  assert.doesNotMatch(await a.innerText(),/נומינלי|ריאלי|הפקדות עתידיות|רווח בסימולציה/);
+  assert.equal(await a.locator('.product-sim-today, .product-sim-assumption').count(),0);
+  assert.doesNotMatch(await a.innerText(),/נומינלי|ריאלי|הפקדות עתידיות|רווח בסימולציה|עליית המחירים/);
   const beforeFee=await a.locator('.product-sim-amount').innerText();
   await page.evaluate(()=>{userFunds[0].managementFee=1;updateProductSimulation(document.querySelector('[data-sim-uid="a"]'));});assert.notEqual(await a.locator('.product-sim-amount').innerText(),beforeFee);
   await page.evaluate(()=>{userFunds[0].fund.stock_pct=null;updateProductSimulation(document.querySelector('[data-sim-uid="a"]'));});assert.match(await a.innerText(),/חסר נתון/);
