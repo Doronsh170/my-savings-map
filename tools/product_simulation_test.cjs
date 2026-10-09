@@ -41,6 +41,7 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   assert.equal(await page.locator('#saveShareDetails').getAttribute('open'),null);
   assert.equal(await page.locator('#professionalDetails').getAttribute('open'),null);
   assert.equal(await page.locator('#bottomActions .action-toolbar').isVisible(),false);
+  await page.locator('[data-close-product="a"]').click();
   await page.locator('#saveShareDetails > summary').click();
   assert.equal(await page.locator('#bottomActions .action-toolbar').isVisible(),true);
   await page.locator('#saveShareDetails > summary').click();
@@ -52,7 +53,6 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
    const rows=await page.locator('#historyDetails > summary, #saveShareDetails > summary, #professionalDetails > summary').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return {w:r.width,h:r.height,x:r.x};}));
    assert.ok(rows.every(r=>Math.abs(r.w-rows[0].w)<1&&Math.abs(r.h-rows[0].h)<1&&Math.abs(r.x-rows[0].x)<1),`footer rows match at ${width}px`);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-   assert.equal(await a.locator('input').evaluateAll(es=>es.every(e=>e.getBoundingClientRect().width>100)),true);
    const summary=page.locator('#historyDetails > summary');
    for(const open of [false,true]){
     await page.locator('#historyDetails').evaluate((el,open)=>el.open=open,open);
@@ -63,16 +63,42 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
     if(width===390&&open) await page.screenshot({path:path.join(root,'..','simulation-mobile-preview.png'),fullPage:true});
    }
   }
-  for(const width of [320,390,768]){
+  await page.evaluate(()=>{userFunds.push({...userFunds[1],fund:{...userFunds[1].fund,uid:'c',fund_name:'מוצר שלישי לדוגמה'}});goToDashboard();});
+  for(const width of [320,390,768,1280]){
    await page.setViewportSize({width,height:740});
-   for(const uid of ['b','a','b','a']){
+   for(const uid of ['b','a','c','b']){
     await page.locator(`[data-toggle-uid="${uid}"]`).click();
     await page.waitForTimeout(100);
-    const bounds=await page.locator(`.product[data-product-uid="${uid}"] > .product-row`).boundingBox();
-    assert.ok(bounds.y>=0&&bounds.y+bounds.height<=740,`new product heading visible at ${width}px (${uid})`);
+    const dialog=page.locator(`.product-focus-dialog[data-focus-uid="${uid}"]`);
+    const bounds=await dialog.locator('.product-focus-heading').boundingBox();
+    assert.ok(bounds.y>=0&&bounds.y+bounds.height<=740,`product heading visible at ${width}px (${uid})`);
     assert.equal(await page.locator('.product.is-open').getAttribute('data-product-uid'),uid);
+    assert.equal(await page.locator('.product-focus-dialog[open]').count(),1);
+    const returnedScroll=await page.evaluate(()=>PRODUCT_VIEW_SCROLL);
+    await dialog.locator('.product-focus-scroll').evaluate(el=>el.scrollTop=el.scrollHeight);
+    const closeBox=await dialog.locator('[data-close-product]').boundingBox();
+    assert.ok(closeBox.y>=0&&closeBox.y+closeBox.height<=740,`close button visible at ${width}px`);
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.body).position),'fixed');
+    assert.equal(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth),true);
+    if(width===390&&uid==='a')await page.screenshot({path:path.join(root,'..','focused-product-mobile.png')});
+    await dialog.locator('[data-close-product]').click();
+    assert.equal(await page.locator('.product-focus-dialog[open]').count(),0);
+    assert.ok(Math.abs((await page.evaluate(()=>scrollY))-returnedScroll)<2);
+    assert.equal(await page.evaluate(()=>document.body.classList.contains('product-view-open')),false);
    }
   }
+  await page.locator('[data-toggle-uid="a"]').click();
+  await page.locator('.product-focus-dialog[open] [data-info="full"]').click();
+  assert.equal(await page.locator('#infoDialog').getAttribute('open'),'');
+  await page.locator('#infoDialog .info-dialog-x').click();
+  assert.equal(await page.locator('.product-focus-dialog[open]').count(),1);
+  await page.locator('.product-focus-dialog[open] [data-edit-uid]').click();
+  assert.equal(await page.locator('.product-focus-dialog[open]').count(),0);
+  assert.equal(await page.evaluate(()=>document.body.classList.contains('product-view-open')),false);
+  assert.equal(await page.locator('#wizard').isVisible(),true);
+  await page.evaluate(()=>{goToDashboard();setProductOpen('a');});
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.product-focus-dialog[open]').count(),0);
   await page.screenshot({path:path.join(root,'..','simulation-preview.png'),fullPage:true});
   assert.deepEqual(errors,[]);console.log('PASS inline simulation: independent product inputs, historical calculation, fees, validation, missing data, secondary history, responsive layout, no runtime errors');
  }finally{await browser.close();}

@@ -1221,8 +1221,31 @@ function productItemHtml(item, activeItems, totalBalance) {
         </span>
         <span class="product-chev" aria-hidden="true"></span>
       </button>
-      <div class="product-detail" id="${panelId}"${open ? '' : ' hidden'}>${productDetailHtml(item, cmp)}${productSimulationHtml(item)}</div>
+      <dialog class="product-focus-dialog" aria-labelledby="${panelId}-title" data-focus-uid="${uid}">
+        <div class="product-focus-heading"><h3 id="${panelId}-title">${escapeHtml(title)}</h3>${track ? `<p>${escapeHtml(track)}</p>` : ''}</div>
+        <div class="product-focus-scroll"><div class="product-detail" id="${panelId}"${open ? '' : ' hidden'}>${productDetailHtml(item, cmp)}${productSimulationHtml(item)}</div></div>
+        <div class="product-focus-footer"><button type="button" class="action-btn" data-close-product="${uid}" autofocus>סגור</button></div>
+      </dialog>
     </article>`;
+}
+let PRODUCT_VIEW_SCROLL = null;
+function syncProductView() {
+  const dialog = document.querySelector('#detailsRows .product.is-open .product-focus-dialog');
+  document.querySelectorAll('.product-focus-dialog[open]').forEach(other => { if (other !== dialog) other.close(); });
+  if (dialog) {
+    if (PRODUCT_VIEW_SCROLL === null) {
+      PRODUCT_VIEW_SCROLL = window.scrollY;
+      document.body.style.setProperty('--product-scroll-top', -PRODUCT_VIEW_SCROLL + 'px');
+      document.body.classList.add('product-view-open');
+    }
+    if (!dialog.open) { dialog.showModal(); dialog.querySelector('.product-focus-scroll').scrollTop = 0; }
+  } else if (PRODUCT_VIEW_SCROLL !== null) {
+    const top = PRODUCT_VIEW_SCROLL;
+    PRODUCT_VIEW_SCROLL = null;
+    document.body.classList.remove('product-view-open');
+    document.body.style.removeProperty('--product-scroll-top');
+    window.scrollTo({ top, behavior: 'instant' });
+  }
 }
 function setProductOpen(uid, focusFee) {
   OPEN_PRODUCT_UID = OPEN_PRODUCT_UID === uid && !focusFee ? null : uid;
@@ -1233,30 +1256,22 @@ function setProductOpen(uid, focusFee) {
     el.querySelector('.product-detail').hidden = !isOpen;
     if (isOpen) updateProductSimulation(el.querySelector('.product-simulation'));
   });
+  syncProductView();
   if (focusFee && OPEN_PRODUCT_UID) {
     const button = document.querySelector(`#detailsRows [data-fee-edit][data-fee-uid="${CSS.escape(uid)}"]`);
     if (button) openFeeEditor(button);
   }
-  if (OPEN_PRODUCT_UID) {
-    const opened = document.querySelector('#detailsRows .product.is-open');
-    // Closing the previous product moves this heading. Scroll after the browser
-    // has completed layout and scroll anchoring, so its beginning stays visible.
-    requestAnimationFrame(() => {
-      if (!opened || !opened.classList.contains('is-open')) return;
-      const header = document.querySelector('header');
-      const headerStyle = header && getComputedStyle(header);
-      const offset = headerStyle && ['fixed', 'sticky'].includes(headerStyle.position)
-        ? header.getBoundingClientRect().height : 0;
-      const top = Math.max(0, window.scrollY + opened.getBoundingClientRect().top - offset - 12);
-      window.scrollTo({ top, behavior: 'instant' });
-    });
-  }
 }
 document.addEventListener('click', event => {
+  const close = event.target.closest('[data-close-product]');
+  if (close) { setProductOpen(close.dataset.closeProduct); return; }
   const row = event.target.closest('[data-toggle-uid]');
   if (!row) return;
   setProductOpen(row.getAttribute('data-toggle-uid'), !!event.target.closest('[data-ask-fee]'));
 });
+document.addEventListener('close', event => {
+  if (event.target.matches('.product-focus-dialog') && !event.target.open && OPEN_PRODUCT_UID === event.target.dataset.focusUid) setProductOpen(OPEN_PRODUCT_UID);
+}, true);
 /* שמירת דמי ניהול מתוך המוצר הפתוח: מעדכנים את הנתון, את שורת המוצר, את
    טבלת ההדפסה ואת דמי הניהול המשוקללים — בלי לצייר מחדש את המוצר, כדי
    שהמיקוד יישאר בשדה הבא. דמי ניהול אינם משנים את "היתרות עודכנו לפני...". */
@@ -1409,6 +1424,8 @@ function renderDashboard() {
   const activeItems = userFunds.filter(item => (Number(item.balance) || 0) > 0);
   const totalBalance = activeItems.reduce((sum, item) => sum + (Number(item.balance) || 0), 0);
   if (totalBalance <= 0) {
+    OPEN_PRODUCT_UID = null;
+    syncProductView();
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('detailsSection').style.display = 'none';
     document.getElementById('perfSection').style.display = 'none';
@@ -1464,6 +1481,7 @@ function renderDashboard() {
   document.getElementById('detailsRows').innerHTML = rows;
   document.querySelectorAll('#detailsRows .product.is-open .product-simulation').forEach(updateProductSimulation);
   if (OPEN_PRODUCT_UID && !activeItems.some(item => item.fund.uid === OPEN_PRODUCT_UID)) OPEN_PRODUCT_UID = null;
+  syncProductView();
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('detailsSection').style.display = 'block';
   document.getElementById('perfSection').style.display = 'block';
@@ -2554,6 +2572,7 @@ function findUserFundIndex(uid) {
    הפונקציות כאן נשארו כנקודות כניסה חיצוניות ומנתבות לאשף. */
 function openQuickEditor(fund) {
   if (!fund) return;
+  if (OPEN_PRODUCT_UID) setProductOpen(OPEN_PRODUCT_UID);
   // בתצוגת הדשבורד האשף מוסתר; עריכה מתוך הדוח חייבת להחזיר אותו.
   document.body.classList.remove('dashboard-reached');
   WIZ_FOCUS_FIELD = '';
@@ -3584,3 +3603,4 @@ function updateProductSimulation(section) {
 document.addEventListener('input', event => {
   if (event.target.matches('[data-product-sim]')) updateProductSimulation(event.target.closest('.product-simulation'));
 });
+
