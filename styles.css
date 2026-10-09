@@ -8875,4 +8875,16 @@ body.product-view-open { position: fixed; top: var(--product-scroll-top); width:
 #detailsRows .product-chev::before { border-color: #102743; border-width: 3px; }
 #detailsRows .product-simulation > summary { border-radius: 8px; padding: 12px; background: #eaf1f9; box-shadow: inset 0 0 0 1.5px #839ab3; font-weight: 700; }
 #detailsRows .product-simulation > summary::marker { color: #102743; }
+body.footer-view-open { position: fixed; top: var(--footer-scroll-top); width: 100%; overflow: hidden; }
+.footer-focus-dialog { position: fixed; inset: 0; margin: auto; width: min(880px, calc(100% - 32px)); height: min(900px, calc(100dvh - 32px)); max-width: none; max-height: none; padding: 0; border: 1px solid #e0e6ed; border-radius: 16px; background: #f8fafc; color: #102743; overflow: hidden; }
+.footer-focus-dialog:not([open]) { display: none; }
+.footer-focus-dialog[open] { display: flex; flex-direction: column; }
+.footer-focus-dialog::backdrop { background: rgba(11,28,44,.65); }
+.footer-focus-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.footer-focus-scroll > .dashboard-toggle-content { margin: 0 !important; border: 0 !important; border-radius: 0 !important; }
+#saveShareDetails .action-toolbar { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+#saveShareDetails .action-btn { min-width: 0; white-space: normal; }
+#saveShareDetails .action-delete { color: #a1262f; border-color: #d8a5aa; }
+@media (max-width: 600px) { .footer-focus-dialog { width: 100%; height: 100dvh; border: 0; border-radius: 0; } #saveShareDetails .action-toolbar { grid-template-columns: 1fr; } }
+@media print { body.footer-view-open { position: static; } .footer-focus-dialog { display: none !important; } }
 #detailsRows .product-row:focus-visible, #historySection summary:focus-visible, #bottomActions .dashboard-toggle-summary:focus-visible, #siteInfoSection .dashboard-toggle-summary:focus-visible, #detailsRows .product-simulation > summary:focus-visible { outline: 3px solid #102743; outline-offset: 3px; }

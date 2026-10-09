@@ -2548,6 +2548,7 @@ function resetAllData() {
   const count = userFunds.length + missingSavedFunds.length;
   const ok = window.confirm(`למחוק מהדפדפן הזה את ${count === 1 ? 'המוצר' : 'כל ' + count + ' המוצרים'}, היתרות ודמי הניהול שהוזנו? אי אפשר לבטל את המחיקה.`);
   if (!ok) return;
+  closeFooterFocus();
   userFunds = [];
   missingSavedFunds = [];
   CURRENT_EDIT_FUND = null;
@@ -3604,3 +3605,52 @@ document.addEventListener('input', event => {
   if (event.target.matches('[data-product-sim]')) updateProductSimulation(event.target.closest('.product-simulation'));
 });
 
+
+/* The three footer choices open focused views, using their existing content. */
+let FOOTER_FOCUS_ACTIVE = null;
+let FOOTER_FOCUS_SCROLL = null;
+function closeFooterFocus() {
+  if (!FOOTER_FOCUS_ACTIVE) return;
+  const { dialog, details } = FOOTER_FOCUS_ACTIVE;
+  FOOTER_FOCUS_ACTIVE = null;
+  if (dialog.open) dialog.close();
+  details.open = false;
+  document.body.classList.remove('footer-view-open');
+  document.body.style.removeProperty('--footer-scroll-top');
+  const top = FOOTER_FOCUS_SCROLL;
+  FOOTER_FOCUS_SCROLL = null;
+  if (top !== null) window.scrollTo({ top, behavior: 'instant' });
+}
+function initFooterFocus() {
+  ['historyDetails', 'saveShareDetails', 'professionalDetails'].forEach(id => {
+    const details = document.getElementById(id);
+    if (!details || details.querySelector('.footer-focus-dialog')) return;
+    const summary = details.querySelector(':scope > summary');
+    const content = details.querySelector(':scope > .dashboard-toggle-content');
+    const dialog = document.createElement('dialog');
+    dialog.className = 'footer-focus-dialog';
+    dialog.setAttribute('aria-labelledby', id + '-focus-title');
+    dialog.innerHTML = `<div class="product-focus-heading"><h3 id="${id}-focus-title">${escapeHtml(summary.textContent.trim())}</h3></div><div class="footer-focus-scroll"></div><div class="product-focus-footer"><button type="button" class="action-btn" data-footer-close autofocus>סגור</button></div>`;
+    dialog.querySelector('.footer-focus-scroll').appendChild(content);
+    details.appendChild(dialog);
+    summary.setAttribute('aria-haspopup', 'dialog');
+    summary.addEventListener('click', event => {
+      event.preventDefault();
+      closeFooterFocus();
+      FOOTER_FOCUS_SCROLL = window.scrollY;
+      FOOTER_FOCUS_ACTIVE = { dialog, details };
+      document.body.style.setProperty('--footer-scroll-top', -FOOTER_FOCUS_SCROLL + 'px');
+      document.body.classList.add('footer-view-open');
+      details.open = true;
+      dialog.showModal();
+      dialog.querySelector('.footer-focus-scroll').scrollTop = 0;
+      if (id === 'historyDetails') renderHistorySection(userFunds.filter(item => Number(item.balance) > 0));
+    });
+    dialog.querySelector('[data-footer-close]').addEventListener('click', closeFooterFocus);
+    dialog.addEventListener('close', () => {
+      if (!dialog.open && FOOTER_FOCUS_ACTIVE?.dialog === dialog) closeFooterFocus();
+    });
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initFooterFocus);
+else initFooterFocus();
