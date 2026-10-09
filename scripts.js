@@ -3545,7 +3545,7 @@ function calculateProductSimulation(item, monthly, years) {
     for (let m = 0; m < 12; m++) amount = amount * growth * (1 - fee / 1200) + monthly;
   }
   const contributions = monthly * 12 * years;
-  return { amount, contributions, gain: amount - initial - contributions };
+  return { amount, realAmount: amount / Math.pow(1 + SIM_DEFAULT_INFLATION / 100, years), contributions, gain: amount - initial - contributions };
 }
 function updateProductSimulation(section) {
   if (!section) return;
@@ -3563,9 +3563,11 @@ function updateProductSimulation(section) {
   }
   const simulation = calculateProductSimulation(item, monthly, years);
   if (!simulation) { result.textContent = 'הסימולציה אינה זמינה לחיסכון הזה: חסר נתון חשיפה למניות.'; return; }
-  result.innerHTML = `<p>בסימולציה הזו, לאחר ${years} שנים היתרה תהיה כ־<strong>${fmtSimCurrency(simulation.amount)}</strong></p>
-    <div class="product-sim-breakdown"><span>הפקדות עתידיות: ${fmtSimCurrency(simulation.contributions)}</span><span>${simulation.gain < 0 ? 'הפסד' : 'רווח'} בסימולציה: ${fmtSimCurrency(Math.abs(simulation.gain))}</span></div>
-    <p class="product-sim-note">לפי החשיפה למניות של החיסכון ודמי הניהול מהצבירה${Number.isFinite(item.managementFee) ? ' שהזנת (' + fmtSimPercent(item.managementFee) + ')' : '; דמי הניהול לא הוזנו ולכן חושבו כ־0%'}. לא כולל מס, אינפלציה או דמי ניהול מהפקדות.</p>`;
+  result.innerHTML = `<p class="product-sim-heading">הסכום בחיסכון בעוד ${years} שנים, לפי הסימולציה</p>
+    <div class="product-sim-amount">כ־${fmtSimCurrency(simulation.amount)}</div>
+    <p class="product-sim-today">אחרי עליית המחירים, זה יהיה שווה בערך<br><strong>כמו ${fmtSimCurrency(simulation.realAmount)} היום</strong></p>
+    <p class="product-sim-assumption">בהנחה שהמחירים יעלו ב־${SIM_DEFAULT_INFLATION}% בשנה.</p>
+    ${Number.isFinite(item.managementFee) ? '' : '<p class="product-sim-note">דמי הניהול לא הוזנו ולכן חושבו כ־0%.</p>'}`;
 }
 document.addEventListener('input', event => {
   if (event.target.matches('[data-product-sim]')) updateProductSimulation(event.target.closest('.product-simulation'));

@@ -23,7 +23,12 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   await a.locator('[data-product-sim="years"]').fill('10');
   await page.evaluate(()=>setProductOpen('b'));const b=page.locator('[data-sim-uid="b"]');assert.equal(await b.locator('[data-product-sim="monthly"]').inputValue(),'');
   await page.evaluate(()=>setProductOpen('a'));assert.equal(await a.locator('[data-product-sim="monthly"]').inputValue(),'1000');
-  await page.evaluate(()=>{userFunds[0].managementFee=1;updateProductSimulation(document.querySelector('[data-sim-uid="a"]'));});assert.match(await a.innerText(),/1\.00%/);
+  const realExpected=await page.evaluate(()=>fmtSimCurrency(calculateProductSimulation(userFunds[0],1000,10).amount/Math.pow(1.02,10)));
+  assert.ok((await a.locator('.product-sim-today').innerText()).includes(realExpected));
+  assert.match(await a.innerText(),/המחירים יעלו ב־2%/);
+  assert.doesNotMatch(await a.innerText(),/נומינלי|ריאלי|הפקדות עתידיות|רווח בסימולציה/);
+  const beforeFee=await a.locator('.product-sim-amount').innerText();
+  await page.evaluate(()=>{userFunds[0].managementFee=1;updateProductSimulation(document.querySelector('[data-sim-uid="a"]'));});assert.notEqual(await a.locator('.product-sim-amount').innerText(),beforeFee);
   await page.evaluate(()=>{userFunds[0].fund.stock_pct=null;updateProductSimulation(document.querySelector('[data-sim-uid="a"]'));});assert.match(await a.innerText(),/חסר נתון/);
   await page.evaluate(()=>{userFunds[0].fund.stock_pct=25;userFunds[0].managementFee=null;updateProductSimulation(document.querySelector('[data-sim-uid="a"]'));});assert.match(await a.innerText(),/לא הוזנו/);
   assert.equal(await page.evaluate(()=>!!(document.getElementById('bottomActions').compareDocumentPosition(document.getElementById('historySection'))&Node.DOCUMENT_POSITION_FOLLOWING)),true);

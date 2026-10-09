@@ -8821,7 +8821,10 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 .product-sim-fields input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; font: inherit; font-size: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #102743; }
 .product-sim-result { margin-top: 16px; color: #102743; }
 .product-sim-result > p { margin: 8px 0; }
-.product-sim-breakdown { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 14px; }
+.product-sim-amount { font-size: clamp(28px, 5vw, 36px); font-weight: 600; line-height: 1.3; font-variant-numeric: tabular-nums; margin: 4px 0 18px; }
+.product-sim-today { color: #596579; line-height: 1.6; }
+.product-sim-today strong { color: #102743; font-weight: 600; }
+.product-sim-result .product-sim-assumption { font-size: 13px; color: #596579; margin-top: 4px; }
 .product-sim-note { font-size: 12px; line-height: 1.6; color: #596579; margin: 8px 0 0; }
 #historySection .history-toggle-section { box-shadow: none; background: transparent; }
 #historySection .dashboard-toggle-summary { font-size: 14px; color: #596579; }
