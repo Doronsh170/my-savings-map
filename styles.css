@@ -8844,4 +8844,17 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 #bottomActions details[open] > .dashboard-toggle-summary::after, #siteInfoSection details[open] > .dashboard-toggle-summary::after { transform: translateY(-50%) rotate(180deg); }
 .footer-info-text { margin-bottom: 20px; line-height: 1.7; overflow-wrap: anywhere; }
 .footer-info-text h3 { font-size: 17px; margin: 0 0 8px; }
+body.product-view-open { position: fixed; top: var(--product-scroll-top); width: 100%; overflow: hidden; }
+#detailsRows .product-focus-dialog { position: fixed; inset: 0; margin: auto; width: min(880px, calc(100% - 32px)); height: min(900px, calc(100dvh - 32px)); max-width: none; max-height: none; padding: 0; border: 1px solid #e0e6ed; border-radius: 16px; background: #f8fafc; color: #102743; overflow: hidden; }
+#detailsRows .product-focus-dialog:not([open]) { display: none; }
+#detailsRows .product-focus-dialog[open] { display: flex; flex-direction: column; }
+.product-focus-dialog::backdrop { background: rgba(11,28,44,.65); }
+.product-focus-heading { flex-shrink: 0; padding: 16px 24px; border-bottom: 1px solid #e0e6ed; background: #fff; }
+.product-focus-heading h3 { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+.product-focus-heading p { margin: 4px 0 0; font-size: 13px; color: #596579; }
+.product-focus-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.product-focus-footer { flex-shrink: 0; padding: 12px 20px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid #e0e6ed; background: #fff; }
+.product-focus-footer .action-btn { width: 100%; min-height: 48px; }
+@media (max-width: 600px) { #detailsRows .product-focus-dialog { width: 100%; height: 100dvh; border: 0; border-radius: 0; } .product-focus-heading { padding: 14px 16px; } }
+@media print { body.product-view-open { position: static; } #detailsRows .product-focus-dialog { position: static; width: auto; height: auto; overflow: visible; display: block !important; } .product-focus-heading, .product-focus-footer { display: none; } .product-focus-scroll { overflow: visible; } }
 @media (max-width: 420px) { #historySection .dashboard-toggle-summary, #bottomActions .dashboard-toggle-summary, #siteInfoSection .dashboard-toggle-summary { font-size: 16px !important; } }
