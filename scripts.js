@@ -3539,15 +3539,15 @@ function productSimulationHtml(item) {
   const uid = item.fund.uid;
   const id = 'sim-' + String(uid).replace(/[^A-Za-z0-9_-]/g, '-');
   const saved = PRODUCT_SIMULATION_INPUTS.get(uid) || { monthly: '', years: '' };
-  return `<section class="product-simulation" data-sim-uid="${escapeHtml(uid)}" aria-label="סימולציה לחיסכון">
-    <h4>רוצה לראות איך החיסכון שלך עשוי להתפתח?</h4>
+  return `<details class="product-simulation" data-sim-uid="${escapeHtml(uid)}" aria-label="סימולציה לחיסכון">
+    <summary>רוצה לראות איך החיסכון שלך עשוי להתפתח?</summary>
     <div class="product-sim-fields">
       <label for="${id}-monthly">הפקדה חודשית (₪)<input id="${id}-monthly" data-product-sim="monthly" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" value="${escapeHtml(saved.monthly)}"></label>
       <label for="${id}-years">לכמה שנים?<input id="${id}-years" data-product-sim="years" type="number" min="1" max="30" step="1" inputmode="numeric" placeholder="10" value="${escapeHtml(saved.years)}"></label>
     </div>
     <div class="product-sim-result" aria-live="polite"></div>
     <p class="product-sim-note">מבוסס על תשואות עבר (1995–2024), אינו תחזית לעתיד.<br><strong>הסימולציה אינה הבטחה לתשואה או לסכום עתידי.</strong></p>
-  </section>`;
+  </details>`;
 }
 function calculateProductSimulation(item, monthly, years) {
   if (!Number.isFinite(item.fund.stock_pct)) return null;

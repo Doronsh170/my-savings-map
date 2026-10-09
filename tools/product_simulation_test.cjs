@@ -14,6 +14,10 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   assert.equal(await page.locator('#simulationEntrySection').isVisible(),false);
   assert.equal(await page.locator('.product-simulation:visible').count(),1);
   const a=page.locator('[data-sim-uid="a"]');
+  assert.equal(await a.getAttribute('open'),null);
+  assert.equal(await a.locator('[data-product-sim="monthly"]').isVisible(),false);
+  await a.locator('summary').click();
+  assert.equal(await a.locator('[data-product-sim="monthly"]').isVisible(),true);
   assert.match(await a.innerText(),/מבוסס על תשואות עבר \(1995–2024\), אינו תחזית לעתיד\./);
   assert.match(await a.locator('.product-sim-note strong').innerText(),/אינה הבטחה לתשואה או לסכום עתידי/);
   assert.match(await a.locator('.product-sim-heading').innerText(),/הסכום הצפוי בחיסכון/);
@@ -24,6 +28,8 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   await a.locator('[data-product-sim="years"]').fill('31');assert.match(await a.innerText(),/1–30/);
   await a.locator('[data-product-sim="years"]').fill('10');
   await page.evaluate(()=>setProductOpen('b'));const b=page.locator('[data-sim-uid="b"]');assert.equal(await b.locator('[data-product-sim="monthly"]').inputValue(),'');
+  assert.equal(await b.getAttribute('open'),null);
+  assert.equal(await b.locator('[data-product-sim="monthly"]').isVisible(),false);
   await page.evaluate(()=>setProductOpen('a'));assert.equal(await a.locator('[data-product-sim="monthly"]').inputValue(),'1000');
   assert.equal(await a.locator('.product-sim-today, .product-sim-assumption').count(),0);
   assert.doesNotMatch(await a.innerText(),/נומינלי|ריאלי|הפקדות עתידיות|רווח בסימולציה|עליית המחירים/);
