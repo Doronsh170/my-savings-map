@@ -8835,3 +8835,13 @@ button.stat-value:focus-visible { outline: 2px solid var(--accent); outline-offs
 #historySection .history-toggle-section[open] > .dashboard-toggle-summary::after { transform: translateY(-50%) rotate(180deg); }
 @media (max-width: 420px) { .product-sim-fields { grid-template-columns: 1fr; } }
 @media print { .product-simulation { display: none !important; } }
+
+/* Three matching, collapsed footer rows, in the order history/share/disclosure. */
+#historySection, #bottomActions, #siteInfoSection { padding: 6px 0 !important; }
+#historySection .dashboard-toggle-section, #bottomActions .footer-accordion, #siteInfoSection .footer-accordion { margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+#historySection .dashboard-toggle-summary, #bottomActions .dashboard-toggle-summary, #siteInfoSection .dashboard-toggle-summary { position: relative; display: flex; justify-content: center; align-items: center; text-align: center; min-height: 64px !important; padding: 18px 48px !important; font-size: 17px !important; border: 1px solid #e0e6ed; border-radius: 14px; background: #fff; color: #172e45 !important; margin: 0 !important; }
+#bottomActions .dashboard-toggle-summary::after, #siteInfoSection .dashboard-toggle-summary::after { position: absolute; inset-inline-end: 14px; top: 50%; transform: translateY(-50%); margin: 0; }
+#bottomActions details[open] > .dashboard-toggle-summary::after, #siteInfoSection details[open] > .dashboard-toggle-summary::after { transform: translateY(-50%) rotate(180deg); }
+.footer-info-text { margin-bottom: 20px; line-height: 1.7; overflow-wrap: anywhere; }
+.footer-info-text h3 { font-size: 17px; margin: 0 0 8px; }
+@media (max-width: 420px) { #historySection .dashboard-toggle-summary, #bottomActions .dashboard-toggle-summary, #siteInfoSection .dashboard-toggle-summary { font-size: 16px !important; } }

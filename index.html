@@ -283,22 +283,6 @@
   </div>
 </section>
 
-<section class="bottom-actions" id="bottomActions" aria-label="פעולות דוח" style="display:none;">
-  <div class="container">
-
-    <h3 class="actions-heading">שמירה ושיתוף</h3>
-    <div class="action-toolbar" aria-label="שמירה ושיתוף">
-      <button type="button" class="action-btn" onclick="saveAsPDF()"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 3H6v18h12V7zM14 3v5h4M9 12h6M9 16h6"/></svg>שמירה / הדפסה ל־PDF</button>
-      <button type="button" class="action-btn" onclick="shareWhatsApp()"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 12 16 7M8 12l8 5"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/></svg>שיתוף בווטסאפ</button>
-    </div>
-    <details class="portfolio-management">
-      <summary>ניהול התיק</summary>
-      <p>הנתונים נשמרים בדפדפן הזה.</p>
-      <button type="button" class="reset-link" onclick="resetAllData()">מחיקת כל הנתונים מהדפדפן</button>
-    </details>
-  </div>
-</section>
-
 <section class="details" id="historySection" style="display:none;">
   <div class="container">
     <details class="dashboard-toggle-section history-toggle-section" id="historyDetails">
@@ -315,17 +299,38 @@
   </div>
 </section>
 
+<section class="bottom-actions" id="bottomActions" aria-label="פעולות דוח" style="display:none;">
+  <div class="container">
+
+    <details class="dashboard-toggle-section footer-accordion" id="saveShareDetails">
+<summary class="dashboard-toggle-summary"><span>שמירה ושיתוף</span></summary>
+<div class="dashboard-toggle-content">
+    <div class="action-toolbar" aria-label="שמירה ושיתוף">
+      <button type="button" class="action-btn" onclick="saveAsPDF()"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 3H6v18h12V7zM14 3v5h4M9 12h6M9 16h6"/></svg>שמירה / הדפסה ל־PDF</button>
+      <button type="button" class="action-btn" onclick="shareWhatsApp()"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 12 16 7M8 12l8 5"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/></svg>שיתוף בווטסאפ</button>
+    </div>
+    <details class="portfolio-management">
+      <summary>ניהול התיק</summary>
+      <p>הנתונים נשמרים בדפדפן הזה.</p>
+      <button type="button" class="reset-link" onclick="resetAllData()">מחיקת כל הנתונים מהדפדפן</button>
+    </details>
+    </div>
+    </details>
+  </div>
+</section>
+
+
+
 <section class="section site-info-section" id="siteInfoSection">
   <div class="container">
-    <div class="info-rows" aria-label="מידע על הכלי">
-      <button type="button" class="info-row" id="landingAboutBtn" aria-expanded="false" aria-controls="landingAboutPanel">
-        <span class="info-row-text">
-          <span class="info-row-kicker">הסבר פשוט</span>
-          <span class="info-row-title">מה הכלי עושה?</span>
-        </span>
-        <span class="info-row-chevron" aria-hidden="true"></span>
-      </button>
-      <div class="landing-panel info-panel" id="landingAboutPanel" hidden>
+    <details class="dashboard-toggle-section footer-accordion" id="professionalDetails">
+      <summary class="dashboard-toggle-summary"><span>הבהרה מקצועית</span></summary>
+      <div class="dashboard-toggle-content">
+<div class="footer-info-text" id="landingDisclosurePanel">
+<h3>הבהרה מקצועית</h3>
+      הדשבורד מציג חשיפות וביצועים מתוך נתונים ציבוריים של המסלולים בלבד. הוא אינו מושך יתרות אישיות ממסלקה פנסיונית, אינו מחליף ייעוץ פנסיוני או פיננסי, ואינו מציג המלצה. נתוני התשואה הם נתוני מסלול ציבוריים, ודמי הניהול בדשבורד מבוססים רק על הנתון שהוזן ידנית עבור כל מוצר.
+      </div>
+<div class="footer-info-text" id="landingAboutPanel">
 <h3>מה הכלי עושה?</h3>
       הכלי מיועד לעזור גם למי שפחות מכיר את עולם החיסכון הפנסיוני והפיננסי. במקום להסתכל על כל קופה בנפרד, אפשר להוסיף את הקופות והקרנות שלך, להזין יתרה ודמי ניהול אישיים, ולקבל תמונה אחת מרוכזת: מה החשיפה הכוללת למניות, כמה מהכסף מושקע בחו״ל, מה החשיפה למט״ח, ומה המשקל של כל מוצר בתיק. המטרה היא לתת תמונת מצב פשוטה וברורה, לא המלצה ולא ייעוץ.
       <br>
@@ -338,29 +343,12 @@
         <a class="external-link-btn" href="https://www.gov.il/he/service/pension_savings_search" target="_blank" rel="noopener noreferrer">מעבר להר הכסף</a>
       </div>
       </div>
-      <button type="button" class="info-row" id="landingDisclosureBtn" aria-expanded="false" aria-controls="landingDisclosurePanel">
-        <span class="info-row-text">
-          <span class="info-row-kicker">חשוב לדעת</span>
-          <span class="info-row-title">הבהרה מקצועית</span>
-        </span>
-        <span class="info-row-chevron" aria-hidden="true"></span>
-      </button>
-      <div class="landing-panel info-panel" id="landingDisclosurePanel" hidden>
-<h3>הבהרה מקצועית</h3>
-      הדשבורד מציג חשיפות וביצועים מתוך נתונים ציבוריים של המסלולים בלבד. הוא אינו מושך יתרות אישיות ממסלקה פנסיונית, אינו מחליף ייעוץ פנסיוני או פיננסי, ואינו מציג המלצה. נתוני התשואה הם נתוני מסלול ציבוריים, ודמי הניהול בדשבורד מבוססים רק על הנתון שהוזן ידנית עבור כל מוצר.
-      </div>
-      <button type="button" class="info-row" id="landingPrivacyBtn" aria-expanded="false" aria-controls="landingPrivacyPanel">
-        <span class="info-row-text">
-          <span class="info-row-kicker">אמון ופרטיות</span>
-          <span class="info-row-title">פרטיות ומקור נתונים</span>
-        </span>
-        <span class="info-row-chevron" aria-hidden="true"></span>
-      </button>
-      <div class="landing-panel info-panel" id="landingPrivacyPanel" hidden>
+<div class="footer-info-text" id="landingPrivacyPanel">
 <h3>פרטיות ומקור נתונים</h3>
       היתרות ודמי הניהול שהזנת נשמרים בדפדפן שלך. הם אינם נשמרים בשרת ואינם משויכים לפרטים אישיים. מקור הנתונים: קובצי המידע הציבוריים של רשות שוק ההון, הביטוח והחיסכון, מתוך מאגרי גמל נט, פנסיה נט וביטוח נט כפי שפורסמו ב-data.gov.il.
       </div>
-    </div>
+      </div>
+    </details>
   </div>
 </section>
 

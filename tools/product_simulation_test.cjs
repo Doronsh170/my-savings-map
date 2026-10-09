@@ -37,9 +37,20 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   await page.evaluate(()=>{userFunds[0].managementFee=1;updateProductSimulation(document.querySelector('[data-sim-uid="a"]'));});assert.notEqual(await a.locator('.product-sim-amount').innerText(),beforeFee);
   await page.evaluate(()=>{userFunds[0].fund.stock_pct=null;updateProductSimulation(document.querySelector('[data-sim-uid="a"]'));});assert.match(await a.innerText(),/חסר נתון/);
   await page.evaluate(()=>{userFunds[0].fund.stock_pct=25;userFunds[0].managementFee=null;updateProductSimulation(document.querySelector('[data-sim-uid="a"]'));});assert.match(await a.innerText(),/לא הוזנו/);
-  assert.equal(await page.evaluate(()=>!!(document.getElementById('bottomActions').compareDocumentPosition(document.getElementById('historySection'))&Node.DOCUMENT_POSITION_FOLLOWING)),true);
+  assert.equal(await page.evaluate(()=>!!(document.getElementById('historySection').compareDocumentPosition(document.getElementById('bottomActions'))&Node.DOCUMENT_POSITION_FOLLOWING)),true);
+  assert.equal(await page.locator('#saveShareDetails').getAttribute('open'),null);
+  assert.equal(await page.locator('#professionalDetails').getAttribute('open'),null);
+  assert.equal(await page.locator('#bottomActions .action-toolbar').isVisible(),false);
+  await page.locator('#saveShareDetails > summary').click();
+  assert.equal(await page.locator('#bottomActions .action-toolbar').isVisible(),true);
+  await page.locator('#saveShareDetails > summary').click();
+  await page.locator('#professionalDetails > summary').click();
+  for(const id of ['landingAboutPanel','landingDisclosurePanel','landingPrivacyPanel']) assert.equal(await page.locator('#'+id).isVisible(),true);
+  await page.locator('#professionalDetails > summary').click();
   for(const width of [320,360,390,768,1280]){
    await page.setViewportSize({width,height:1000});
+   const rows=await page.locator('#historyDetails > summary, #saveShareDetails > summary, #professionalDetails > summary').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return {w:r.width,h:r.height,x:r.x};}));
+   assert.ok(rows.every(r=>Math.abs(r.w-rows[0].w)<1&&Math.abs(r.h-rows[0].h)<1&&Math.abs(r.x-rows[0].x)<1),`footer rows match at ${width}px`);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
    assert.equal(await a.locator('input').evaluateAll(es=>es.every(e=>e.getBoundingClientRect().width>100)),true);
    const summary=page.locator('#historyDetails > summary');
