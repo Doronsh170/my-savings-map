@@ -46,6 +46,16 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
     if(width===390&&open) await page.screenshot({path:path.join(root,'..','simulation-mobile-preview.png'),fullPage:true});
    }
   }
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:740});
+   for(const uid of ['b','a','b','a']){
+    await page.locator(`[data-toggle-uid="${uid}"]`).click();
+    await page.waitForTimeout(100);
+    const bounds=await page.locator(`.product[data-product-uid="${uid}"] > .product-row`).boundingBox();
+    assert.ok(bounds.y>=0&&bounds.y+bounds.height<=740,`new product heading visible at ${width}px (${uid})`);
+    assert.equal(await page.locator('.product.is-open').getAttribute('data-product-uid'),uid);
+   }
+  }
   await page.screenshot({path:path.join(root,'..','simulation-preview.png'),fullPage:true});
   assert.deepEqual(errors,[]);console.log('PASS inline simulation: independent product inputs, historical calculation, fees, validation, missing data, secondary history, responsive layout, no runtime errors');
  }finally{await browser.close();}

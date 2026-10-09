@@ -1237,6 +1237,20 @@ function setProductOpen(uid, focusFee) {
     const button = document.querySelector(`#detailsRows [data-fee-edit][data-fee-uid="${CSS.escape(uid)}"]`);
     if (button) openFeeEditor(button);
   }
+  if (OPEN_PRODUCT_UID) {
+    const opened = document.querySelector('#detailsRows .product.is-open');
+    // Closing the previous product moves this heading. Scroll after the browser
+    // has completed layout and scroll anchoring, so its beginning stays visible.
+    requestAnimationFrame(() => {
+      if (!opened || !opened.classList.contains('is-open')) return;
+      const header = document.querySelector('header');
+      const headerStyle = header && getComputedStyle(header);
+      const offset = headerStyle && ['fixed', 'sticky'].includes(headerStyle.position)
+        ? header.getBoundingClientRect().height : 0;
+      const top = Math.max(0, window.scrollY + opened.getBoundingClientRect().top - offset - 12);
+      window.scrollTo({ top, behavior: 'instant' });
+    });
+  }
 }
 document.addEventListener('click', event => {
   const row = event.target.closest('[data-toggle-uid]');
