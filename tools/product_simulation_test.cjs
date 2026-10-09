@@ -44,10 +44,12 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   await page.locator('[data-close-product="a"]').click();
   await page.locator('#saveShareDetails > summary').click();
   assert.equal(await page.locator('#bottomActions .action-toolbar').isVisible(),true);
-  await page.locator('#saveShareDetails > summary').click();
+  assert.equal(await page.locator('#saveShareDetails .action-toolbar > button').count(),3);
+  assert.equal(await page.locator('.portfolio-management').count(),0);
+  await page.locator('#saveShareDetails [data-footer-close]').click();
   await page.locator('#professionalDetails > summary').click();
   for(const id of ['landingAboutPanel','landingDisclosurePanel','landingPrivacyPanel']) assert.equal(await page.locator('#'+id).isVisible(),true);
-  await page.locator('#professionalDetails > summary').click();
+  await page.locator('#professionalDetails [data-footer-close]').click();
   for(const width of [320,360,390,768,1280]){
    await page.setViewportSize({width,height:1000});
    const rows=await page.locator('#historyDetails > summary, #saveShareDetails > summary, #professionalDetails > summary').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return {w:r.width,h:r.height,x:r.x};}));
@@ -64,6 +66,23 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
    }
   }
   await page.evaluate(()=>{userFunds.push({...userFunds[1],fund:{...userFunds[1].fund,uid:'c',fund_name:'מוצר שלישי לדוגמה'}});goToDashboard();});
+  for(const width of [320,390,768,1280]){
+   await page.setViewportSize({width,height:740});
+   for(const id of ['historyDetails','saveShareDetails','professionalDetails']){
+    await page.locator('#'+id+' > summary').click();
+    const dialog=page.locator('#'+id+' .footer-focus-dialog');
+    assert.equal(await dialog.isVisible(),true);
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.body).position),'fixed');
+    const previous=await page.evaluate(()=>FOOTER_FOCUS_SCROLL);
+    await dialog.locator('.footer-focus-scroll').evaluate(el=>el.scrollTop=el.scrollHeight);
+    const button=await dialog.locator('[data-footer-close]').boundingBox();
+    assert.ok(button.y>=0&&button.y+button.height<=740);
+    assert.equal(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth),true);
+    await dialog.locator('[data-footer-close]').click();
+    assert.ok(Math.abs(await page.evaluate(()=>scrollY)-previous)<2);
+    assert.equal(await page.evaluate(()=>document.body.classList.contains('footer-view-open')),false);
+   }
+  }
   for(const width of [320,390,768,1280]){
    await page.setViewportSize({width,height:740});
    for(const uid of ['b','a','c','b']){
@@ -99,6 +118,12 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   await page.evaluate(()=>{goToDashboard();setProductOpen('a');});
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('.product-focus-dialog[open]').count(),0);
+  await page.locator('#saveShareDetails > summary').click();
+  page.once('dialog',dialog=>dialog.dismiss());
+  await page.locator('#saveShareDetails .action-delete').click();
+  assert.equal(await page.evaluate(()=>userFunds.length),3);
+  assert.equal(await page.locator('#saveShareDetails .footer-focus-dialog').isVisible(),true);
+  await page.locator('#saveShareDetails [data-footer-close]').click();
   await page.screenshot({path:path.join(root,'..','simulation-preview.png'),fullPage:true});
   assert.deepEqual(errors,[]);console.log('PASS inline simulation: independent product inputs, historical calculation, fees, validation, missing data, secondary history, responsive layout, no runtime errors');
  }finally{await browser.close();}
