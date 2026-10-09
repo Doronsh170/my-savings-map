@@ -15,6 +15,8 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   assert.equal(await page.locator('.product-simulation:visible').count(),1);
   const a=page.locator('[data-sim-uid="a"]');
   assert.match(await a.innerText(),/מבוסס על תשואות עבר \(1995–2024\), אינו תחזית לעתיד\./);
+  assert.match(await a.locator('.product-sim-note strong').innerText(),/אינה הבטחה לתשואה או לסכום עתידי/);
+  assert.match(await a.locator('.product-sim-heading').innerText(),/הסכום הצפוי בחיסכון/);
   await a.locator('[data-product-sim="monthly"]').fill('1000');
   await a.locator('[data-product-sim="years"]').fill('10');
   const expected=await page.evaluate(()=>{let amount=100000;for(let y=0;y<10;y++){const r=Math.pow(1+simAnnualYield(y,25)/100,1/12);for(let m=0;m<12;m++)amount=amount*r*(1-.3/1200)+1000;}return fmtSimCurrency(amount);});
