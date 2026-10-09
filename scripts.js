@@ -3412,7 +3412,7 @@ if (document.readyState === 'loading') {
     ['landingAboutPanel', 'landingDisclosurePanel', 'landingPrivacyPanel'].forEach(function(id) {
       const panel = document.getElementById(id);
       const btn = document.querySelector('[aria-controls="' + id + '"]');
-      if (!panel || id === exceptId) return;
+      if (!panel || id === exceptId || panel.classList.contains('footer-info-text')) return;
       panel.hidden = true;
       if (btn) btn.setAttribute('aria-expanded', 'false');
     });
