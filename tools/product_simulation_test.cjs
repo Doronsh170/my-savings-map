@@ -49,6 +49,9 @@ const fixture = (uid, stock) => ({uid, fund_id:uid, fund_name:'קרן השתלמ
   await page.locator('#saveShareDetails [data-footer-close]').click();
   await page.locator('#professionalDetails > summary').click();
   for(const id of ['landingAboutPanel','landingDisclosurePanel','landingPrivacyPanel']) assert.equal(await page.locator('#'+id).isVisible(),true);
+  const transparency=page.locator('#landingPrivacyPanel a[href="docs/funds-by-track-review.pdf"]');
+  assert.equal(await transparency.isVisible(),true);
+  assert.equal(await transparency.getAttribute('target'),'_blank');
   await page.locator('#professionalDetails [data-footer-close]').click();
   for(const width of [320,360,390,768,1280]){
    await page.setViewportSize({width,height:1000});
