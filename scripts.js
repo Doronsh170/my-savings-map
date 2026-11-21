@@ -1131,8 +1131,13 @@ function annualRankHtml(fund) {
     ? `בשנה האחרונה: מקום ${rank(mine)} מתוך ${rows.length}`
     : 'אין מספיק נתונים לדירוג בשנה האחרונה';
   const table = rows.length ? `
-    <details style="margin-top:0.5rem">
-      <summary style="width:fit-content;cursor:pointer">הצג טבלת דירוג</summary>
+    <button type="button" class="action-btn rank-open" data-rank-open aria-haspopup="dialog">הצג טבלת דירוג</button>
+    <dialog class="rank-dialog" data-rank-panel aria-label="טבלת דירוג בקטגוריה">
+      <div class="rank-dialog-inner">
+      <header class="rank-dialog-head">
+        <h3>טבלת דירוג בקטגוריה</h3>
+        <form method="dialog"><button type="submit" class="action-btn" autofocus>סגירה</button></form>
+      </header>
       <div class="rank-compare-actions" data-rank-compare="${escapeHtml(fund.uid)}">
         <button type="button" class="action-btn" data-rank-submit disabled>השווה מסלולים</button>
         <span data-rank-status aria-live="polite">בחרו עד שני מסלולים להשוואה מול הקופה שלכם</span>
@@ -1152,7 +1157,8 @@ function annualRankHtml(fund) {
           }).join('')}</tbody>
         </table>
       </div>
-    </details>` : '';
+      </div>
+    </dialog>` : '';
   return `<details style="padding:0.25rem 1rem 0.65rem">
     <summary style="width:fit-content;cursor:pointer">מיקום בקטגוריה</summary>
     <span style="display:inline-block;margin-top:0.25rem;padding:0.4rem 0.65rem;border:1px solid #b9d4d0;border-radius:0.5rem">${message}</span>

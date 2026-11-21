@@ -32,3 +32,12 @@
 #fundComparison .compare-plot {margin-block:.75rem}
 .rank-compare-actions {display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-block:.5rem}
 .rank-compare-choice {display:inline-flex;align-items:center;gap:.25rem;min-height:40px;white-space:nowrap}
+
+.rank-open {margin-inline-start:.5rem}
+dialog.rank-dialog {position:fixed;inset:0;margin:auto;width:min(720px,calc(100% - 24px));max-height:85dvh;padding:0;border:1px solid #b9d4d0;border-radius:16px;background:#fff;color:#143538;overflow:auto}
+.rank-dialog::backdrop {background:#10343899}
+.rank-dialog-inner {padding:clamp(12px,3vw,24px)}
+.rank-dialog-head {display:flex;align-items:center;justify-content:space-between;gap:12px}
+.rank-dialog-head h3 {margin:0}
+.rank-dialog-head form {margin:0}
+.rank-dialog-head button {min-height:44px}

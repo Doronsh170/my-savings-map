@@ -140,7 +140,7 @@
   document.addEventListener('change', event => {
     const check = event.target.closest('[data-rank-peer]');
     if (!check) return;
-    const panel = check.closest('details');
+    const panel = check.closest('[data-rank-panel]');
     const choices = [...panel.querySelectorAll('[data-rank-peer]')];
     const count = choices.filter(choice => choice.checked).length;
     choices.forEach(choice => { choice.disabled = count >= 2 && !choice.checked; });
@@ -151,11 +151,24 @@
   });
 
   document.addEventListener('click', event => {
+    const rankOpen = event.target.closest('[data-rank-open]');
+    if (rankOpen) {
+      rankOpen.nextElementSibling.showModal();
+      return;
+    }
+    const backdrop = event.target.closest('[data-rank-panel]');
+    if (backdrop === event.target) {
+      backdrop.close();
+      return;
+    }
     const submit = event.target.closest('[data-rank-submit]');
     if (submit) {
-      const panel = submit.closest('details');
+      const panel = submit.closest('[data-rank-panel]');
       const peers = [...panel.querySelectorAll('[data-rank-peer]:checked')].map(check => check.dataset.rankPeer);
-      if (peers.length) openComparison([submit.closest('[data-rank-compare]').dataset.rankCompare, ...peers]);
+      if (peers.length) {
+        panel.close();
+        openComparison([submit.closest('[data-rank-compare]').dataset.rankCompare, ...peers]);
+      }
       return;
     }
     const open = event.target.closest('[data-compare-open]');
