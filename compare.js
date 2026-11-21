@@ -153,7 +153,17 @@
   document.addEventListener('click', event => {
     const rankOpen = event.target.closest('[data-rank-open]');
     if (rankOpen) {
-      rankOpen.nextElementSibling.showModal();
+      const panel = rankOpen.nextElementSibling;
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
+      panel.showModal();
+      document.body.classList.add('rank-dialog-open');
+      document.body.style.setProperty('--rank-page-offset', -scrollY + 'px');
+      panel.addEventListener('close', () => {
+        document.body.classList.remove('rank-dialog-open');
+        document.body.style.removeProperty('--rank-page-offset');
+        window.scrollTo({ left: scrollX, top: scrollY, behavior: 'instant' });
+      }, { once: true });
       return;
     }
     const backdrop = event.target.closest('[data-rank-panel]');

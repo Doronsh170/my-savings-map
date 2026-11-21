@@ -62,3 +62,29 @@ dialog.rank-dialog {position:fixed;inset:0;margin:auto;width:min(720px,calc(100%
   .rank-dialog .rank-dialog-head h3 {font-size:1.05rem}
   .rank-dialog .rank-dialog-inner {padding-inline:8px}
 }
+
+body.rank-dialog-open {
+  position: fixed;
+  inset-inline: 0;
+  top: var(--rank-page-offset, 0px);
+  width: 100%;
+  overflow: hidden;
+}
+dialog.rank-dialog {overflow:hidden}
+.rank-dialog .rank-dialog-inner {
+  display:flex;
+  flex-direction:column;
+  box-sizing:border-box;
+  max-height:85vh;
+  max-height:85dvh;
+  overflow:hidden;
+}
+.rank-dialog .rank-dialog-head,
+.rank-dialog .rank-compare-actions {flex:none}
+.rank-dialog .rank-list {
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+}
