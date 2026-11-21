@@ -1107,6 +1107,20 @@ function trailingYearComparison(fund) {
     ? (cmpPolicyPeers(fund) || []).map(trailingYearYield).filter(Number.isFinite) : [];
   return { mine, peers: values.length >= CMP_MIN_PEERS ? cmpMean(values) : null, count: values.length };
 }
+function annualRankHtml(fund) {
+  const mine = trailingYearYield(fund);
+  const peers = isSelectableFund(fund) && cmpIsFresh(fund) && Number.isFinite(mine)
+    ? (cmpPolicyPeers(fund) || []).map(trailingYearYield).filter(Number.isFinite)
+    : [];
+  const position = 1 + peers.filter(value => value - mine > 1e-9).length;
+  const message = peers.length
+    ? `בשנה האחרונה: מקום ${position} מתוך ${peers.length + 1}`
+    : 'אין מספיק נתונים לדירוג בשנה האחרונה';
+  return `<details style="padding:0.25rem 1rem 0.65rem">
+    <summary style="width:fit-content;cursor:pointer">מיקום בקטגוריה</summary>
+    <span style="display:inline-block;margin-top:0.25rem;padding:0.4rem 0.65rem;border:1px solid #b9d4d0;border-radius:0.5rem">${message}</span>
+  </details>`;
+}
 function productDetailHtml(item, cmp) {
   const f = item.fund;
   const uid = escapeHtml(f.uid);
@@ -1222,6 +1236,7 @@ function productItemHtml(item, activeItems, totalBalance) {
         </span>
         <span class="product-chev" aria-hidden="true"></span>
       </button>
+      ${annualRankHtml(f)}
       <dialog class="product-focus-dialog" aria-labelledby="${panelId}-title" data-focus-uid="${uid}">
         <div class="product-focus-heading"><h3 id="${panelId}-title">${escapeHtml(title)}</h3>${track ? `<p>${escapeHtml(track)}</p>` : ''}</div>
         <div class="product-focus-scroll"><div class="product-detail" id="${panelId}"${open ? '' : ' hidden'}>${productDetailHtml(item, cmp)}${productSimulationHtml(item)}</div></div>
