@@ -1,0 +1,24 @@
+
+#searchSection .compare-entry {display:block;margin:0 0 12px auto}
+#fundComparison {width:min(720px,calc(100% - 24px));max-height:90dvh;padding:0;border:1px solid #b9d4d0;border-radius:18px;color:#143538;background:#fff;box-shadow:0 16px 64px #14353844}
+#fundComparison::backdrop {background:#10343899}
+#fundComparison .compare-shell {padding:clamp(12px,3vw,24px)}
+#fundComparison header,#fundComparison .compare-picks>div,#fundComparison .compare-dates {display:flex;align-items:center;justify-content:space-between;gap:8px}
+#fundComparison h2 {margin:0;font-size:1.35rem}
+#fundComparison button,#fundComparison input {font:inherit;min-height:44px;border:1px solid #b9d4d0;border-radius:9px;padding:6px 10px;background:white;color:inherit}
+#fundComparison input {width:100%;box-sizing:border-box;margin:4px 0 8px}
+#fundComparison button[aria-pressed=true] {background:#165557;color:#fff}
+#fundComparison .compare-picks>div {justify-content:flex-start;background:#ecf7f5;border-radius:9px;padding:8px;margin:7px 0}
+#fundComparison .compare-picks button {margin-inline-start:auto}
+#fundComparison small {display:block;font-size:.82rem}
+#fundComparison .compare-results {display:grid;gap:5px;max-height:207px;overflow:auto}
+#fundComparison .compare-results button {text-align:start}
+#fundComparison .compare-period,#fundComparison .compare-output {margin-top:12px}
+#fundComparison .compare-note {background:#f5f4e9;padding:8px;border-radius:8px}
+#fundComparison .compare-dot {display:inline-block;width:9px;height:9px;border-radius:50%;flex:none;margin-inline-end:5px}
+#fundComparison svg {display:block;width:100%;max-height:185px;direction:ltr}
+#fundComparison .compare-dates {direction:ltr;font-size:.82rem}
+#fundComparison .compare-table {margin-top:10px;overflow-x:auto}
+#fundComparison table {width:100%;border-collapse:collapse;font-size:.88rem}
+#fundComparison td,#fundComparison th {padding:6px;text-align:start;border-bottom:1px solid #dce9e7}
+#fundComparison td {white-space:nowrap}

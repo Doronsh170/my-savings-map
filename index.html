@@ -13,6 +13,7 @@
 
 
 
+<link rel="stylesheet" href="compare.css">
 </head>
 <body>
 <section class="hero premium-hero">
@@ -34,6 +35,7 @@
         <p>בלי הרשמה.<br>הנתונים נשמרים בדפדפן שלך.</p>
       </aside>
       <div class="wizard" id="wizard">
+      <button type="button" class="action-btn compare-entry" data-compare-open>השוואת מסלולים</button>
       <header class="wiz-bar" id="wizBar"></header>
       <nav class="wiz-crumbs" id="wizCrumbs" aria-label="הבחירות עד כה" hidden></nav>
       <div class="wiz-screen" id="wizScreen" aria-live="polite"></div>
@@ -433,7 +435,23 @@
 
 
 
+<dialog id="fundComparison" dir="rtl" aria-labelledby="fundComparisonTitle">
+  <div class="compare-shell">
+    <header><h2 id="fundComparisonTitle">השוואת מסלולים</h2><form method="dialog"><button type="submit">סגירה</button></form></header>
+    <p>בחרו שניים או שלושה מסלולים להשוואה.</p>
+    <div class="compare-picks"></div>
+    <label for="comparisonSearch">חיפוש במאגר</label>
+    <input id="comparisonSearch" type="search" placeholder="למשל: הראל מניות או מספר קופה" autocomplete="off">
+    <div class="compare-results" aria-live="polite"></div>
+    <div class="compare-period" hidden aria-label="תקופת תשואה">
+      <button type="button" data-months="12" aria-pressed="true">שנה</button>
+      <button type="button" data-months="36" aria-pressed="false">3 שנים</button>
+    </div>
+    <div class="compare-output" aria-live="polite"></div>
+  </div>
+</dialog>
 <script src="scripts.js"></script>
+<script src="compare.js"></script>
 </body>
 </html>
 

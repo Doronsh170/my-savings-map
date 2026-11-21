@@ -1137,6 +1137,7 @@ function productDetailHtml(item, cmp) {
       <p class="product-expo">מניות <b>${fmtRound(f.stock_pct)}</b> · חו״ל <b>${fmtRound(f.foreign_pct)}</b> · מט״ח <b>${fmtRound(f.fx_pct)}</b></p>
       <div class="product-actions">
         <button type="button" class="product-action product-action-main" data-info="full" data-info-uid="${uid}" aria-haspopup="dialog">${cmp ? 'השוואה מקיפה' : 'פרטי המסלול'} <span aria-hidden="true">›</span></button>
+        <button type="button" class="product-action" data-compare-open="${uid}">השווה מסלול זה</button>
         <button type="button" class="product-action" data-edit-uid="${uid}" aria-label="עריכת ${escapeHtml(f.fund_name || 'המוצר')}">עריכה</button>
       </div>
       <div class="print-only">${fullComparisonHtml(item, cmp, true)}</div>`;
