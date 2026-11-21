@@ -13,7 +13,7 @@
 
 
 
-<link rel="stylesheet" href="compare.css">
+<link rel="stylesheet" href="compare.css?v=rank-compare">
 </head>
 <body>
 <section class="hero premium-hero">
@@ -85,6 +85,7 @@
         <div class="total-actions">
           <button type="button" class="dashboard-primary" onclick="prepareAnotherFund()"><span aria-hidden="true">+</span> הוספת חיסכון</button>
           <button type="button" class="dashboard-secondary" onclick="openBalancesDialog()">עדכון יתרות</button>
+          <button type="button" class="dashboard-secondary" data-compare-open>השוואת מסלולים</button>
         </div>
       </div>
     </div>
@@ -440,18 +441,22 @@
     <header><h2 id="fundComparisonTitle">השוואת מסלולים</h2><form method="dialog"><button type="submit">סגירה</button></form></header>
     <p>בחרו שניים או שלושה מסלולים להשוואה.</p>
     <div class="compare-picks"></div>
+    <div class="compare-output" aria-live="polite"></div>
+    <details class="compare-chart" hidden><summary>הצג גרף תשואות</summary>
+      <div class="compare-period" aria-label="תקופת תשואה">
+        <button type="button" data-months="12" aria-pressed="true">שנה</button>
+        <button type="button" data-months="36" aria-pressed="false">3 שנים</button>
+      </div><div class="compare-plot"></div>
+    </details>
+    <details class="compare-finder"><summary>חיפוש והוספת מסלול</summary>
     <label for="comparisonSearch">חיפוש במאגר</label>
     <input id="comparisonSearch" type="search" placeholder="למשל: הראל מניות או מספר קופה" autocomplete="off">
     <div class="compare-results" aria-live="polite"></div>
-    <div class="compare-period" hidden aria-label="תקופת תשואה">
-      <button type="button" data-months="12" aria-pressed="true">שנה</button>
-      <button type="button" data-months="36" aria-pressed="false">3 שנים</button>
-    </div>
-    <div class="compare-output" aria-live="polite"></div>
+    </details>
   </div>
 </dialog>
-<script src="scripts.js?v=category-rank-expand"></script>
-<script src="compare.js"></script>
+<script src="scripts.js?v=rank-compare"></script>
+<script src="compare.js?v=rank-compare"></script>
 </body>
 </html>
 

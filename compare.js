@@ -5,6 +5,9 @@
   const results = dialog.querySelector('.compare-results');
   const output = dialog.querySelector('.compare-output');
   const periods = dialog.querySelector('.compare-period');
+  const chart = dialog.querySelector('.compare-chart');
+  const plot = dialog.querySelector('.compare-plot');
+  const finder = dialog.querySelector('.compare-finder');
   const colors = ['#087c79', '#9750ad', '#b65615'];
   let selected = [];
   let months = 12;
@@ -37,21 +40,30 @@
     const y = value => 12 + 136 * (high - value) / (high - low);
     const paths = series.map((points, i) => '<polyline fill="none" stroke="' + colors[i]
       + '" stroke-width="2.5" points="' + points.map((value, j) => x(j) + ',' + y(value)).join(' ') + '"/>');
-    return '<svg viewBox="0 0 500 160" role="img" aria-label="תשואה מצטברת לאורך התקופה. הערכים בסוף התקופה מופיעים בטבלה."><line x1="12" x2="488" y1="'
+    return '<svg viewBox="0 0 500 160" role="img" aria-label="תשואה מצטברת לאורך התקופה שנבחרה"><line x1="12" x2="488" y1="'
       + y(0) + '" y2="' + y(0) + '" stroke="#adbebd"/>' + paths.join('')
       + '</svg><div class="compare-dates"><span>' + fmtPeriod(start) + '</span><span>' + fmtPeriod(end) + '</span></div>';
   }
 
   const pct = (value, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) + '%' : '—';
   function renderOutput() {
-    periods.hidden = selected.length < 2;
+    chart.hidden = selected.length < 2;
+    plot.replaceChildren();
     if (selected.length < 2) {
       output.textContent = 'בחרו לפחות שני מסלולים להצגת ההשוואה.';
       return;
     }
-    const perf = commonPerformance(selected, months);
+    const perf = commonPerformance(selected, 12);
+    const graphPerf = months === 12 ? perf : commonPerformance(selected, months);
+    plot.innerHTML = graphPerf ? graph(graphPerf) : '<p class="compare-note">אין נתוני תשואה חודשיים מלאים לתקופה משותפת זו.</p>';
     const rows = [
-      ['תשואה מצטברת לפני דמי ניהול', (_, i) => pct(perf?.series[i].at(-1))],
+      ['תשואה ל־12 חודשים לפני דמי ניהול', (_, i) => pct(perf?.series[i].at(-1), 2)],
+      ['מיקום בקטגוריה בשנה האחרונה', f => {
+        const category = annualRankRows(f);
+        const own = category.find(row => row.fund.uid === f.uid);
+        return own ? 'מקום ' + annualRankPosition(category, own.value) + ' מתוך ' + category.length
+          + '<small>' + escapeHtml(cmpPolicyLabel(f)) + ' · ' + fmtPeriod(f.report_period) + '</small>' : '—';
+      }],
       ['חשיפה למניות', f => pct(f.stock_pct)],
       ['חשיפה לחו״ל', f => pct(f.foreign_pct)],
       ['חשיפה למט״ח', f => pct(f.fx_pct)],
@@ -64,10 +76,10 @@
         ['דמי ניהול אישיים מהפקדות', f => pct(userFunds.find(item => item.fund.uid === f.uid)?.depositFee, 2)]);
     }
     const heading = selected.map((f, i) => '<th scope="col"><span class="compare-dot" style="background:'
-      + colors[i] + '"></span>מסלול ' + (i + 1) + '</th>').join('');
+      + colors[i] + '"></span>' + escapeHtml(f.fund_name) + '</th>').join('');
     output.innerHTML = (selected.slice(1).some(f => !sameGroup(selected[0], f))
       ? '<p class="compare-note">ההשוואה כוללת מסלולים מקבוצות השוואה שונות.</p>' : '')
-      + (perf ? graph(perf) : '<p class="compare-note">אין נתוני תשואה חודשיים מלאים לתקופה משותפת זו.</p>')
+      + (perf ? '<p>תקופת התשואות בטבלה: ' + fmtPeriod(perf.start) + ' עד ' + fmtPeriod(perf.end) + '</p>' : '<p class="compare-note">אין 12 חודשי תשואה משותפים לכל המסלולים.</p>')
       + '<div class="compare-table"><table><thead><tr><th scope="col">מדד</th>' + heading
       + '</tr></thead><tbody>' + rows.map(([label, value]) => '<tr><th scope="row">' + label + '</th>'
         + selected.map((f, i) => '<td>' + value(f, i) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
@@ -113,15 +125,41 @@
     renderOutput();
   }
 
-  document.addEventListener('click', event => {
-    const open = event.target.closest('[data-compare-open]');
-    if (!open) return;
-    const fund = DATA.find(f => String(f.uid) === open.dataset.compareOpen && isSelectableFund(f));
-    selected = fund ? [fund] : [];
+  function openComparison(ids) {
+    selected = [...new Set(ids)].map(uid => DATA.find(f => String(f.uid) === uid && isSelectableFund(f))).filter(Boolean).slice(0, 3);
+    months = 12;
+    chart.open = false;
+    finder.open = selected.length < 2;
     search.value = '';
-    dialog.showModal();
+    periods.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.months) === 12)));
     render();
-    search.focus();
+    dialog.showModal();
+    if (finder.open) search.focus();
+  }
+
+  document.addEventListener('change', event => {
+    const check = event.target.closest('[data-rank-peer]');
+    if (!check) return;
+    const panel = check.closest('details');
+    const choices = [...panel.querySelectorAll('[data-rank-peer]')];
+    const count = choices.filter(choice => choice.checked).length;
+    choices.forEach(choice => { choice.disabled = count >= 2 && !choice.checked; });
+    panel.querySelector('[data-rank-submit]').disabled = count === 0;
+    panel.querySelector('[data-rank-status]').textContent = count
+      ? 'נבחרו ' + count + ' מתוך 2 מסלולים נוספים'
+      : 'בחרו עד שני מסלולים להשוואה מול הקופה שלכם';
+  });
+
+  document.addEventListener('click', event => {
+    const submit = event.target.closest('[data-rank-submit]');
+    if (submit) {
+      const panel = submit.closest('details');
+      const peers = [...panel.querySelectorAll('[data-rank-peer]:checked')].map(check => check.dataset.rankPeer);
+      if (peers.length) openComparison([submit.closest('[data-rank-compare]').dataset.rankCompare, ...peers]);
+      return;
+    }
+    const open = event.target.closest('[data-compare-open]');
+    if (open) openComparison([open.dataset.compareOpen]);
   });
   search.addEventListener('input', renderResults);
   dialog.addEventListener('click', event => {
@@ -137,8 +175,9 @@
       (search.disabled ? picks.querySelector('button') : search).focus();
     } else if (remove) {
       selected.splice(Number(remove.dataset.compareRemove), 1);
+      if (selected.length < 2) finder.open = true;
       render();
-      search.focus();
+      if (finder.open) search.focus();
     } else if (period) {
       months = Number(period.dataset.months);
       periods.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button === period)));
