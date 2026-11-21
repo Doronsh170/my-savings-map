@@ -1122,8 +1122,7 @@ function annualRankHtml(fund) {
     ? `בשנה האחרונה: מקום ${rank(mine)} מתוך ${rows.length}`
     : 'אין מספיק נתונים לדירוג בשנה האחרונה';
   const table = rows.length ? `
-    <details style="margin-top:0.5rem">
-      <summary style="width:fit-content;cursor:pointer">הצג טבלת דירוג</summary>
+    <div style="margin-top:0.5rem">
       <div style="overflow-x:auto">
         <table style="width:100%;text-align:start;border-collapse:collapse">
           <caption style="text-align:start">תשואה מצטברת לפני דמי ניהול · 12 חודשים עד ${escapeHtml(fmtPeriod(fund.report_period))}</caption>
@@ -1138,7 +1137,7 @@ function annualRankHtml(fund) {
           }).join('')}</tbody>
         </table>
       </div>
-    </details>` : '';
+    </div>` : '';
   return `<details style="padding:0.25rem 1rem 0.65rem">
     <summary style="width:fit-content;cursor:pointer">מיקום בקטגוריה</summary>
     <span style="display:inline-block;margin-top:0.25rem;padding:0.4rem 0.65rem;border:1px solid #b9d4d0;border-radius:0.5rem">${message}</span>
