@@ -1110,15 +1110,39 @@ function trailingYearComparison(fund) {
 function annualRankHtml(fund) {
   const mine = trailingYearYield(fund);
   const peers = isSelectableFund(fund) && cmpIsFresh(fund) && Number.isFinite(mine)
-    ? (cmpPolicyPeers(fund) || []).map(trailingYearYield).filter(Number.isFinite)
+    ? (cmpPolicyPeers(fund) || [])
+      .map(peer => ({ fund: peer, value: trailingYearYield(peer) }))
+      .filter(row => Number.isFinite(row.value))
     : [];
-  const position = 1 + peers.filter(value => value - mine > 1e-9).length;
-  const message = peers.length
-    ? `בשנה האחרונה: מקום ${position} מתוך ${peers.length + 1}`
+  const rows = peers.length
+    ? [...peers, { fund, value: mine }].sort((a, b) => b.value - a.value)
+    : [];
+  const rank = value => 1 + rows.filter(row => row.value - value > 1e-9).length;
+  const message = rows.length
+    ? `בשנה האחרונה: מקום ${rank(mine)} מתוך ${rows.length}`
     : 'אין מספיק נתונים לדירוג בשנה האחרונה';
+  const table = rows.length ? `
+    <details style="margin-top:0.5rem">
+      <summary style="width:fit-content;cursor:pointer">הצג טבלת דירוג</summary>
+      <div style="overflow-x:auto">
+        <table style="width:100%;text-align:start;border-collapse:collapse">
+          <caption style="text-align:start">תשואה מצטברת לפני דמי ניהול · 12 חודשים עד ${escapeHtml(fmtPeriod(fund.report_period))}</caption>
+          <thead><tr><th scope="col">מקום</th><th scope="col">שם הקופה / המסלול</th><th scope="col">תשואה</th></tr></thead>
+          <tbody>${rows.map(row => {
+            const current = row.fund.uid === fund.uid;
+            return `<tr${current ? ' style="background:#ecf7f5;color:#143538;font-weight:700"' : ''}>
+              <td>${rank(row.value)}</td>
+              <th scope="row" style="text-align:start;padding:0.25rem">${escapeHtml(row.fund.fund_name)}${current ? ' · שלך' : ''}</th>
+              <td style="white-space:nowrap"><bdi>${row.value.toFixed(2)}%</bdi></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+    </details>` : '';
   return `<details style="padding:0.25rem 1rem 0.65rem">
     <summary style="width:fit-content;cursor:pointer">מיקום בקטגוריה</summary>
     <span style="display:inline-block;margin-top:0.25rem;padding:0.4rem 0.65rem;border:1px solid #b9d4d0;border-radius:0.5rem">${message}</span>
+    ${table}
   </details>`;
 }
 function productDetailHtml(item, cmp) {
