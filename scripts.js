@@ -1136,23 +1136,23 @@ function annualRankHtml(fund) {
       <div class="rank-dialog-inner">
       <header class="rank-dialog-head">
         <h3>טבלת דירוג בקטגוריה</h3>
-        <form method="dialog"><button type="submit" class="action-btn" autofocus>סגירה</button></form>
+        <form method="dialog"><button type="submit" class="action-btn" aria-label="סגירת טבלת דירוג" autofocus>✕</button></form>
       </header>
       <div class="rank-compare-actions" data-rank-compare="${escapeHtml(fund.uid)}">
         <button type="button" class="action-btn" data-rank-submit disabled>השווה מסלולים</button>
         <span data-rank-status aria-live="polite">בחרו עד שני מסלולים להשוואה מול הקופה שלכם</span>
       </div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;text-align:start;border-collapse:collapse">
+      <div class="rank-list">
+        <table class="rank-table">
           <caption style="text-align:start">תשואה מצטברת לפני דמי ניהול · 12 חודשים עד ${escapeHtml(fmtPeriod(fund.report_period))}</caption>
-          <thead><tr><th scope="col">מקום</th><th scope="col">שם הקופה / המסלול</th><th scope="col">תשואה</th><th scope="col">השוואה</th></tr></thead>
+          <thead><tr><th scope="col">מקום</th><th scope="col">מסלול</th><th scope="col">תשואה</th><th scope="col" aria-label="השוואה">+</th></tr></thead>
           <tbody>${rows.map(row => {
             const current = row.fund.uid === fund.uid;
             return `<tr${current ? ' style="background:#ecf7f5;color:#143538;font-weight:700"' : ''}>
               <td>${rank(row.value)}</td>
-              <th scope="row" style="text-align:start;padding:0.25rem">${escapeHtml(row.fund.fund_name)}${current ? ' · שלך' : ''}</th>
+              <th scope="row">${escapeHtml(row.fund.fund_name)}${current ? ' · שלך' : ''}</th>
               <td style="white-space:nowrap"><bdi>${row.value.toFixed(2)}%</bdi></td>
-              <td>${current ? 'כלולה' : `<label class="rank-compare-choice"><input type="checkbox" data-rank-peer="${escapeHtml(row.fund.uid)}" aria-label="הוסף להשוואה: ${escapeHtml(row.fund.fund_name)}"> הוסף</label>`}</td>
+              <td>${current ? '✓' : `<label class="rank-compare-choice"><input type="checkbox" data-rank-peer="${escapeHtml(row.fund.uid)}" aria-label="הוסף להשוואה: ${escapeHtml(row.fund.fund_name)}"></label>`}</td>
             </tr>`;
           }).join('')}</tbody>
         </table>
