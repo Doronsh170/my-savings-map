@@ -14,25 +14,33 @@
 
 
 <style>
-  #siteInfoSection .gemel-pro-link {
-    flex-direction: column;
-    gap: 2px;
+  #detailsSection .gemel-pro-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    width: fit-content;
+    max-width: 100%;
+    min-height: 44px;
+    margin: 16px auto 0;
+    padding: 10px 18px;
+    box-sizing: border-box;
+    border: 1px solid #839ab3;
+    border-radius: 12px;
+    background: #f3f7fc;
+    color: #102743;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
     text-decoration: none;
   }
-  #siteInfoSection .gemel-pro-link::after {
-    content: '←' / '';
-  }
-  #siteInfoSection .gemel-pro-description {
-    font-size: 13px;
-    font-weight: 400;
-    color: #526b86;
-    overflow-wrap: anywhere;
-  }
-  #siteInfoSection .gemel-pro-link + .footer-accordion {
-    margin-top: 14px !important;
+  #detailsSection .gemel-pro-link:hover { background: #e6eef8; }
+  #detailsSection .gemel-pro-link:focus-visible {
+    outline: 3px solid #102743;
+    outline-offset: 3px;
   }
   @media print {
-    #siteInfoSection .gemel-pro-link { display: none !important; }
+    #detailsSection .gemel-pro-link { display: none !important; }
   }
 </style>
 </head>
@@ -150,6 +158,10 @@
     </div>
     <p class="products-def">לחיצה על חיסכון פותחת את הנתונים וההשוואות שלו.</p>
     <div class="product-list" id="detailsRows"></div>
+    <a class="gemel-pro-link" href="https://doronsh170.github.io/Gemel-Pro/" target="_blank" rel="noopener noreferrer">
+      <span>השוואת קופות ומסלולים ב־<bdi dir="ltr">Gemel Pro</bdi></span>
+      <span aria-hidden="true">←</span>
+    </a>
   </div>
 </section>
 
@@ -341,10 +353,6 @@
 
 <section class="section site-info-section" id="siteInfoSection">
   <div class="container">
-    <a class="dashboard-toggle-summary gemel-pro-link" href="https://doronsh170.github.io/Gemel-Pro/" target="_blank" rel="noopener noreferrer">
-      <span>Gemel Pro</span>
-      <span class="gemel-pro-description">השוואת קופות גמל, השתלמות ופנסיה</span>
-    </a>
     <details class="dashboard-toggle-section footer-accordion" id="professionalDetails">
       <summary class="dashboard-toggle-summary"><span>הבהרה מקצועית</span></summary>
       <div class="dashboard-toggle-content">
