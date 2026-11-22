@@ -2,7 +2,7 @@
   publish = "_site"
   command = """
     mkdir -p _site
-    cp index.html styles.css scripts.js compare.css compare.js funds_unified.json _site/
+    cp index.html styles.css scripts.js funds_unified.json _site/
     cp index.html _site/404.html
     mkdir -p _site/docs
     cp docs/funds-by-track-review.pdf _site/docs/
