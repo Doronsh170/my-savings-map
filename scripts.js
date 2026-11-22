@@ -1107,64 +1107,6 @@ function trailingYearComparison(fund) {
     ? (cmpPolicyPeers(fund) || []).map(trailingYearYield).filter(Number.isFinite) : [];
   return { mine, peers: values.length >= CMP_MIN_PEERS ? cmpMean(values) : null, count: values.length };
 }
-function annualRankRows(fund) {
-  const mine = trailingYearYield(fund);
-  const peers = isSelectableFund(fund) && cmpIsFresh(fund) && Number.isFinite(mine)
-    ? (cmpPolicyPeers(fund) || [])
-      .map(peer => ({ fund: peer, value: trailingYearYield(peer) }))
-      .filter(row => Number.isFinite(row.value))
-    : [];
-  return peers.length
-    ? [...peers, { fund, value: mine }].sort((a, b) => b.value - a.value)
-    : [];
-}
-
-function annualRankPosition(rows, value) {
-  return 1 + rows.filter(row => row.value - value > 1e-9).length;
-}
-
-function annualRankHtml(fund) {
-  const rows = annualRankRows(fund);
-  const rank = value => annualRankPosition(rows, value);
-  const mine = rows.find(row => row.fund.uid === fund.uid)?.value;
-  const message = rows.length
-    ? `בשנה האחרונה: מקום ${rank(mine)} מתוך ${rows.length}`
-    : 'אין מספיק נתונים לדירוג בשנה האחרונה';
-  const table = rows.length ? `
-    <button type="button" class="action-btn rank-open" data-rank-open aria-haspopup="dialog">הצג טבלת דירוג</button>
-    <dialog class="rank-dialog" data-rank-panel aria-label="טבלת דירוג בקטגוריה">
-      <div class="rank-dialog-inner">
-      <header class="rank-dialog-head">
-        <h3>טבלת דירוג בקטגוריה</h3>
-        <form method="dialog"><button type="submit" class="action-btn" aria-label="סגירת טבלת דירוג" autofocus>✕</button></form>
-      </header>
-      <div class="rank-compare-actions" data-rank-compare="${escapeHtml(fund.uid)}">
-        <button type="button" class="action-btn" data-rank-submit disabled>השווה מסלולים</button>
-        <span data-rank-status aria-live="polite">בחרו עד שני מסלולים להשוואה מול הקופה שלכם</span>
-      </div>
-      <div class="rank-list">
-        <table class="rank-table">
-          <caption style="text-align:start">תשואה מצטברת לפני דמי ניהול · 12 חודשים עד ${escapeHtml(fmtPeriod(fund.report_period))}</caption>
-          <thead><tr><th scope="col">מקום</th><th scope="col">מסלול</th><th scope="col">תשואה</th><th scope="col" aria-label="השוואה">+</th></tr></thead>
-          <tbody>${rows.map(row => {
-            const current = row.fund.uid === fund.uid;
-            return `<tr${current ? ' style="background:#ecf7f5;color:#143538;font-weight:700"' : ''}>
-              <td>${rank(row.value)}</td>
-              <th scope="row">${escapeHtml(row.fund.fund_name)}${current ? ' · שלך' : ''}</th>
-              <td style="white-space:nowrap"><bdi>${row.value.toFixed(2)}%</bdi></td>
-              <td>${current ? '✓' : `<label class="rank-compare-choice"><input type="checkbox" data-rank-peer="${escapeHtml(row.fund.uid)}" aria-label="הוסף להשוואה: ${escapeHtml(row.fund.fund_name)}"></label>`}</td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table>
-      </div>
-      </div>
-    </dialog>` : '';
-  return `<details style="padding:0.25rem 1rem 0.65rem">
-    <summary style="width:fit-content;cursor:pointer">מיקום בקטגוריה</summary>
-    <span style="display:inline-block;margin-top:0.25rem;padding:0.4rem 0.65rem;border:1px solid #b9d4d0;border-radius:0.5rem">${message}</span>
-    ${table}
-  </details>`;
-}
 function productDetailHtml(item, cmp) {
   const f = item.fund;
   const uid = escapeHtml(f.uid);
@@ -1195,7 +1137,6 @@ function productDetailHtml(item, cmp) {
       <p class="product-expo">מניות <b>${fmtRound(f.stock_pct)}</b> · חו״ל <b>${fmtRound(f.foreign_pct)}</b> · מט״ח <b>${fmtRound(f.fx_pct)}</b></p>
       <div class="product-actions">
         <button type="button" class="product-action product-action-main" data-info="full" data-info-uid="${uid}" aria-haspopup="dialog">${cmp ? 'השוואה מקיפה' : 'פרטי המסלול'} <span aria-hidden="true">›</span></button>
-        <button type="button" class="product-action" data-compare-open="${uid}">השווה מסלול זה</button>
         <button type="button" class="product-action" data-edit-uid="${uid}" aria-label="עריכת ${escapeHtml(f.fund_name || 'המוצר')}">עריכה</button>
       </div>
       <div class="print-only">${fullComparisonHtml(item, cmp, true)}</div>`;
@@ -1280,7 +1221,6 @@ function productItemHtml(item, activeItems, totalBalance) {
         </span>
         <span class="product-chev" aria-hidden="true"></span>
       </button>
-      ${annualRankHtml(f)}
       <dialog class="product-focus-dialog" aria-labelledby="${panelId}-title" data-focus-uid="${uid}">
         <div class="product-focus-heading"><h3 id="${panelId}-title">${escapeHtml(title)}</h3>${track ? `<p>${escapeHtml(track)}</p>` : ''}</div>
         <div class="product-focus-scroll"><div class="product-detail" id="${panelId}"${open ? '' : ' hidden'}>${productDetailHtml(item, cmp)}${productSimulationHtml(item)}</div></div>
