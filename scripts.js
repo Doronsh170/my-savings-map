@@ -2351,6 +2351,7 @@ function buildShareText(mode) {
   lines.push(withAmounts
     ? 'הבהרה: הנתונים מבוססים על נתונים ציבוריים של המסלולים ויתרות שהוזנו ידנית. התשואות הן של המסלולים, לפני דמי ניהול. זה אינו ייעוץ או המלצה.'
     : 'הבהרה: הנתונים מבוססים על נתונים ציבוריים של המסלולים, משוקללים לפי יתרות שאינן מוצגות כאן. התשואות הן של המסלולים, לפני דמי ניהול. זה אינו ייעוץ או המלצה.');
+  lines.push('', 'לכל הכלים הפיננסיים של דורון שרייבמן:', 'https://doronsh170.github.io/doron-tools/');
   return lines.join('\n');
 }
 // Remembers which collapsible sections were open before printing, so the
